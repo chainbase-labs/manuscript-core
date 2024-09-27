@@ -121,5 +121,6 @@ else
     echo "  export PATH=${executable_folder}:\$PATH"
 fi
 
-echo "Run '${exe_name} --help' to get started"
+"${exe}" --help
+
 exit 0
