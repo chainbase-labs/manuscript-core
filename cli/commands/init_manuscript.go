@@ -17,7 +17,12 @@ services:
     container_name: chainbase_jobmanager
     hostname: chainbase_jobmanager
     user: "flink"
-    command: "./bin/jobmanager.sh start-foreground & ./bin/sql-gateway.sh start -Dsql-gateway.endpoint.rest.address=localhost"
+    command:
+      - /bin/bash
+      - -c
+      - |
+        ./bin/sql-gateway.sh start -Dsql-gateway.endpoint.rest.address=localhost &
+        ./bin/jobmanager.sh start-foreground
     ports:
       - "8081:8081"
       - "8083:8083"
@@ -145,7 +150,6 @@ set 'table.exec.sink.not-null-enforcer' = 'ERROR';
 use catalog paimon;
 `
 
-// InitManuscript 初始化 Manuscript 项目的 Docker 环境
 func InitManuscript() {
 	manuscriptDir := "manuscript"
 	steps := []func() error{
@@ -160,7 +164,6 @@ func InitManuscript() {
 		func() error { return createDemoManuscriptFile(manuscriptDir) },
 	}
 
-	// 顺序执行所有步骤
 	for i, step := range steps {
 		err := executeStepWithLoading(fmt.Sprintf("Step %d", i+1), step)
 		if err != nil {
@@ -170,12 +173,10 @@ func InitManuscript() {
 	log.Println("\033[32m✓ All steps completed successfully!")
 }
 
-// 带加载动画的步骤执行函数
 func executeStepWithLoading(stepName string, stepFunc func() error) error {
 	done := make(chan struct{})
 	loading := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
-	// 显示加载动画
 	go func() {
 		i := 0
 		for {
@@ -190,10 +191,8 @@ func executeStepWithLoading(stepName string, stepFunc func() error) error {
 		}
 	}()
 
-	// 执行步骤函数
 	err := stepFunc()
 
-	// 结束动画
 	close(done)
 	if err != nil {
 		fmt.Printf("\r\033[31m✗\033[0m %s failed!\n", stepName)
@@ -204,8 +203,6 @@ func executeStepWithLoading(stepName string, stepFunc func() error) error {
 
 	return err
 }
-
-// 步骤函数定义
 
 func createDirectory(dir string) error {
 	err := os.MkdirAll(dir, 0755)
@@ -284,23 +281,18 @@ func createSchemaFile(dir string) error {
 }
 
 func executeSQLCommands(dir string) error {
-	for i := 0; i < 10; i++ {
-		execSQLCmd := []string{"docker", "exec", "-i", "chainbase_postgres", "psql", "-U", "postgres", "-c", "select 1"}
+	for i := 0; i < 30; i++ {
+		execSQLCmd := []string{"docker", "exec", "-i", "chainbase_postgres", "psql", "-U", "postgres", "-f", "/schema/node.sql"}
 		execSQL := exec.Command(execSQLCmd[0], execSQLCmd[1:]...)
 		err := execSQL.Run()
 		if err != nil {
-			log.Println("Waiting for PostgreSQL container to start...")
+			log.Println("waiting for container start...")
+			time.Sleep(2 * time.Second)
+			continue
 		}
-		time.Sleep(5 * time.Second)
+		return nil
 	}
-
-	execSQLCmd := []string{"docker", "exec", "-i", "chainbase_postgres", "psql", "-U", "postgres", "-f", "/schema/node.sql"}
-	execSQL := exec.Command(execSQLCmd[0], execSQLCmd[1:]...)
-	err := execSQL.Run()
-	if err != nil && !strings.Contains(err.Error(), "already exists") {
-		return fmt.Errorf("failed to create database and tables: %w", err)
-	}
-	return nil
+	return fmt.Errorf("failed to create database and tables")
 }
 
 func createDemoManuscriptFile(dir string) error {
@@ -321,7 +313,6 @@ func createSqlGatewayFile(dir string) error {
 	return nil
 }
 
-// isContainerRunning 检查 Docker 容器是否在运行
 func isContainerRunning(containerName string) (bool, error) {
 	cmd := exec.Command("docker", "ps", "--filter", fmt.Sprintf("name=%s", containerName), "--filter", "status=running", "--format", "{{.Names}}")
 	output, err := cmd.Output()

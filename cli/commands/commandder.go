@@ -29,7 +29,6 @@ func Execute(args []string) error {
 	return nil
 }
 
-var shouldRoundUp bool
 var initCmd = &cobra.Command{
 	Use:     "init",
 	Aliases: []string{"ini", "in", "i"},
@@ -58,7 +57,7 @@ var jobCmd = &cobra.Command{
 }
 
 var deployCmd = &cobra.Command{
-	Use:     "deploy [manuscript_path]",
+	Use:     "deploy <manuscript-file>",
 	Aliases: []string{"deplo", "depl", "dep", "de", "d"},
 	Short:   "Deploy manuscript to flink cluster",
 	Long:    "Deploy manuscript to flink cluster",
@@ -69,7 +68,6 @@ var deployCmd = &cobra.Command{
 }
 
 func init() {
-	//multiplyCmd.Flags().BoolVarP(&shouldRoundUp, "round", "r", false, "Round results up to 2 decimal places")
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(jobCmd)
 	rootCmd.AddCommand(deployCmd)
