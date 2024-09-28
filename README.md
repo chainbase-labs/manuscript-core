@@ -150,5 +150,5 @@ Here are some of the planned improvements:
 
 ## License 📗
 
-Quix Streams is licensed under the Apache 2.0 license.  
+Manuscript is licensed under the Apache 2.0 license.  
 View a copy of the License file [here](https://github.com/chainbase-labs/manuscript-core/blob/main/LICENSE).
