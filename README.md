@@ -10,7 +10,7 @@
 [![X](https://img.shields.io/twitter/url?&color=D4B68C&label=&style=social&url=https%3A%2F%2Fx.com%2FchainbaseHQ)](https://x.com/chainbaseHQ)
 [![Community Slack](https://img.shields.io/badge/Community%20Slack-blueviolet?logo=slack)](https://join.slack.com/share/enQtNzc4NDI3Mzk2Njg3MS1hZjdhOGY0ZTU5ODk3ZmY0NDAzN2JiY2YxMjNmOTY5NmEwNWNhMDhiMWE0M2I1ZDc2YzI1NDQ3ZDhhMWQ4Zjg0?cdn_fallback=1)
 [![Discord](https://img.shields.io/badge/Chainbase-0345b2?logo=Discord)](https://discord.gg/YnAavwwR)
-[![Discord](https://img.shields.io/badge/Chainbase-0345b2?logo=Telegram)](https://te.me/ChainbaseNetwork)
+[![Telegram](https://img.shields.io/badge/Chainbase-0345b2?logo=Telegram)](https://te.me/ChainbaseNetwork)
 
 # Build The World's Largest Omnichain Data Network
 Chainbase is a global blockchain data network with an extensive dataset and cluster worldwide. If we compare Chainbase’s global data network to a country, then Manuscript would be the language of this data network nation. Manuscript plays a crucial role in the Chainbase ecosystem, serving as a bridge connecting various data, services, and users.
@@ -37,52 +37,45 @@ The vision of Manuscript is to realize “data trade” within the Chainbase net
 curl -fsSL  https://github.com/Liquidwe/rust-examples/raw/main/install.sh | bash
 ```
 ### Requirements
-Docker Desktop 25.1+, Docker Compose v2.20.0+
+[Docker Desktop 25.1+](https://www.docker.com/products/docker-desktop/)
 
 ### Example
 
-Here's an example of how to <b>process</b> data from a Kafka Topic with Quix Streams:
+Here's an example of how to <b>process</b> data from chainbase with manuscript:
 
-```python
+```bash
 from quixstreams import Application
 
 # A minimal application reading temperature data in Celsius from the Kafka topic,
 # converting it to Fahrenheit and producing alerts to another topic.
 
-# Define an application that will connect to Kafka
-app = Application(
-    broker_address="localhost:9092",  # Kafka broker address
-)
+➜  chainbase manuscript-cli --help
 
-# Define the Kafka topics
-temperature_topic = app.topic("temperature-celsius", value_deserializer="json")
-alerts_topic = app.topic("temperature-alerts", value_serializer="json")
+ ██████  ██    ██    ████   ████████ ███    ██ ███████    ████    ██████  ████████
+██       ██    ██   ██  ██     ██    ████   ██ ██    ██  ██  ██  ██    ██ ██
+██       ██    ██  ██    ██    ██    ██ ██  ██ ██    ██ ██    ██ ██       ██
+██       ████████  ████████    ██    ██  ██ ██ ███████  ████████  ██████  ██████
+██       ██    ██  ██    ██    ██    ██   ████ ██    ██ ██    ██       ██ ██
+██       ██    ██  ██    ██    ██    ██    ███ ██    ██ ██    ██ ██    ██ ██
+ ██████  ██    ██  ██    ██ ████████ ██     ██ ███████  ██    ██  ██████  ████████
 
-# Create a Streaming DataFrame connected to the input Kafka topic
-sdf = app.dataframe(topic=temperature_topic)
+Chainbase Manuscript ™ Build The World's Largest Omnichain Data Network 🚀 🚀 🚀
+─────────────────────────────────────────────────────────────────────────────────
 
-# Convert temperature to Fahrenheit by transforming the input message (with an anonymous or user-defined function)
-sdf = sdf.apply(lambda value: {"temperature_F": (value["temperature"] * 9/5) + 32})
+Usage:
+  manuscript-cli [command]
 
-# Filter values above the threshold
-sdf = sdf[sdf["temperature_F"] > 150]
+Available Commands:
+  deploy      Deploy manuscript to flink cluster
+  help        Help about any command
+  init        Initialize and start Flink containers
+  job         Initialize and start Flink containers
 
-# Produce alerts to the output topic
-sdf = sdf.to_topic(alerts_topic)
+Flags:
+  -h, --help   help for manuscript-cli
 
-# Run the streaming application (app automatically tracks the sdf!)
-app.run()
+Use "manuscript-cli [command] --help" for more information about a command.
 ```
-
-### Tutorials
-
-To see Quix Streams in action, check out the Quickstart and Tutorials in the docs:
-
-- [**Quickstart**](https://quix.io/docs/quix-streams/quickstart.html)
-- [**Tutorial - Word Count**](https://quix.io/docs/quix-streams/tutorials/word-count/tutorial.html)
-- [**Tutorial - Anomaly Detection**](https://quix.io/docs/quix-streams/tutorials/anomaly-detection/tutorial.html)
-- [**Tutorial - Purchase Filtering**](https://quix.io/docs/quix-streams/tutorials/purchase-filtering/tutorial.html)
-
 
 ### Key Concepts
 There are two primary objects:
@@ -95,16 +88,6 @@ Under the hood, the `Application` will:
 - Produce it to the output topic.
 - Automatically checkpoint processed messages and state for resiliency.
 - Scale using Kafka's built-in consumer groups mechanism.
-
-
-### Deployment
-You can run Quix Streams pipelines anywhere Python is installed.
-
-Deploy to your own infrastructure or to [Quix Cloud](https://quix.io/product) on AWS, Azure, GCP or on-premise for a fully managed platform.  
-You'll get self-service DevOps, CI/CD and monitoring, all built with best in class engineering practices learned from Formula 1 Racing.
-
-Please see the [**Connecting to Quix Cloud**](https://quix.io/docs/quix-streams/quix-platform.html) page
-to learn how to use Quix Streams and Quix Cloud together.
 
 ## Roadmap 📍
 
@@ -121,18 +104,14 @@ Here are some of the planned improvements:
 - [ ] Joins
 - [ ] Windowed aggregations over Sliding windows
 
-For a more detailed overview of the planned features, please look at [the Roadmap Board](https://github.com/orgs/quixio/projects/1).
-
 ## Get Involved 🤝
 
-- Please use [GitHub issues](https://github.com/quixio/quix-streams/issues) to report bugs and suggest new features.
-- Join the [Quix Community on Slack](https://quix.io/slack-invite), a vibrant group of Kafka Python developers, data engineers and newcomers to Apache Kafka, who are learning and leveraging Quix Streams for real-time data processing.
-- Watch and subscribe to [@QuixStreams on YouTube](https://www.youtube.com/@QuixStreams) for code-along tutorials from scratch and interesting community highlights.
-- Follow us on [X](https://x.com/Quix_io) and [LinkedIn](https://www.linkedin.com/company/70925173) where we share our latest tutorials, forthcoming community events and the occasional meme.
-- If you have any questions or feedback - write to us at support@quix.io!
-
+- Please use [GitHub issues](https://github.com/chainbase-labs/manuscript-core/issues) to report bugs and suggest new features.
+- Join the [Quix Community on telegram](https://te.me/ChainbaseNetwork), a vibrant group of developers, data engineers and newcomers to blockchain data, who are learning and leveraging Manuscript for real-time data processing.
+- Follow us on [X](https://x.com/chainbaseHQ) where we share our latest tutorials, forthcoming community events and the occasional meme.
+- If you have any questions or feedback - write to us at support@chainbase.com!
 
 ## License 📗
 
 Quix Streams is licensed under the Apache 2.0 license.  
-View a copy of the License file [here](https://github.com/quixio/quix-streams/blob/main/LICENSE).
+View a copy of the License file [here](https://github.com/chainbase-labs/manuscript-core/blob/main/LICENSE).
