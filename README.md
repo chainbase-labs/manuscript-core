@@ -44,24 +44,10 @@ curl -fsSL  https://github.com/Liquidwe/rust-examples/raw/main/install.sh | bash
 Here's an example of how to <b>process</b> data from chainbase with manuscript:
 
 ```bash
-from quixstreams import Application
-
-# A minimal application reading temperature data in Celsius from the Kafka topic,
-# converting it to Fahrenheit and producing alerts to another topic.
-
+# 1. After installing `manuscript-cli`, you can initialize the Manuscript scripts and environment using the command.
 ➜  chainbase manuscript-cli --help
-
- ██████  ██    ██    ████   ████████ ███    ██ ███████    ████    ██████  ████████
-██       ██    ██   ██  ██     ██    ████   ██ ██    ██  ██  ██  ██    ██ ██
-██       ██    ██  ██    ██    ██    ██ ██  ██ ██    ██ ██    ██ ██       ██
-██       ████████  ████████    ██    ██  ██ ██ ███████  ████████  ██████  ██████
-██       ██    ██  ██    ██    ██    ██   ████ ██    ██ ██    ██       ██ ██
-██       ██    ██  ██    ██    ██    ██    ███ ██    ██ ██    ██ ██    ██ ██
- ██████  ██    ██  ██    ██ ████████ ██     ██ ███████  ██    ██  ██████  ████████
-
-Chainbase Manuscript ™ Build The World's Largest Omnichain Data Network 🚀 🚀 🚀
+Chainbase Manuscript ™ Build The World\'s Largest Omnichain Data Network 🚀 🚀 🚀
 ─────────────────────────────────────────────────────────────────────────────────
-
 Usage:
   manuscript-cli [command]
 
@@ -75,39 +61,90 @@ Flags:
   -h, --help   help for manuscript-cli
 
 Use "manuscript-cli [command] --help" for more information about a command.
+
+# 2. Use the client to initialize the `manuscript.yaml` file for a local standalone container environment.
+➜  chainbase manuscript-cli init
+✓ Step 1 complete!.
+✓ Step 2 complete!.
+✓ Step 3 complete!.
+[+] Running 7/7g...
+ ✔ Network manuscript_avs_network                                                                                                                             Created                                                                                                0.0s
+ ✔ Container chainbase_jobmanager                                                                                                                             Started                                                                                                0.6s
+ ✔ Container chainbase_postgres                                                                                                                               Started                                                                                                0.6s
+ ✔ Container chainbase_taskmanager                                                                                                                            Started                                                                                                0.7s
+✓ Step 4 complete!.
+✓ Step 5 complete!.
+✓ Step 6 complete!.
+✓ Step 7 complete!.
+⠦ Step 8 Loading... waiting for container start...
+✓ Step 8 complete!.
+✓ Step 9 complete!.
+✓ All steps completed successfully!
+
+# The initialized Manuscript file is as follows:
+➜  chainbase cat manuscript/manuscript.yaml
+name: demo
+specVersion: v0.1.0
+parallelism: 1
+
+sources:
+  - name: zkevm_blocks
+    type: dataset
+    dataset: zkevm.blocks
+    filter: "block_number > 100000"
+
+transforms:
+  - name: zkevm_blocks_transform
+    sql: >
+      SELECT
+          *
+      FROM zkevm_blocks
+      limit 100
+
+sinks:
+  - name: zkevm_blocks_sink
+    type: print
+    from: zkevm_blocks_transform
+
+
+# 3. Deploy the `manuscript.yaml` file to the Flink cluster for processing data from Chainbase 
+➜  chainbase manuscript-cli deploy manuscript/manuscript.yaml
+⠦ Step 1: Initializing the flink client Loading... Session created: cafd614d-ea5b-450a-85a0-f6d41227aa1a
+⠴ Step 1: Initializing the flink client Loading... Client initialized successfully
+✓ Step 1: Initializing the flink client complete!
+✓ Step 2: Parsing manuscript yaml complete!
+✓ Step 3: Deploy Manuscript to flink complete!.
+✓ Manuscript deployment completed successfully!
 ```
 
 ### Key Concepts
 There are two primary objects:
-- `StreamingDataFrame` - a predefined declarative pipeline to process and transform incoming messages.
-- `Application` - to manage the Kafka-related setup, teardown and message lifecycle (consuming, committing). It processes each message with the dataframe you provide for it to run.
+- `manuscript.yaml` - A script file used to describe the data processing workflow, defining data sources, data processing methods, and the final data flow direction.
+- `docker-compose.yaml` - The Docker Compose file defines a local container cluster environment, allowing developers to test locally. After testing, it can be deployed to the Chainbase distributed network.
 
-Under the hood, the `Application` will:
-- Consume and deserialize messages.
-- Process them with your `StreamingDataFrame`.
-- Produce it to the output topic.
-- Automatically checkpoint processed messages and state for resiliency.
-- Scale using Kafka's built-in consumer groups mechanism.
+Under the hood, the `Manuscript` will:
+- Start a default stream processing framework, such as a Flink cluster.
+- Consume user-defined source data.
+- Process these stream data using your defined transforms.
+- Sink the processed data to the data source.
 
 ## Roadmap 📍
 
-This library is being actively developed by a full-time team.
-
 Here are some of the planned improvements:
 
-- [x] [Windowed aggregations over Tumbling & Hopping windows](https://quix.io/docs/quix-streams/v2-0-latest/windowing.html)
-- [x] [Stateful operations and recovery based on Kafka changelog topics](https://quix.io/docs/quix-streams/advanced/stateful-processing.html)
-- [x] [Group-by operation](https://quix.io/docs/quix-streams/groupby.html)
-- [x] ["Exactly Once" delivery guarantees for Kafka message processing (AKA transactions)](https://quix.io/docs/quix-streams/configuration.html#processing-guarantees)
-- [x] Support for [Avro](https://quix.io/docs/quix-streams/advanced/serialization.html#avro) and [Protobuf](https://quix.io/docs/quix-streams/advanced/serialization.html#protobuf) formats
-- [x] [Schema Registry support](https://quix.io/docs/quix-streams/advanced/schema-registry.html)
-- [ ] Joins
-- [ ] Windowed aggregations over Sliding windows
+- [x] Integrate Chainbase Network Flink data.
+- [x] Support Flink application mode.
+- [x] Support Schema Registry.
+- [ ] Support custom advanced data processing logic with JAVA and Rust APIs.
+- [ ] Support local lightweight k8s environment deployment.
+- [ ] Support distributed edge node coordinators.
+- [ ] Support RPC and substream data processing formats.
+- [ ] Support light node authentication.
 
 ## Get Involved 🤝
 
 - Please use [GitHub issues](https://github.com/chainbase-labs/manuscript-core/issues) to report bugs and suggest new features.
-- Join the [Quix Community on telegram](https://te.me/ChainbaseNetwork), a vibrant group of developers, data engineers and newcomers to blockchain data, who are learning and leveraging Manuscript for real-time data processing.
+- Join the [Manuscript Community On Telegram](https://te.me/ChainbaseNetwork), a vibrant group of developers, data engineers and newcomers to blockchain data, who are learning and leveraging Manuscript for real-time data processing.
 - Follow us on [X](https://x.com/chainbaseHQ) where we share our latest tutorials, forthcoming community events and the occasional meme.
 - If you have any questions or feedback - write to us at support@chainbase.com!
 
