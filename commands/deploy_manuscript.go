@@ -3,8 +3,9 @@ package commands
 import (
 	"fmt"
 	"log"
-	"manuscript-core/cli/client"
-	"manuscript-core/cli/static"
+	"manuscript-core/client"
+	"manuscript-core/pkg"
+	"manuscript-core/static"
 	"os"
 )
 
@@ -35,7 +36,7 @@ func DeployManuscript(args []string) {
 	}
 
 	for _, step := range steps {
-		err := executeStepWithLoading(step.name, step.fn)
+		err := pkg.ExecuteStepWithLoading(step.name, step.fn)
 		if err != nil {
 			log.Fatalf("\033[31m✗ %s failed: %v\n", step.name, err)
 		}
