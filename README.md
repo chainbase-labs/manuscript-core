@@ -1,5 +1,3 @@
-# manuscript-core
-
 ![manuscript](./images/manuscript_logo.jpeg)
 
 [![GitHub Version](https://img.shields.io/github/tag-pre/Liquidwe/rust-examples?label=Version&color=D4B68C)](https://github.com/chainbase-labs/manuscript-core/releases)
