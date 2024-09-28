@@ -2,9 +2,9 @@
 
 ![manuscript](./images/manuscript_logo.jpeg)
 
-[![GitHub Version](https://img.shields.io/github/tag-pre/quixio/quix-streams.svg?label=Version&color=008dff)](https://github.com/quixio/quix-streams/releases)
-![PyPI License](https://img.shields.io/pypi/l/quixstreams?label=Licence&color=008dff)
-[![Docs](https://img.shields.io/badge/docs-quix.io-0345b2?label=Docs&color=008dff)](https://quix.io/docs/quix-streams/introduction.html) \
+[![GitHub Version](https://img.shields.io/github/tag-pre/quixio/quix-streams.svg?label=Version&color=D4B68C)](https://github.com/quixio/quix-streams/releases)
+![PyPI License](https://img.shields.io/pypi/l/quixstreams?label=Licence&color=D4B68C)
+[![Docs](https://img.shields.io/badge/docs-quix.io-0345b2?label=Docs&color=D4B68C)](https://quix.io/docs/quix-streams/introduction.html) \
 [![Community Slack](https://img.shields.io/badge/Community%20Slack-blueviolet?logo=slack)](https://quix.io/slack-invite)
 [![YouTube](https://img.shields.io/badge/-YouTube-FF0000?logo=youtube)](https://www.youtube.com/@QuixStreams)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2.svg?logo=linkedin)](https://www.linkedin.com/company/70925173/)
