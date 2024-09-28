@@ -15,7 +15,7 @@ package main
 
 import (
 	"log"
-	"manuscript-core/cli/commands"
+	"manuscript-core/commands"
 	"os"
 )
 
