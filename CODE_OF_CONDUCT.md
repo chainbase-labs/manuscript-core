@@ -30,15 +30,15 @@ We do not tolerate unpleasant behavior. If someone repeatedly or deliberately ac
 
 ## Who does this apply to?
 
-This Code of Conduct applies to anyone in the Quix community, including but not limited to, the founders and staff of Quix, presenters, organisers, and attendees of our Quix-led events, maintainers, contributors, digital community members engaged in discussions on our Slack channel or other forums.
+This Code of Conduct applies to anyone in the Manuscript community, including but not limited to, the founders and staff of chainbase, presenters, organisers, and attendees of our chainbase-led events, maintainers, contributors, digital community members engaged in discussions on our Slack channel or other forums.
 
 ## Where does this apply?
 
-The Code of Conduct applies in all official Quix spaces - both our in-person events we run, including of Stream Processing Meetups, as well as our digital spaces such as The Stream, our community Slack channel.
+The Code of Conduct applies in all official Chainbase spaces - both our in-person events we run, including of Stream Processing Meetups, as well as our digital spaces such as The Stream, our community Slack channel.
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior can be sent to mods@quix.io. All issues are dealt with seriousness and in confidence.
+Instances of abusive, harassing, or otherwise unacceptable behavior can be sent to mods@chainbase.com. All issues are dealt with seriousness and in confidence.
 
 If someone engages in any behavior violating this Code of Conduct, the moderators may take any action they deem appropriate, including warning the offender in private or in public, expulsion from the community, exclusion from any interaction, and loss of all rights in this community.
 
