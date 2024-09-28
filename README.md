@@ -1,5 +1,7 @@
 # manuscript-core
 
+![manuscript](./images/manuscript_logo.jpeg)
+
 ## Installation of manuscript-cli
 ### For macOS:
 ```bash
