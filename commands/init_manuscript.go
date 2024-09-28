@@ -1,18 +1,129 @@
 package commands
 
 import (
+	"bufio"
 	"fmt"
 	"log"
+	"manuscript-core/client"
 	"manuscript-core/pkg"
 	"manuscript-core/static"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
 
 func InitManuscript() {
+	var chains []*client.ChainBaseDatasetListItem
+	err := pkg.ExecuteStepWithLoading("Checking Datasets From Network", func() error {
+		c := client.NewChainBaseClient("https://api.chainbase.com")
+		var err error
+		chains, err = c.GetChainBaseDatasetList()
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		log.Fatalf("\033[31m✗ %s failed: %v\n", fmt.Sprintf("Step %d", 1), err)
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+
+	fmt.Println("\r\033[33m🏂 1.Please select a chainbase network dataset from the list below:\033[0m")
+	for i, chain := range chains {
+		fmt.Printf("%d: %s (Database: %s)\n", i+1, chain.Name, chain.DatabaseName)
+	}
+
+	fmt.Print("\r\033[33m🏂 1.Enter your choice (default is zkevm): \033[0m")
+	chainChoice, _ := reader.ReadString('\n')
+	chainChoice = strings.TrimSpace(chainChoice)
+
+	selectedChain := "zkevm"
+	selectedDatabase := "zkevm"
+	defaultChainIndex := 1
+
+	if chainChoice != "" {
+		index, err := strconv.Atoi(chainChoice)
+		if err != nil || index < 1 || index > len(chains) {
+			fmt.Printf("Invalid choice. Please enter a number between 1 and %d.\n", len(chains))
+			return
+		}
+		selectedChain = chains[index-1].Name
+		selectedDatabase = chains[index-1].DatabaseName
+		defaultChainIndex = index - 1
+		fmt.Printf("\r\033[32m\u2714 You have selected chain: %s\n\033[0m\n", selectedChain)
+	} else {
+		fmt.Printf("No input provided. Defaulting to chain: %s\n\033[0m\n", selectedChain)
+	}
+
+	fmt.Println("\r\033[33m🧲 2.Please select a table from the list below:\033[0m")
+	for i, table := range chains[defaultChainIndex].Tables {
+		fmt.Printf("%d: %s\n", i+1, table)
+	}
+
+	fmt.Print("\r\033[33mEnter your choice (default is blocks): \033[0m")
+	tableChoice, _ := reader.ReadString('\n')
+	tableChoice = strings.TrimSpace(tableChoice)
+
+	selectedTable := "blocks"
+	if tableChoice != "" {
+		index, err := strconv.Atoi(tableChoice)
+		if err != nil || index < 1 || index > len(chains[defaultChainIndex].Tables) {
+			fmt.Printf("Invalid choice. Please enter a number between 1 and %d.\n", len(chains[defaultChainIndex].Tables))
+			return
+		}
+		selectedTable = chains[defaultChainIndex].Tables[index-1]
+		fmt.Printf("\r\033[32m\u2714 You have selected table: %s\n\033[0m\n", selectedTable)
+	} else {
+		fmt.Printf("\u001B[32m\u2714 No input provided. Defaulting to table: %s\n\033[0m\n", selectedTable)
+	}
+
+	defaultSQL := fmt.Sprintf("Select * From %s.%s Limit 100", selectedDatabase, selectedTable)
+	fmt.Printf("\r\033[33m🧬 3.Enter your SQL query (default is '%s'): \033[0m", defaultSQL)
+	sqlQuery, _ := reader.ReadString('\n')
+	sqlQuery = strings.TrimSpace(sqlQuery)
+	if sqlQuery == "" {
+		sqlQuery = defaultSQL
+		fmt.Printf("\r\033[32m\u2714 No input provided. Defaulting to SQL query: %s\n\033[0m\n", sqlQuery)
+	} else {
+		fmt.Printf("\033[32m\u2714 You have entered SQL query: %s\033\n[0m\n", sqlQuery)
+	}
+
+	fmt.Println("\033[33m📍 4.Please select a data output target:\033[0m")
+	fmt.Println("1: Print (output to console)")
+	fmt.Println("2: Postgresql")
+
+	fmt.Print("\033[33mEnter your choice (default is Print): ")
+	outputChoice, _ := reader.ReadString('\n')
+	outputChoice = strings.TrimSpace(outputChoice)
+
+	selectedOutput := "print"
+	if outputChoice != "" {
+		index, err := strconv.Atoi(outputChoice)
+		if err != nil || index < 1 || index > 2 {
+			fmt.Printf("Invalid choice. Please enter a number between 1 and 2.\n")
+			return
+		}
+		if index == 2 {
+			selectedOutput = "postgresql"
+		}
+		fmt.Printf("\r\033[32m\u2714 You have selected output target: %s\n", selectedOutput)
+	} else {
+		fmt.Printf("\033[32m\u2714 No input provided. Defaulting to output target: %s\033[0m\n", selectedOutput)
+	}
+
+	fmt.Printf("\n\033[33m🏄🏄 Summary of your selections:\033[0m\n")
+	fmt.Printf("Selected chain: \033[32m%s\033[0m\n", selectedChain)
+	fmt.Printf("Selected table: \u001B[32m%s\u001B[0m\n", selectedTable)
+	fmt.Printf("SQL query: \u001B[32m%s\u001B[0m\n", sqlQuery)
+	fmt.Printf("Data output target: \u001B[32m%s\u001B[0m\n", selectedOutput)
+}
+
+func executeInitManuscript() {
 	manuscriptDir := "manuscript"
 	steps := []func() error{
 		func() error { return createDirectory(manuscriptDir) },
