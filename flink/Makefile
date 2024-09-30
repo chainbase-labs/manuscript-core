@@ -3,7 +3,7 @@
 help:
 	@echo "Available commands:"
 	@echo "  build  - Build the Docker image for the Flink job"
-	@echo "  run    - Run the manuscript (usage: make run path=/path/to/manuscript.yaml)"
+	@echo "  run    - Run the manuscript (usage: make run path=/path/to/manuscript.yaml [image=custom_image] [data_path=/custom/data/path])"
 	@echo "  help   - Display this help message"
 
 build:
@@ -19,13 +19,9 @@ run:
 		echo "Error: manuscript.yaml not found at $$ms_abs_path"; \
 		exit 1; \
 	fi; \
-	image=$$(docker images -q ms_flink:$$(git rev-parse --abbrev-ref HEAD)-$$(git rev-parse --short HEAD)); \
-	if [ -z "$$image" ]; then \
-		echo "Error: Docker image not found. Please run 'make build' first."; \
-		exit 1; \
-	fi; \
-	docker run -it --rm \
-		-v $$ms_abs_path:/opt/flink/manuscript.yaml \
-		ms_flink:$$(git rev-parse --abbrev-ref HEAD)-$$(git rev-parse --short HEAD)
-
-
+	image=$${image:-ms_flink:$$(git rev-parse --abbrev-ref HEAD)-$$(git rev-parse --short HEAD)}; \
+	data_path=$${data_path:-./data}; \
+	export MS_FLINK_IMAGE=$$image; \
+	export MANUSCRIPT_DATA_PATH=$$data_path; \
+	export MANUSCRIPT_PATH=$$ms_abs_path; \
+	docker-compose up -d
