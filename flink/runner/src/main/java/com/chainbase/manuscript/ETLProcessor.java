@@ -10,9 +10,13 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.sql.ResultSet;
 import java.util.Map;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
 
 public class ETLProcessor {
     private Map<String, Object> config;
@@ -201,22 +205,135 @@ public class ETLProcessor {
                 .collect(Collectors.joining(", "));
     }
 
+    private String getPostgresSchemaFromTransform(String transformName) {
+        Table table = tEnv.from(transformName);
+        List<TableColumn> columns = table.getSchema().getTableColumns();
+        return columns.stream()
+                .map(col -> {
+                    String flinkType = col.getType().toString();
+                    String postgresType = mapFlinkTypeToPostgresType(flinkType);
+                    return col.getName() + " " + postgresType;
+                })
+                .collect(Collectors.joining(", "));
+    }
+
+    private String mapFlinkTypeToPostgresType(String flinkType) {
+        // Remove NOT NULL from the type string if present
+        String baseType = flinkType.replace(" NOT NULL", "").toUpperCase();
+        
+        if (baseType.startsWith("VARCHAR(") && baseType.endsWith(")")) {
+            return baseType;
+        }
+        
+        switch (baseType) {
+            case "VARCHAR":
+                return "VARCHAR";
+            case "TINYINT":
+                return "SMALLINT";
+            case "SMALLINT":
+                return "SMALLINT";
+            case "INT":
+                return "INTEGER";
+            case "BIGINT":
+                return "BIGINT";
+            case "DECIMAL":
+                if (baseType.startsWith("DECIMAL(") && baseType.endsWith(")")) {
+                    String[] parts = baseType.substring(8, baseType.length() - 1).split(",");
+                    return "NUMERIC(" + parts[0].trim() + "," + parts[1].trim() + ")";
+                }
+                return "NUMERIC";
+            case "FLOAT":
+                return "REAL";
+            case "DOUBLE":
+                return "DOUBLE PRECISION";
+            case "BOOLEAN":
+                return "BOOLEAN";
+            case "DATE":
+                return "DATE";
+            case "TIME":
+            case "TIME WITHOUT TIMEZONE":
+                return "TIME WITHOUT TIME ZONE";
+            case "TIMESTAMP":
+            case "TIMESTAMP WITHOUT TIMEZONE":
+                return "TIMESTAMP WITHOUT TIME ZONE";
+            case "STRING":
+                return "TEXT";
+            case "BYTES":
+                return "BYTEA";
+            default:
+                if (baseType.startsWith("DECIMAL")) {
+                    return baseType.replace("DECIMAL", "NUMERIC");
+                } else if (baseType.startsWith("TIME(")) {
+                    return baseType.replace("TIME", "TIME") + " WITHOUT TIME ZONE";
+                } else if (baseType.startsWith("TIMESTAMP(")) {
+                    return baseType.replace("TIMESTAMP", "TIMESTAMP") + " WITHOUT TIME ZONE";
+                } else if (baseType.startsWith("ARRAY")) {
+                    return baseType;
+                }
+                throw new IllegalArgumentException("Unsupported Flink type: " + flinkType);
+        }
+    }
+
     private void createPostgresSink(Map<String, Object> sink) {
-        String schema = getSchemaFromTransform(sink.get("from").toString());
+        System.out.println("Creating PostgreSQL sink...");
+        String flinkSchema = getSchemaFromTransform(sink.get("from").toString());
+        String postgresSchema = getPostgresSchemaFromTransform(sink.get("from").toString());
+        String database = sink.get("database").toString();
+        String schemaName = sink.get("schema").toString();
+        String tableName = sink.get("table").toString();
+        String primaryKey = sink.get("primary_key").toString();
+        String username = ((Map<String, Object>)sink.get("config")).get("username").toString();
+        String password = ((Map<String, Object>)sink.get("config")).get("password").toString();
+        String host = ((Map<String, Object>)sink.get("config")).get("host").toString();
+        String port = ((Map<String, Object>)sink.get("config")).get("port").toString();
+
+        System.out.println("Connecting to PostgreSQL and creating database/table if not exists...");
+        try (Connection conn = DriverManager.getConnection("jdbc:postgresql://" + host + ":" + port + "/postgres", username, password);
+             Statement stmt = conn.createStatement()) {
+            
+            // Check if database exists
+            ResultSet rs = stmt.executeQuery("SELECT 1 FROM pg_database WHERE datname = '" + database + "'");
+            if (!rs.next()) {
+                // Create database if it doesn't exist
+                stmt.execute("CREATE DATABASE " + database);
+                System.out.println("Database created: " + database);
+            } else {
+                System.out.println("Database already exists: " + database);
+            }
+            
+            // Connect to the new database
+            try (Connection dbConn = DriverManager.getConnection("jdbc:postgresql://" + host + ":" + port + "/" + database, username, password);
+                 Statement dbStmt = dbConn.createStatement()) {
+                
+                // Create schema if it doesn't exist
+                dbStmt.execute("CREATE SCHEMA IF NOT EXISTS " + schemaName);
+                System.out.println("Schema created or already exists: " + schemaName);
+                
+                // Create table if it doesn't exist
+                String createTableSQL = "CREATE TABLE IF NOT EXISTS " + schemaName + "." + tableName + " (" + postgresSchema + ", PRIMARY KEY (" + primaryKey + "))";
+                System.out.println("Creating table: " + createTableSQL);
+                dbStmt.execute(createTableSQL);
+                System.out.println("Table created or already exists: " + schemaName + "." + tableName);
+            }
+        } catch (Exception e) {
+            System.err.println("Error creating database or table for PostgreSQL sink: " + e.getMessage());
+            throw new RuntimeException("Error creating database or table for PostgreSQL sink", e);
+        }
+
+        System.out.println("Creating Flink SQL table for PostgreSQL sink...");
         String sql = String.format(
-                "CREATE TABLE %s (%s) WITH (" +
+                "CREATE TABLE %s (%s, PRIMARY KEY (%s) NOT ENFORCED) WITH (" +
                         "  'connector' = 'jdbc'," +
-                        "  'url' = 'jdbc:postgresql://localhost:5432/%s'," +
+                        "  'url' = 'jdbc:postgresql://%s:%s/%s'," +
                         "  'table-name' = '%s.%s'," +
                         "  'username' = '%s'," +
                         "  'password' = '%s'" +
                         ")",
-                sink.get("name"), schema, sink.get("database"),
-                sink.get("schema"), sink.get("table"),
-                ((Map<String, Object>)sink.get("config")).get("username"),
-                ((Map<String, Object>)sink.get("config")).get("password")
+                sink.get("name"), flinkSchema, primaryKey, host, port, database,
+                schemaName, tableName, username, password
         );
         tEnv.executeSql(sql);
+        System.out.println("PostgreSQL sink created successfully.");
     }
 
     private void createStarrocksSink(Map<String, Object> sink) {
