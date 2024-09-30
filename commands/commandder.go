@@ -28,11 +28,37 @@ var initCmd = &cobra.Command{
 var jobCmd = &cobra.Command{
 	Use:     "job",
 	Aliases: []string{"jo", "j"},
-	Short:   "Initialize and start Flink containers",
-	Long:    "Initialize Manuscript Repository and start Flink containers",
-	Args:    cobra.ExactArgs(0),
+	Short:   "Manage Flink jobs",
+	Long:    "Manage Flink jobs, such as listing, stopping, and viewing logs of jobs",
+}
+
+var jobListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List all Flink jobs",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("")
+		ListJobs()
+	},
+}
+
+var jobStopCmd = &cobra.Command{
+	Use:   "stop <jobid>",
+	Short: "Stop a Flink job",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		jobID := args[0]
+		// Implement the logic to stop a job by jobID here
+		fmt.Printf("Stopping job with ID: %s\n", jobID)
+	},
+}
+
+var jobLogCmd = &cobra.Command{
+	Use:   "log <jobid>",
+	Short: "View logs of a Flink job",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		jobID := args[0]
+		// Implement the logic to fetch and display logs for the jobID here
+		fmt.Printf("Fetching logs for job with ID: %s\n", jobID)
 	},
 }
 
@@ -48,6 +74,12 @@ var deployCmd = &cobra.Command{
 }
 
 func init() {
+	// Add the subcommands to the jobCmd
+	jobCmd.AddCommand(jobListCmd)
+	jobCmd.AddCommand(jobStopCmd)
+	jobCmd.AddCommand(jobLogCmd)
+
+	// Add jobCmd and other commands to the root command
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(jobCmd)
 	rootCmd.AddCommand(deployCmd)
