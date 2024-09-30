@@ -25,29 +25,45 @@ func formatDurationToMinutes(durationMs int64) string {
 
 func ListJobs() {
 	_ = pkg.ExecuteStepWithLoading("Checking jobs", func() error {
-		c := client.NewFlinkUiClient("http://127.0.0.1:8081")
-		jobs, err := c.GetJobsList()
+		dockers, err := pkg.RunDockerPs()
 		if err != nil {
-			log.Fatalf("Error: Failed to get jobs list: %v", err)
+			log.Fatalf("Error: Failed to get docker ps: %v", err)
+		}
+		if len(dockers) == 0 {
+			log.Fatalf("Error: No flink jobmanager found")
+		}
+		if dockers[0].Ports == nil {
+			log.Fatalf("Error: No port found for flink jobmanager")
 		}
 
-		for i, job := range jobs {
-			startTime := formatTimestamp(job.StartTime)
-			duration := formatDurationToMinutes(job.Duration)
+		for _, d := range dockers {
+			if d.Ports == nil {
+				continue
+			}
+			c := client.NewFlinkUiClient(fmt.Sprintf("http://localhost:%s", d.Ports[0]))
+			jobs, err := c.GetJobsList()
+			if err != nil {
+				log.Fatalf("Error: Failed to get jobs list: %v", err)
+			}
 
-			switch job.State {
-			case "Running":
-				fmt.Printf("\r🟢 %d: Name: %s | State: \033[32m%s\033[0m | Start Time: %s | Duration: %v\n", i+1, job.Name, job.State, startTime, duration)
-			case "CANCELED":
-				fmt.Printf("\r🟡 %d: Name: %s | State: \033[33m%s\033[0m | Start Time: %s | Duration: %v\n", i+1, job.Name, job.State, startTime, duration)
-			default:
-				fmt.Printf("\r⚪️ %d: Name: %s | State: %s | Start Time: %s | Duration: %v\n", i+1, job.Name, job.State, startTime, duration)
+			for i, job := range jobs {
+				startTime := formatTimestamp(job.StartTime)
+				duration := formatDurationToMinutes(job.Duration)
+
+				switch job.State {
+				case "RUNNING":
+					fmt.Printf("\r🟢 %d: Name: %s | State: \033[32m%s\033[0m | Start Time: %s | Duration: %v\n", i+1, d.Names, job.State, startTime, duration)
+				case "CANCELED":
+					fmt.Printf("\r🟡 %d: Name: %s | State: \033[33m%s\033[0m | Start Time: %s | Duration: %v\n", i+1, d.Names, job.State, startTime, duration)
+				default:
+					fmt.Printf("\r⚪️ %d: Name: %s | State: %s | Start Time: %s | Duration: %v\n", i+1, job.Name, job.State, startTime, duration)
+				}
 			}
 		}
 		return err
 	})
 }
 
-func JobLogs(jobID string) {
-
+func JobLogs(jobName string) {
+	_ = pkg.GetDockerLogs(jobName)
 }
