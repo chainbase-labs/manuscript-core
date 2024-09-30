@@ -56,9 +56,7 @@ var jobLogCmd = &cobra.Command{
 	Short: "View logs of a Flink job",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		jobID := args[0]
-		// Implement the logic to fetch and display logs for the jobID here
-		fmt.Printf("Fetching logs for job with ID: %s\n", jobID)
+		JobLogs(args[0])
 	},
 }
 

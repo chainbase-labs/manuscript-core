@@ -1,6 +1,23 @@
 package static
 
-var DockerComposeContent = `version: '3.2'
+var DockerComposeTemplate = `
+services:
+  jobmanager:
+    image: ms:v1
+    container_name: {{.Name}}
+    hostname: {{.Name}}
+    user: "flink"
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./tmp:/opt/flink/tmp
+      - ./statuspoint/checkpoint:/opt/flink/checkpoint
+      - ./statuspoint/savepoint:/opt/flink/savepoint
+      - ./log:/opt/flink/log
+      - ./manuscript.yaml:/opt/flink/manuscript.yaml
+      - ./proof:/opt/proof`
+
+var DockerComposeWithPostgresqlContent = `version: '3.2'
 services:
   jobmanager:
     image: repository.chainbase.com/network/flink:v1.18-0.2

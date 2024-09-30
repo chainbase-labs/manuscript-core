@@ -12,10 +12,53 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 )
 
+type Manuscript struct {
+	Name     string `yaml:"name"`
+	Chain    string `yaml:"chain"`
+	Table    string `yaml:"table"`
+	Database string `yaml:"database"`
+	Query    string `yaml:"query"`
+	Sink     string `yaml:"sink"`
+}
+
+func executeInitManuscript(ms Manuscript) {
+	manuscriptName := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(ms.Name, " ", "_"), "-", "_"))
+	manuscriptDir := fmt.Sprintf("manuscript/%s", manuscriptName)
+
+	steps := []struct {
+		name string
+		fn   func() error
+	}{
+		{"Step 1: Create Directory", func() error { return createDirectory(manuscriptDir) }},
+		{"Step 2: Create ManuscriptFile", func() error { return createManuscriptFile(manuscriptDir, ms) }},
+		{"Step 3: Create DockerComposeFile", func() error { return createDockerComposeFile(manuscriptDir, ms) }},
+		{"Step 4: Check Docker Installed", func() error { return checkDockerInstalled() }},
+		{"Step 5: Start Docker Containers", func() error { return startDockerContainers(manuscriptDir) }},
+		{"Step 6: Check Container Status", func() error { return checkContainerStatus(ms) }},
+	}
+
+	for i, step := range steps {
+		err := pkg.ExecuteStepWithLoading(step.name, step.fn)
+		if err != nil {
+			log.Fatalf("\033[31m✗ %s failed: %v\n", fmt.Sprintf("Step %d", i+1), err)
+		}
+	}
+	log.Println("\033[32m✓ All steps completed successfully!")
+}
+
 func InitManuscript() {
+	fmt.Printf("\r\033[33m🏂 1. Enter your manuscript name: (default is demo)\033[0m")
+	reader := bufio.NewReader(os.Stdin)
+	manuscriptName, _ := reader.ReadString('\n')
+	manuscriptName = strings.TrimSpace(manuscriptName)
+	if manuscriptName == "" {
+		manuscriptName = "demo"
+	}
+
 	var chains []*client.ChainBaseDatasetListItem
 	err := pkg.ExecuteStepWithLoading("Checking Datasets From Network", func() error {
 		c := client.NewChainBaseClient("https://api.chainbase.com")
@@ -31,14 +74,12 @@ func InitManuscript() {
 		log.Fatalf("\033[31m✗ %s failed: %v\n", fmt.Sprintf("Step %d", 1), err)
 	}
 
-	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Println("\r\033[33m🏂 1.Please select a chainbase network dataset from the list below:\033[0m")
+	fmt.Println("\r\033[33m🏂 2.Please select a chainbase network dataset from the list below:\033[0m")
 	for i, chain := range chains {
 		fmt.Printf("%d: %s (Database: %s)\n", i+1, chain.Name, chain.DatabaseName)
 	}
 
-	fmt.Print("\r\033[33m🏂 1.Enter your choice (default is zkevm): \033[0m")
+	fmt.Print("\r\033[33m🏂 1.Enter your chain choice (default is zkevm): \033[0m")
 	chainChoice, _ := reader.ReadString('\n')
 	chainChoice = strings.TrimSpace(chainChoice)
 
@@ -60,7 +101,7 @@ func InitManuscript() {
 		fmt.Printf("No input provided. Defaulting to chain: %s\n\033[0m\n", selectedChain)
 	}
 
-	fmt.Println("\r\033[33m🧲 2.Please select a table from the list below:\033[0m")
+	fmt.Println("\r\033[33m🧲 3.Please select a table from the list below:\033[0m")
 	for i, table := range chains[defaultChainIndex].Tables {
 		fmt.Printf("%d: %s\n", i+1, table)
 	}
@@ -82,8 +123,8 @@ func InitManuscript() {
 		fmt.Printf("\u001B[32m\u2714 No input provided. Defaulting to table: %s\n\033[0m\n", selectedTable)
 	}
 
-	defaultSQL := fmt.Sprintf("Select * From %s.%s Limit 100", selectedDatabase, selectedTable)
-	fmt.Printf("\r\033[33m🧬 3.Enter your SQL query (default is '%s'): \033[0m", defaultSQL)
+	defaultSQL := fmt.Sprintf("Select * From %s_%s", selectedDatabase, selectedTable)
+	fmt.Printf("\r\033[33m🧬 4.Enter your SQL query (default is '%s'): \033[0m", defaultSQL)
 	sqlQuery, _ := reader.ReadString('\n')
 	sqlQuery = strings.TrimSpace(sqlQuery)
 	if sqlQuery == "" {
@@ -117,35 +158,27 @@ func InitManuscript() {
 	}
 
 	fmt.Printf("\n\033[33m🏄🏄 Summary of your selections:\033[0m\n")
+	fmt.Printf("Selected manuscript name: \033[32m%s\033[0m\n", manuscriptName)
 	fmt.Printf("Selected chain: \033[32m%s\033[0m\n", selectedChain)
 	fmt.Printf("Selected table: \u001B[32m%s\u001B[0m\n", selectedTable)
 	fmt.Printf("SQL query: \u001B[32m%s\u001B[0m\n", sqlQuery)
 	fmt.Printf("Data output target: \u001B[32m%s\u001B[0m\n", selectedOutput)
 
-	executeInitManuscript()
-}
-
-func executeInitManuscript() {
-	manuscriptDir := "manuscript"
-	steps := []func() error{
-		func() error { return createDirectory(manuscriptDir) },
-		func() error { return createDockerComposeFile(manuscriptDir) },
-		func() error { return checkDockerInstalled() },
-		func() error { return startDockerContainers(manuscriptDir) },
-		func() error { return waitForContainers() },
-		func() error { return checkContainerStatus() },
-		func() error { return createSchemaFile(manuscriptDir) },
-		func() error { return executeSQLCommands(manuscriptDir) },
-		func() error { return createDemoManuscriptFile(manuscriptDir) },
-	}
-
-	for i, step := range steps {
-		err := pkg.ExecuteStepWithLoading(fmt.Sprintf("Step %d", i+1), step)
-		if err != nil {
-			log.Fatalf("\033[31m✗ %s failed: %v\n", fmt.Sprintf("Step %d", i+1), err)
+	fmt.Print("\n\033[33m🚀 Do you want to proceed with the above selections? (yes/no): \033[0m")
+	proceed, _ := reader.ReadString('\n')
+	proceed = strings.TrimSpace(proceed)
+	if proceed == "yes" || proceed == "y" || proceed == "" {
+		ms := Manuscript{
+			Name:     manuscriptName,
+			Chain:    selectedChain,
+			Table:    selectedTable,
+			Database: selectedDatabase,
+			Query:    sqlQuery,
+			Sink:     selectedOutput,
 		}
+		executeInitManuscript(ms)
+		return
 	}
-	log.Println("\033[32m✓ All steps completed successfully!")
 }
 
 func createDirectory(dir string) error {
@@ -168,19 +201,23 @@ func createDirectory(dir string) error {
 	return nil
 }
 
-func createDockerComposeFile(dir string) error {
+func createManuscriptFile(dir string, ms Manuscript) error {
+	manuscriptFilePath := filepath.Join(dir, "manuscript.yaml")
+	return createTemplateFile(manuscriptFilePath, static.ManuscriptTemplate, ms)
+}
+
+func createDockerComposeFile(dir string, ms Manuscript) error {
 	composeFilePath := filepath.Join(dir, "docker-compose.yml")
-	err := os.WriteFile(composeFilePath, []byte(static.DockerComposeContent), 0644)
-	if err != nil {
-		return fmt.Errorf("failed to write docker-compose.yml file: %w", err)
-	}
-	return nil
+	return createTemplateFile(composeFilePath, static.DockerComposeTemplate, ms)
 }
 
 func checkDockerInstalled() error {
 	_, err := exec.LookPath("docker")
 	if err != nil {
-		return fmt.Errorf("Docker is not installed. Please install Docker to proceed.")
+		return fmt.Errorf("🔔 \033[33mDocker is not installed. Please install Docker to proceed.\033[0m\n " +
+			"For macOs: https://docs.docker.com/desktop/install/mac-install/\n " +
+			"For Windows: https://docs.docker.com/desktop/install/windows-install/\n " +
+			"For Linux: https://docs.docker.com/desktop/install/linux/\n")
 	}
 	return nil
 }
@@ -196,13 +233,8 @@ func startDockerContainers(dir string) error {
 	return nil
 }
 
-func waitForContainers() error {
-	time.Sleep(5 * time.Second)
-	return nil
-}
-
-func checkContainerStatus() error {
-	containerNames := []string{"chainbase_jobmanager", "chainbase_taskmanager", "chainbase_postgres"}
+func checkContainerStatus(ms Manuscript) error {
+	containerNames := []string{ms.Name}
 	for _, containerName := range containerNames {
 		isRunning, err := isContainerRunning(containerName)
 		if err != nil {
@@ -239,15 +271,6 @@ func executeSQLCommands(dir string) error {
 	return fmt.Errorf("failed to create database and tables")
 }
 
-func createDemoManuscriptFile(dir string) error {
-	demoFilePath := filepath.Join(dir, "manuscript.yaml")
-	err := os.WriteFile(demoFilePath, []byte(static.ManuscriptDemo), 0644)
-	if err != nil {
-		return fmt.Errorf("failed to write demo manuscript file: %w", err)
-	}
-	return nil
-}
-
 func createSqlGatewayFile(dir string) error {
 	sqlGatewayFilePath := filepath.Join(dir, "sql-gateway.yaml")
 	err := os.WriteFile(sqlGatewayFilePath, []byte(static.InitSql), 0644)
@@ -271,4 +294,24 @@ func isContainerRunning(containerName string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func createTemplateFile(filePath, tmplContent string, data interface{}) error {
+	tmpl, err := template.New(filepath.Base(filePath)).Parse(tmplContent)
+	if err != nil {
+		return fmt.Errorf("failed to parse template: %w", err)
+	}
+
+	file, err := os.Create(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer file.Close()
+
+	err = tmpl.Execute(file, data)
+	if err != nil {
+		return fmt.Errorf("failed to execute template: %w", err)
+	}
+
+	return nil
 }
