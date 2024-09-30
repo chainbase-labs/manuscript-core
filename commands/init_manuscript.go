@@ -121,6 +121,8 @@ func InitManuscript() {
 	fmt.Printf("Selected table: \u001B[32m%s\u001B[0m\n", selectedTable)
 	fmt.Printf("SQL query: \u001B[32m%s\u001B[0m\n", sqlQuery)
 	fmt.Printf("Data output target: \u001B[32m%s\u001B[0m\n", selectedOutput)
+
+	executeInitManuscript()
 }
 
 func executeInitManuscript() {
