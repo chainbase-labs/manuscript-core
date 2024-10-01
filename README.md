@@ -132,14 +132,20 @@ Under the hood, the `Manuscript` will:
 
 Here are some of the planned improvements:
 
-- [x] Integrate Chainbase Network Flink data.
+- [x] Support Chainbase Network Streaming Lakehouse.
 - [x] Support Flink application mode.
 - [x] Support Schema Registry.
+- [ ] Support for user-defined functions (UDFs) for blockchain data parsing, such as decoding contract events and functions
 - [ ] Support custom advanced data processing logic with JAVA and Rust APIs.
 - [ ] Support local lightweight k8s environment deployment.
 - [ ] Support distributed edge node coordinators.
 - [ ] Support RPC and substream data processing formats.
 - [ ] Support light node authentication.
+
+## Contributors
+
+<!-- readme: contributors -start -->
+<!-- readme: contributors -end -->
 
 ## Get Involved 🤝
 

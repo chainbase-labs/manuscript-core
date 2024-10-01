@@ -28,7 +28,7 @@ func extractPorts(portInfo string) []string {
 	matches := regex.FindAllStringSubmatch(portInfo, -1)
 	for _, match := range matches {
 		if len(match) > 1 {
-			ports = append(ports, match[1]) // 提取端口号
+			ports = append(ports, match[1])
 		}
 	}
 	return ports
