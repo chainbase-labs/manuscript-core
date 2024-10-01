@@ -2,10 +2,10 @@ package static
 
 var DockerComposeTemplate = `
 version: '3.2'
+name: {{.Name}}
 services:
   jobmanager: 
     image: ms_flink:cobra-cli-5732e3f
-    container_name: {{.Name}}
     user: "flink"
     command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
     ports:
@@ -16,7 +16,7 @@ services:
       - ./data/log:/opt/flink/log
       - ./manuscript.yaml:/opt/flink/manuscript.yaml
     networks:
-      - ms_network_{{.Name}}
+      - ms_network
 
   taskmanager:
     image: ms_flink:cobra-cli-5732e3f
@@ -31,17 +31,17 @@ services:
       - ./data/log:/opt/flink/log
       - ./manuscript.yaml:/opt/flink/manuscript.yaml
     networks:
-      - ms_network_{{.Name}}
+      - ms_network
 
 networks:
-  ms_network_{{.Name}}:`
+  ms_network:`
 
 var DockerComposeWithPostgresqlContent = `
 version: '3.2'
+name: {{.Name}}
 services:
   jobmanager: 
     image: ms_flink:cobra-cli-5732e3f
-    container_name: {{.Name}}
     user: "flink"
     command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
     ports:
@@ -52,7 +52,7 @@ services:
       - ./data/log:/opt/flink/log
       - ./manuscript.yaml:/opt/flink/manuscript.yaml
     networks:
-      - ms_network_{{.Name}}
+      - ms_network
 
   taskmanager:
     image: ms_flink:cobra-cli-5732e3f
@@ -67,7 +67,7 @@ services:
       - ./data/log:/opt/flink/log
       - ./manuscript.yaml:/opt/flink/manuscript.yaml
     networks:
-      - ms_network_{{.Name}}
+      - ms_network
 
   postgres:
     image: postgres:16.4
@@ -78,8 +78,8 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_DB=${POSTGRES_DB:-public}
     networks:
-      - ms_network_{{.Name}}
+      - ms_network
     restart: unless-stopped
 
 networks:
-  ms_network_{{.Name}}:`
+  ms_network:`
