@@ -8,6 +8,8 @@ import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.configuration.Configuration;
 import org.yaml.snakeyaml.Yaml;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -21,6 +23,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 
 public class ETLProcessor {
+    private static final Logger logger = LoggerFactory.getLogger(ETLProcessor.class);
     private Map<String, Object> config;
     private StreamExecutionEnvironment env;
     private StreamTableEnvironment tEnv;
@@ -174,16 +177,16 @@ public class ETLProcessor {
     private void createTransforms() {
         tEnv.useCatalog("default_catalog");
         List<Map<String, Object>> transforms = (List<Map<String, Object>>) config.get("transforms");
-        System.out.println("Creating transforms:");
+        logger.info("Creating transforms:");
         for (Map<String, Object> transform : transforms) {
             String name = transform.get("name").toString();
             String sql = transform.get("sql").toString();
-            System.out.println("  Creating transform: " + name);
-            System.out.println("  SQL: " + sql);
+            logger.info("  Creating transform: {}", name);
+            logger.info("  SQL: {}", sql);
             tEnv.createTemporaryView(name, tEnv.sqlQuery(sql));
-            System.out.println("  Transform created successfully: " + name);
+            logger.info("  Transform created successfully: {}", name);
         }
-        System.out.println("All transforms created.");
+        logger.info("All transforms created.");
     }
 
     private void createSinks() {
@@ -203,7 +206,7 @@ public class ETLProcessor {
                     break;
                 default:
                     String errorMessage = "Unsupported sink type: " + sinkType;
-                    System.err.println(errorMessage);
+                    logger.error(errorMessage);
                     throw new IllegalArgumentException(errorMessage);
             }
         }
@@ -287,7 +290,7 @@ public class ETLProcessor {
     }
 
     private void createPostgresSink(Map<String, Object> sink) {
-        System.out.println("Creating PostgreSQL sink...");
+        logger.info("Creating PostgreSQL sink...");
         String flinkSchema = getSchemaFromTransform(sink.get("from").toString());
         String postgresSchema = getPostgresSchemaFromTransform(sink.get("from").toString());
         String database = sink.get("database").toString();
@@ -299,7 +302,7 @@ public class ETLProcessor {
         String host = ((Map<String, Object>)sink.get("config")).get("host").toString();
         String port = ((Map<String, Object>)sink.get("config")).get("port").toString();
 
-        System.out.println("Connecting to PostgreSQL and creating database/table if not exists...");
+        logger.info("Connecting to PostgreSQL and creating database/table if not exists...");
         try (Connection conn = DriverManager.getConnection("jdbc:postgresql://" + host + ":" + port + "/postgres", username, password);
              Statement stmt = conn.createStatement()) {
             
@@ -308,9 +311,9 @@ public class ETLProcessor {
             if (!rs.next()) {
                 // Create database if it doesn't exist
                 stmt.execute("CREATE DATABASE " + database);
-                System.out.println("Database created: " + database);
+                logger.info("Database created: {}", database);
             } else {
-                System.out.println("Database already exists: " + database);
+                logger.info("Database already exists: {}", database);
             }
             
             // Connect to the new database
@@ -319,20 +322,20 @@ public class ETLProcessor {
                 
                 // Create schema if it doesn't exist
                 dbStmt.execute("CREATE SCHEMA IF NOT EXISTS " + schemaName);
-                System.out.println("Schema created or already exists: " + schemaName);
+                logger.info("Schema created or already exists: {}", schemaName);
                 
                 // Create table if it doesn't exist
                 String createTableSQL = "CREATE TABLE IF NOT EXISTS " + schemaName + "." + tableName + " (" + postgresSchema + ", PRIMARY KEY (" + primaryKey + "))";
-                System.out.println("Creating table: " + createTableSQL);
+                logger.info("Creating table: {}", createTableSQL);
                 dbStmt.execute(createTableSQL);
-                System.out.println("Table created or already exists: " + schemaName + "." + tableName);
+                logger.info("Table created or already exists: {}.{}", schemaName, tableName);
             }
         } catch (Exception e) {
-            System.err.println("Error creating database or table for PostgreSQL sink: " + e.getMessage());
+            logger.error("Error creating database or table for PostgreSQL sink: {}", e.getMessage());
             throw new RuntimeException("Error creating database or table for PostgreSQL sink", e);
         }
 
-        System.out.println("Creating Flink SQL table for PostgreSQL sink...");
+        logger.info("Creating Flink SQL table for PostgreSQL sink...");
         String sql = String.format(
                 "CREATE TABLE %s (%s, PRIMARY KEY (%s) NOT ENFORCED) WITH (" +
                         "  'connector' = 'jdbc'," +
@@ -344,13 +347,13 @@ public class ETLProcessor {
                 sink.get("name"), flinkSchema, primaryKey, host, port, database,
                 schemaName, tableName, username, password
         );
-        System.out.println("Executing SQL for PostgreSQL sink: " + sql);
+        logger.info("Executing SQL for PostgreSQL sink: {}", sql);
         tEnv.executeSql(sql);
-        System.out.println("PostgreSQL sink created successfully.");
+        logger.info("PostgreSQL sink created successfully.");
     }
 
     private void createStarrocksSink(Map<String, Object> sink) {
-        System.out.println("Creating StarRocks sink...");
+        logger.info("Creating StarRocks sink...");
         String schema = getSchemaFromTransform(sink.get("from").toString());
         String sql = String.format(
                 "CREATE TABLE %s (%s) WITH (" +
@@ -367,21 +370,21 @@ public class ETLProcessor {
                 ((Map<String, Object>)sink.get("config")).get("username"),
                 ((Map<String, Object>)sink.get("config")).get("password")
         );
-        System.out.println("Executing SQL for StarRocks sink: " + sql);
+        logger.info("Executing SQL for StarRocks sink: {}", sql);
         tEnv.executeSql(sql);
-        System.out.println("StarRocks sink created successfully.");
+        logger.info("StarRocks sink created successfully.");
     }
 
     private void createPrintSink(Map<String, Object> sink) {
-        System.out.println("Creating print sink...");
+        logger.info("Creating print sink...");
         String schema = getSchemaFromTransform(sink.get("from").toString());
         String sql = String.format(
                 "CREATE TABLE %s (%s) WITH ('connector' = 'print', 'standard-error' = 'true')",
                 sink.get("name"), schema
         );
-        System.out.println("Executing SQL for print sink: " + sql);
+        logger.info("Executing SQL for print sink: {}", sql);
         tEnv.executeSql(sql);
-        System.out.println("Print sink created successfully.");
+        logger.info("Print sink created successfully.");
     }
 
     public void execute() throws Exception {
