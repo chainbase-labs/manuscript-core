@@ -4,6 +4,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableColumn;
+import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.configuration.Configuration;
 import org.yaml.snakeyaml.Yaml;
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
+import java.util.ArrayList;
 
 public class ETLProcessor {
     private Map<String, Object> config;
@@ -27,6 +29,7 @@ public class ETLProcessor {
         this.config = loadConfig(configPath);
         validateConfig();
         this.env = StreamExecutionEnvironment.getExecutionEnvironment();
+        this.env.setParallelism((Integer) config.get("parallelism"));
         EnvironmentSettings settings = EnvironmentSettings.newInstance().inStreamingMode().build();
         this.tEnv = StreamTableEnvironment.create(env, settings);
 
@@ -388,8 +391,16 @@ public class ETLProcessor {
         createSinks();
 
         List<Map<String, Object>> sinks = (List<Map<String, Object>>) config.get("sinks");
+        List<TableResult> results = new ArrayList<>();
+
         for (Map<String, Object> sink : sinks) {
-            tEnv.from(sink.get("from").toString()).executeInsert(sink.get("name").toString()).await();
+            TableResult result = tEnv.from(sink.get("from").toString())
+                                     .executeInsert(sink.get("name").toString());
+            results.add(result);
+        }
+
+        for (TableResult result : results) {
+            result.await();
         }
 
         env.execute(config.get("name").toString());

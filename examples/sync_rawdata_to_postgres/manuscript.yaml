@@ -6,15 +6,12 @@ sources:
   - name: zkevm_blocks
     type: dataset
     dataset: zkevm.blocks
-    filter: "block_number > 100000"
   - name: zkevm_transactions
     type: dataset
     dataset: zkevm.transactions
-    filter: "block_number > 100000"
   - name: zkevm_transaction_logs
     type: dataset
     dataset: zkevm.transaction_logs
-    filter: "block_number > 100000"
 
 transforms:
   - name: zkevm_blocks_transform
