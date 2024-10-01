@@ -171,19 +171,24 @@ public class ETLProcessor {
     private void createTransforms() {
         tEnv.useCatalog("default_catalog");
         List<Map<String, Object>> transforms = (List<Map<String, Object>>) config.get("transforms");
+        System.out.println("Creating transforms:");
         for (Map<String, Object> transform : transforms) {
-            tEnv.createTemporaryView(
-                    transform.get("name").toString(),
-                    tEnv.sqlQuery(transform.get("sql").toString())
-            );
+            String name = transform.get("name").toString();
+            String sql = transform.get("sql").toString();
+            System.out.println("  Creating transform: " + name);
+            System.out.println("  SQL: " + sql);
+            tEnv.createTemporaryView(name, tEnv.sqlQuery(sql));
+            System.out.println("  Transform created successfully: " + name);
         }
+        System.out.println("All transforms created.");
     }
 
     private void createSinks() {
         tEnv.useCatalog("default_catalog");
         List<Map<String, Object>> sinks = (List<Map<String, Object>>) config.get("sinks");
         for (Map<String, Object> sink : sinks) {
-            switch (sink.get("type").toString()) {
+            String sinkType = sink.get("type").toString();
+            switch (sinkType) {
                 case "postgres":
                     createPostgresSink(sink);
                     break;
@@ -193,6 +198,10 @@ public class ETLProcessor {
                 case "print":
                     createPrintSink(sink);
                     break;
+                default:
+                    String errorMessage = "Unsupported sink type: " + sinkType;
+                    System.err.println(errorMessage);
+                    throw new IllegalArgumentException(errorMessage);
             }
         }
     }
@@ -201,7 +210,7 @@ public class ETLProcessor {
         Table table = tEnv.from(transformName);
         List<TableColumn> columns = table.getSchema().getTableColumns();
         return columns.stream()
-                .map(col -> col.getName() + " " + col.getType().toString())
+                .map(col -> "`" + col.getName() + "` " + col.getType().toString())
                 .collect(Collectors.joining(", "));
     }
 
@@ -332,11 +341,13 @@ public class ETLProcessor {
                 sink.get("name"), flinkSchema, primaryKey, host, port, database,
                 schemaName, tableName, username, password
         );
+        System.out.println("Executing SQL for PostgreSQL sink: " + sql);
         tEnv.executeSql(sql);
         System.out.println("PostgreSQL sink created successfully.");
     }
 
     private void createStarrocksSink(Map<String, Object> sink) {
+        System.out.println("Creating StarRocks sink...");
         String schema = getSchemaFromTransform(sink.get("from").toString());
         String sql = String.format(
                 "CREATE TABLE %s (%s) WITH (" +
@@ -353,16 +364,21 @@ public class ETLProcessor {
                 ((Map<String, Object>)sink.get("config")).get("username"),
                 ((Map<String, Object>)sink.get("config")).get("password")
         );
+        System.out.println("Executing SQL for StarRocks sink: " + sql);
         tEnv.executeSql(sql);
+        System.out.println("StarRocks sink created successfully.");
     }
 
     private void createPrintSink(Map<String, Object> sink) {
+        System.out.println("Creating print sink...");
         String schema = getSchemaFromTransform(sink.get("from").toString());
         String sql = String.format(
                 "CREATE TABLE %s (%s) WITH ('connector' = 'print', 'standard-error' = 'true')",
                 sink.get("name"), schema
         );
+        System.out.println("Executing SQL for print sink: " + sql);
         tEnv.executeSql(sql);
+        System.out.println("Print sink created successfully.");
     }
 
     public void execute() throws Exception {
