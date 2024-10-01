@@ -22,25 +22,33 @@ sinks:
     from: {{.Database}}_{{.Table}}_transform
 `
 
-var ManuscriptDemo = `name: demo
+var ManuscriptWithPostgresqlTemplate = `
+name: {{.Name}}
 specVersion: v0.1.0
 parallelism: 1
 
 sources:
-  - name: zkevm_blocks
+  - name: {{.Database}}_{{.Table}}
     type: dataset
-    dataset: zkevm.blocks
+    dataset: {{.Database}}.{{.Table}}
     filter: "block_number > 100000"
 
 transforms:
-  - name: zkevm_blocks_transform
+  - name: {{.Database}}_{{.Table}}_transform
     sql: >
-      SELECT
-          *
-      FROM zkevm_blocks
-      limit 100
+      {{.Query}}
 
 sinks:
-  - name: zkevm_blocks_sink
-    type: print
-    from: zkevm_blocks_transform`
+  - name: {{.Database}}_{{.Table}}_sink
+    type: {{.Sink}}
+    from: {{.Database}}_{{.Table}}_transform
+    database: {{.Database}}
+    schema: public
+    table: {{.Table}}
+    primary_key: block_number
+    config:
+      host: postgres
+      port: 5432
+      username: postgres
+      password: postgres
+`

@@ -17,7 +17,7 @@ func Execute(args []string) error {
 var initCmd = &cobra.Command{
 	Use:     "init",
 	Aliases: []string{"ini", "in", "i"},
-	Short:   "Initialize and start Flink containers",
+	Short:   "Initialize and start local Flink containers",
 	Long:    "Initialize Manuscript Repository and start Flink containers",
 	Args:    cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -60,14 +60,25 @@ var jobLogCmd = &cobra.Command{
 	},
 }
 
-var deployCmd = &cobra.Command{
-	Use:     "deploy <manuscript-file>",
-	Aliases: []string{"deplo", "depl", "dep", "de", "d"},
-	Short:   "Deploy manuscript to flink cluster",
-	Long:    "Deploy manuscript to flink cluster",
+var runManuscript = &cobra.Command{
+	Use:     "run <manuscript-file>",
+	Aliases: []string{"r"},
+	Short:   "Run Manuscript on the local Flink cluster",
+	Long:    "Run Manuscript on the local Flink cluster",
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		DeployManuscript(args)
+		RunManuscript(args)
+	},
+}
+
+var deployManuscript = &cobra.Command{
+	Use:     "deploy <coming soon>",
+	Aliases: []string{"d"},
+	Short:   "<coming soon> deploy manuscript to chainbase network",
+	Long:    "<coming soon> deploy manuscript to chainbase network",
+	Args:    cobra.ExactArgs(0),
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Coming soon...")
 	},
 }
 
@@ -80,7 +91,10 @@ func init() {
 	// Add jobCmd and other commands to the root command
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(jobCmd)
-	rootCmd.AddCommand(deployCmd)
+	rootCmd.AddCommand(runManuscript)
+
+	// Add deployManuscript to root command
+	rootCmd.AddCommand(deployManuscript)
 	rootCmd.CompletionOptions.HiddenDefaultCmd = true
 }
 
