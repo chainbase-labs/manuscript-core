@@ -1,0 +1,32 @@
+version: '3.2'
+name: manuscript-contract-evt-decode
+services:
+  jobmanager:
+    image: ${MS_FLINK_IMAGE:-ms_flink}
+    user: "flink"
+    command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
+    volumes:
+      - ${MANUSCRIPT_DATA_PATH:-./data}/statuspoint/checkpoint:/opt/flink/checkpoint
+      - ${MANUSCRIPT_DATA_PATH:-./data}/statuspoint/savepoint:/opt/flink/savepoint
+      - ${MANUSCRIPT_DATA_PATH:-./data}/log:/opt/flink/log
+      - ${MANUSCRIPT_PATH:-./manuscript.yaml}:/opt/flink/manuscript.yaml
+    networks:
+      - ms_network
+
+  taskmanager:
+    image: ${MS_FLINK_IMAGE:-ms_flink}
+    user: "flink"
+    depends_on:
+      - jobmanager
+    command: "taskmanager"
+    scale: 1
+    volumes:
+      - ${MANUSCRIPT_DATA_PATH:-./data}/statuspoint/checkpoint:/opt/flink/checkpoint
+      - ${MANUSCRIPT_DATA_PATH:-./data}/statuspoint/savepoint:/opt/flink/savepoint
+      - ${MANUSCRIPT_DATA_PATH:-./data}/log:/opt/flink/log
+      - ${MANUSCRIPT_PATH:-./manuscript.yaml}:/opt/flink/manuscript.yaml
+    networks:
+      - ms_network
+
+networks:
+  ms_network:

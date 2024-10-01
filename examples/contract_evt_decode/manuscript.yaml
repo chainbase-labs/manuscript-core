@@ -1,0 +1,26 @@
+name: sink_postgres_demo
+specVersion: v0.1.0
+parallelism: 1
+
+sources:
+  - name: zksync_usdt_transfers_evt
+    type: dataset
+    dataset: zksync.transaction_logs
+    filter: "topic0 = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' and address = lower('0x493257fD37EDB34451f62EDf8D2a0C418852bA4C') and block_number > 271910"
+
+transforms:
+  - name: zksync_usdt_transfers_evt_decoded
+    sql: >
+      SELECT 
+        block_number, 
+        block_timestamp, 
+        transaction_hash, 
+        transaction_index, 
+        log_index, address, 
+        Decode_Event('[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"}]', topic0, topic1, topic2, topic3, data) AS evt 
+      FROM zksync_usdt_transfers_evt
+
+sinks:
+  - name: zksync_usdt_transfers_evt_decoded_sink_print
+    type: print
+    from: zksync_usdt_transfers_evt_decoded
