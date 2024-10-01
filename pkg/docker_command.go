@@ -19,7 +19,7 @@ type ContainerInfo struct {
 	Created     string
 	Status      string
 	Ports       []string
-	Names       string
+	Name        string
 }
 
 func extractPorts(portInfo string) []string {
@@ -68,7 +68,7 @@ func RunDockerPs() ([]ContainerInfo, error) {
 			Created:     strings.TrimSpace(parts[3]),
 			Status:      strings.TrimSpace(parts[4]),
 			Ports:       ports,
-			Names:       strings.TrimSpace(parts[6]),
+			Name:        strings.TrimSpace(parts[6]),
 		}
 		containers = append(containers, container)
 	}
@@ -89,7 +89,6 @@ func GetDockerLogs(containerName string) error {
 	}()
 
 	cmd := exec.CommandContext(ctx, "docker", "logs", "-f", containerName)
-	fmt.Printf("Running command: %s\n", cmd.String())
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

@@ -16,16 +16,7 @@ import (
 	"time"
 )
 
-type Manuscript struct {
-	Name     string `yaml:"name"`
-	Chain    string `yaml:"chain"`
-	Table    string `yaml:"table"`
-	Database string `yaml:"database"`
-	Query    string `yaml:"query"`
-	Sink     string `yaml:"sink"`
-}
-
-func executeInitManuscript(ms Manuscript) {
+func executeInitManuscript(ms pkg.Manuscript) {
 	manuscriptName := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(ms.Name, " ", "_"), "-", "_"))
 	manuscriptDir := fmt.Sprintf("manuscript/%s", manuscriptName)
 
@@ -35,10 +26,10 @@ func executeInitManuscript(ms Manuscript) {
 	}{
 		{"Step 1: Create Directory", func() error { return createDirectory(manuscriptDir) }},
 		{"Step 2: Create ManuscriptFile", func() error { return createManuscriptFile(manuscriptDir, ms) }},
-		{"Step 3: Create DockerComposeFile", func() error { return createDockerComposeFile(manuscriptDir, ms) }},
+		{"Step 3: Create DockerComposeFile", func() error { return createDockerComposeFile(manuscriptDir, &ms) }},
 		{"Step 4: Check Docker Installed", func() error { return checkDockerInstalled() }},
 		{"Step 5: Start Docker Containers", func() error { return startDockerContainers(manuscriptDir) }},
-		{"Step 6: Check Container Status", func() error { return checkContainerStatus(ms) }},
+		{"Step 6: Check Container Status", func() error { return checkContainerStatus(&ms) }},
 	}
 
 	for i, step := range steps {
@@ -59,8 +50,19 @@ func InitManuscript() {
 		manuscriptName = "demo"
 	}
 
+	dockers, err := pkg.RunDockerPs()
+	if err != nil {
+		log.Fatalf("Error: Failed to get docker ps: %v", err)
+	}
+	for _, d := range dockers {
+		if d.Name == manuscriptName {
+			fmt.Printf("\033[33mError: Manuscript with name [ %s ] already exists. Please choose a different name.\033[0m\n", manuscriptName)
+			return
+		}
+	}
+
 	var chains []*client.ChainBaseDatasetListItem
-	err := pkg.ExecuteStepWithLoading("Checking Datasets From Network", func() error {
+	err = pkg.ExecuteStepWithLoading("Checking Datasets From Network", func() error {
 		c := client.NewChainBaseClient("https://api.chainbase.com")
 		var err error
 		chains, err = c.GetChainBaseDatasetList()
@@ -168,7 +170,7 @@ func InitManuscript() {
 	proceed, _ := reader.ReadString('\n')
 	proceed = strings.TrimSpace(proceed)
 	if proceed == "yes" || proceed == "y" || proceed == "" {
-		ms := Manuscript{
+		ms := pkg.Manuscript{
 			Name:     manuscriptName,
 			Chain:    selectedChain,
 			Table:    selectedTable,
@@ -186,29 +188,34 @@ func createDirectory(dir string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
-
-	sqlGatewayFile := fmt.Sprintf("%s/proof", dir)
-	err = os.MkdirAll(sqlGatewayFile, 0755)
-	if err != nil {
-		return fmt.Errorf("failed to create directory %s: %w", dir, err)
-	}
-
-	err = createSqlGatewayFile(sqlGatewayFile)
-	if err != nil {
-		return fmt.Errorf("failed to create sql-gateway.yaml file: %w", err)
-	}
-
 	return nil
 }
 
-func createManuscriptFile(dir string, ms Manuscript) error {
+func createManuscriptFile(dir string, ms pkg.Manuscript) error {
 	manuscriptFilePath := filepath.Join(dir, "manuscript.yaml")
-	return createTemplateFile(manuscriptFilePath, static.ManuscriptTemplate, ms)
+	manuscriptTemplate := static.ManuscriptTemplate
+	switch ms.Sink {
+	case "postgres":
+		manuscriptTemplate = static.ManuscriptWithPostgresqlTemplate
+	default:
+	}
+	return createTemplateFile(manuscriptFilePath, manuscriptTemplate, ms)
 }
 
-func createDockerComposeFile(dir string, ms Manuscript) error {
+func createDockerComposeFile(dir string, ms *pkg.Manuscript) error {
 	composeFilePath := filepath.Join(dir, "docker-compose.yml")
-	return createTemplateFile(composeFilePath, static.DockerComposeTemplate, ms)
+	dockComposeTemplate := static.DockerComposeTemplate
+	switch ms.Sink {
+	case "postgres":
+		port, err := FindAvailablePort(8081, 8181)
+		if err != nil {
+			return fmt.Errorf("failed to find available port: %w", err)
+		}
+		ms.Port = strconv.Itoa(port)
+		dockComposeTemplate = static.DockerComposeWithPostgresqlContent
+	default:
+	}
+	return createTemplateFile(composeFilePath, dockComposeTemplate, ms)
 }
 
 func checkDockerInstalled() error {
@@ -233,16 +240,24 @@ func startDockerContainers(dir string) error {
 	return nil
 }
 
-func checkContainerStatus(ms Manuscript) error {
+func checkContainerStatus(ms *pkg.Manuscript) error {
 	containerNames := []string{ms.Name}
+
 	for _, containerName := range containerNames {
-		isRunning, err := isContainerRunning(containerName)
-		if err != nil {
-			return fmt.Errorf("failed to check container %s status: %w", containerName, err)
+		for i := 0; i < 3; i++ {
+			isRunning, err := isContainerRunning(containerName)
+			if err != nil {
+				return fmt.Errorf("failed to check container %s status: %w", containerName, err)
+			}
+			if isRunning {
+				return nil
+			}
+
+			if i < 2 {
+				time.Sleep(5 * time.Second)
+			}
 		}
-		if !isRunning {
-			return fmt.Errorf("container %s is not running", containerName)
-		}
+		return fmt.Errorf("container %s is not running after 3 attempts", containerName)
 	}
 	return nil
 }
@@ -314,4 +329,24 @@ func createTemplateFile(filePath, tmplContent string, data interface{}) error {
 	}
 
 	return nil
+}
+
+func FindAvailablePort(startPort, endPort int) (int, error) {
+	listeningPorts, err := pkg.GetListeningPorts()
+	if err != nil {
+		return 0, err
+	}
+
+	portMap := make(map[int]bool)
+	for _, port := range listeningPorts {
+		portMap[port] = true
+	}
+
+	for port := startPort; port <= endPort; port++ {
+		if !portMap[port] {
+			return port, nil
+		}
+	}
+
+	return 0, fmt.Errorf("no available ports in the range %d-%d", startPort, endPort)
 }

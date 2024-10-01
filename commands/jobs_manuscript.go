@@ -32,9 +32,6 @@ func ListJobs() {
 		if len(dockers) == 0 {
 			log.Fatalf("Error: No flink jobmanager found")
 		}
-		if dockers[0].Ports == nil {
-			log.Fatalf("Error: No port found for flink jobmanager")
-		}
 
 		for _, d := range dockers {
 			if d.Ports == nil {
@@ -52,9 +49,9 @@ func ListJobs() {
 
 				switch job.State {
 				case "RUNNING":
-					fmt.Printf("\r🟢 %d: Name: %s | State: \033[32m%s\033[0m | Start Time: %s | Duration: %v\n", i+1, d.Names, job.State, startTime, duration)
+					fmt.Printf("\r🟢 %d: Name: %s | State: \033[32m%s\033[0m | Start Time: %s | Duration: %v\n", i+1, d.Name, job.State, startTime, duration)
 				case "CANCELED":
-					fmt.Printf("\r🟡 %d: Name: %s | State: \033[33m%s\033[0m | Start Time: %s | Duration: %v\n", i+1, d.Names, job.State, startTime, duration)
+					fmt.Printf("\r🟡 %d: Name: %s | State: \033[33m%s\033[0m | Start Time: %s | Duration: %v\n", i+1, d.Name, job.State, startTime, duration)
 				default:
 					fmt.Printf("\r⚪️ %d: Name: %s | State: %s | Start Time: %s | Duration: %v\n", i+1, job.Name, job.State, startTime, duration)
 				}
@@ -65,5 +62,18 @@ func ListJobs() {
 }
 
 func JobLogs(jobName string) {
-	_ = pkg.GetDockerLogs(jobName)
+	dockers, err := pkg.RunDockerPs()
+	if err != nil {
+		log.Fatalf("Error: Failed to get docker ps: %v", err)
+	}
+	if len(dockers) == 0 {
+		log.Fatalf("Error: No flink jobmanager found")
+	}
+	for _, d := range dockers {
+		if d.Name == jobName {
+			_ = pkg.GetDockerLogs(jobName)
+			break
+		}
+	}
+	fmt.Println("Job not found")
 }
