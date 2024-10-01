@@ -1,0 +1,72 @@
+name: demo
+specVersion: v0.1.0
+parallelism: 3
+
+sources:
+  - name: zkevm_blocks
+    type: dataset
+    dataset: zkevm.blocks
+    filter: "block_number > 100000"
+  - name: zkevm_transactions
+    type: dataset
+    dataset: zkevm.transactions
+    filter: "block_number > 100000"
+  - name: zkevm_transaction_logs
+    type: dataset
+    dataset: zkevm.transaction_logs
+    filter: "block_number > 100000"
+
+transforms:
+  - name: zkevm_blocks_transform
+    sql: >
+      SELECT
+          *
+      FROM zkevm_blocks
+  - name: zkevm_transactions_transform
+    sql: >
+      SELECT
+          *
+      FROM zkevm_transactions
+  - name: zkevm_transaction_logs_transform
+    sql: >
+      SELECT
+          *
+      FROM zkevm_transaction_logs
+
+sinks:
+  - name: zkevm_blocks_sink_pg
+    type: postgres
+    from: zkevm_blocks_transform
+    database: zkevm
+    schema: public
+    table: blocks
+    primary_key: block_number
+    config:
+      host: postgres
+      port: 5432
+      username: postgres
+      password: postgres
+  - name: zkevm_transactions_sink_pg
+    type: postgres
+    from: zkevm_transactions_transform
+    database: zkevm
+    schema: public
+    table: transactions
+    primary_key: hash
+    config:
+      host: postgres
+      port: 5432
+      username: postgres
+      password: postgres
+  - name: zkevm_transaction_logs_sink_pg
+    type: postgres
+    from: zkevm_transaction_logs_transform
+    database: zkevm
+    schema: public
+    table: transaction_logs
+    primary_key: transaction_hash,log_index
+    config:
+      host: postgres
+      port: 5432
+      username: postgres
+      password: postgres
