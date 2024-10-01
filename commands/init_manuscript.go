@@ -150,7 +150,7 @@ func InitManuscript() {
 			return
 		}
 		if index == 2 {
-			selectedOutput = "postgresql"
+			selectedOutput = "postgres"
 		}
 		fmt.Printf("\r\033[32m\u2714 You have selected output target: %s\n", selectedOutput)
 	} else {
