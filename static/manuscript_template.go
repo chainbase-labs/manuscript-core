@@ -9,7 +9,6 @@ sources:
   - name: {{.Database}}_{{.Table}}
     type: dataset
     dataset: {{.Database}}.{{.Table}}
-    filter: "block_number > 0"
 
 transforms:
   - name: {{.Database}}_{{.Table}}_transform
@@ -31,7 +30,6 @@ sources:
   - name: {{.Database}}_{{.Table}}
     type: dataset
     dataset: {{.Database}}.{{.Table}}
-    filter: "block_number > 100000"
 
 transforms:
   - name: {{.Database}}_{{.Table}}_transform
