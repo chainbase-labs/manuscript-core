@@ -394,46 +394,15 @@ public class ETLProcessor {
         logger.info("Creating filesystem sink...");
         String schema = getSchemaFromTransform(sink.get("from").toString());
         String fileName = sink.get("file_name").toString();
-        String format = sink.get("format").toString().toLowerCase();
         String path = "/opt/flink/sink_file_path/" + fileName;
-
-        String formatOptions;
-        switch (format) {
-            case "csv":
-                formatOptions = "'format' = 'csv'";
-                break;
-            case "json":
-                formatOptions = "'format' = 'json'";
-                break;
-            case "avro":
-                formatOptions = "'format' = 'avro'";
-                break;
-            case "debezium-json":
-                formatOptions = "'format' = 'debezium-json'";
-                break;
-            case "canal-json":
-                formatOptions = "'format' = 'canal-json'";
-                break;
-            case "parquet":
-                formatOptions = "'format' = 'parquet'";
-                break;
-            case "orc":
-                formatOptions = "'format' = 'orc'";
-                break;
-            case "raw":
-                formatOptions = "'format' = 'raw'";
-                break;
-            default:
-                throw new IllegalArgumentException("Unsupported file format: " + format);
-        }
 
         String sql = String.format(
                 "CREATE TABLE %s (%s) WITH (" +
                         "  'connector' = 'filesystem'," +
                         "  'path' = '%s'," +
-                        "  %s" +
+                        "  'format' = 'debezium-json'" +
                         ")",
-                sink.get("name"), schema, path, formatOptions
+                sink.get("name"), schema, path
         );
         logger.info("Executing SQL for filesystem sink: {}", sql);
         tEnv.executeSql(sql);
