@@ -6,7 +6,6 @@ sources:
   - name: zkevm_blocks
     type: dataset
     dataset: zkevm.blocks
-    filter: "block_number > 100000"
 
 transforms:
   - name: zkevm_blocks_transform

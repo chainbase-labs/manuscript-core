@@ -1,4 +1,4 @@
-name: demo
+name: sync_rawdata_to_postgres
 specVersion: v0.1.0
 parallelism: 3
 
