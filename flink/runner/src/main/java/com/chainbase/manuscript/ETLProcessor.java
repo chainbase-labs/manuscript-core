@@ -204,6 +204,9 @@ public class ETLProcessor {
                 case "print":
                     createPrintSink(sink);
                     break;
+                case "filesystem":
+                    createFilesystemSink(sink);
+                    break;
                 default:
                     String errorMessage = "Unsupported sink type: " + sinkType;
                     logger.error(errorMessage);
@@ -385,6 +388,25 @@ public class ETLProcessor {
         logger.info("Executing SQL for print sink: {}", sql);
         tEnv.executeSql(sql);
         logger.info("Print sink created successfully.");
+    }
+
+    private void createFilesystemSink(Map<String, Object> sink) {
+        logger.info("Creating filesystem sink...");
+        String schema = getSchemaFromTransform(sink.get("from").toString());
+        String fileName = sink.get("file_name").toString();
+        String path = "/opt/flink/sink_file_path/" + fileName;
+
+        String sql = String.format(
+                "CREATE TABLE %s (%s) WITH (" +
+                        "  'connector' = 'filesystem'," +
+                        "  'path' = '%s'," +
+                        "  'format' = 'debezium-json'" +
+                        ")",
+                sink.get("name"), schema, path
+        );
+        logger.info("Executing SQL for filesystem sink: {}", sql);
+        tEnv.executeSql(sql);
+        logger.info("Filesystem sink created successfully.");
     }
 
     public void execute() throws Exception {
