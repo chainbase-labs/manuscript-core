@@ -1,0 +1,45 @@
+name: sync_rawdata_to_file
+specVersion: v0.1.0
+parallelism: 3
+
+sources:
+  - name: zkevm_blocks
+    type: dataset
+    dataset: zkevm.blocks
+  - name: zkevm_transactions
+    type: dataset
+    dataset: zkevm.transactions
+  - name: zkevm_transaction_logs
+    type: dataset
+    dataset: zkevm.transaction_logs
+
+transforms:
+  - name: zkevm_blocks_transform
+    sql: >
+      SELECT
+          *
+      FROM zkevm_blocks
+  - name: zkevm_transactions_transform
+    sql: >
+      SELECT
+          *
+      FROM zkevm_transactions
+  - name: zkevm_transaction_logs_transform
+    sql: >
+      SELECT
+          *
+      FROM zkevm_transaction_logs
+
+sinks:
+  - name: zkevm_blocks_sink_file
+    type: filesystem
+    from: zkevm_blocks_transform
+    file_name: blocks.json
+  - name: zkevm_transactions_sink_file
+    type: filesystem
+    from: zkevm_transactions_transform
+    file_name: transactions.json
+  - name: zkevm_transaction_logs_sink_file
+    type: filesystem
+    from: zkevm_transaction_logs_transform
+    file_name: transaction_logs.json
