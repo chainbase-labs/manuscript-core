@@ -56,7 +56,7 @@ func RunManuscript(args []string) {
 	}
 
 	for _, step := range steps {
-		err := pkg.ExecuteStepWithLoading(step.name, step.fn)
+		err := pkg.ExecuteStepWithLoading(step.name, true, step.fn)
 		if err != nil {
 			log.Fatalf("\033[31m✗ %s failed: %v\n", step.name, err)
 		}
@@ -137,7 +137,7 @@ func CheckManuscriptExist(ms *pkg.Manuscript) error {
 		return nil
 	}
 	for _, d := range dockers {
-		if d.Name == ms.Name {
+		if d.Name == fmt.Sprintf("%s-jobmanager-1", ms.Name) {
 			return fmt.Errorf("error: Manuscript [ %s ] already deployed, please change the name in the manuscript yaml file", ms.Name)
 		}
 	}

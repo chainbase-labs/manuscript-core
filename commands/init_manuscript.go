@@ -17,7 +17,7 @@ import (
 )
 
 func executeInitManuscript(ms pkg.Manuscript) {
-	manuscriptName := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(ms.Name, " ", "_"), "-", "_"))
+	manuscriptName := strings.ToLower(strings.ReplaceAll(ms.Name, " ", "_"))
 	manuscriptDir := fmt.Sprintf("manuscript/%s", manuscriptName)
 
 	steps := []struct {
@@ -33,7 +33,7 @@ func executeInitManuscript(ms pkg.Manuscript) {
 	}
 
 	for i, step := range steps {
-		err := pkg.ExecuteStepWithLoading(step.name, step.fn)
+		err := pkg.ExecuteStepWithLoading(step.name, true, step.fn)
 		if err != nil {
 			log.Fatalf("\033[31m✗ %s failed: %v\n", fmt.Sprintf("Step %d", i+1), err)
 		}
@@ -62,7 +62,7 @@ func InitManuscript() {
 	}
 
 	var chains []*client.ChainBaseDatasetListItem
-	err = pkg.ExecuteStepWithLoading("Checking Datasets From Network", func() error {
+	err = pkg.ExecuteStepWithLoading("Checking Datasets From Network", true, func() error {
 		c := client.NewChainBaseClient("https://api.chainbase.com")
 		var err error
 		chains, err = c.GetChainBaseDatasetList()
@@ -77,7 +77,8 @@ func InitManuscript() {
 	}
 
 	fmt.Println("\r\033[33m🏂 2.Please select a chainbase network dataset from the list below:\033[0m")
-	for i, chain := range chains {
+	for i := len(chains) - 1; i >= 0; i-- {
+		chain := chains[i]
 		fmt.Printf("%d: %s (Database: %s)\n", i+1, chain.Name, chain.DatabaseName)
 	}
 
@@ -126,25 +127,17 @@ func InitManuscript() {
 	}
 
 	defaultSQL := fmt.Sprintf("Select * From %s_%s", selectedDatabase, selectedTable)
-	fmt.Printf("\r\033[33m🧬 4.Enter your SQL query (default is '%s'): \033[0m", defaultSQL)
-	sqlQuery, _ := reader.ReadString('\n')
-	sqlQuery = strings.TrimSpace(sqlQuery)
-	if sqlQuery == "" {
-		sqlQuery = defaultSQL
-		fmt.Printf("\r\033[32m\u2714 No input provided. Defaulting to SQL query: %s\n\033[0m\n", sqlQuery)
-	} else {
-		fmt.Printf("\033[32m\u2714 You have entered SQL query: %s\033\n[0m\n", sqlQuery)
-	}
+	sqlQuery := defaultSQL
 
-	fmt.Println("\033[33m📍 4.Please select a data output target:\033[0m")
-	fmt.Println("1: Print (output to console)")
-	fmt.Println("2: Postgresql")
+	fmt.Println("\033[33m📍 3.Please select a data output target:\033[0m")
+	fmt.Println("1: Postgresql")
+	fmt.Println("2: Print (output to console)")
 
-	fmt.Print("\033[33mEnter your choice (default is Print): ")
+	fmt.Print("\033[33mEnter your choice (default is Postgresql): ")
 	outputChoice, _ := reader.ReadString('\n')
 	outputChoice = strings.TrimSpace(outputChoice)
 
-	selectedOutput := "print"
+	selectedOutput := "postgres"
 	if outputChoice != "" {
 		index, err := strconv.Atoi(outputChoice)
 		if err != nil || index < 1 || index > 2 {
@@ -152,7 +145,7 @@ func InitManuscript() {
 			return
 		}
 		if index == 2 {
-			selectedOutput = "postgres"
+			selectedOutput = "Print"
 		}
 		fmt.Printf("\r\033[32m\u2714 You have selected output target: %s\n", selectedOutput)
 	} else {
@@ -163,7 +156,6 @@ func InitManuscript() {
 	fmt.Printf("Selected manuscript name: \033[32m%s\033[0m\n", manuscriptName)
 	fmt.Printf("Selected chain: \033[32m%s\033[0m\n", selectedChain)
 	fmt.Printf("Selected table: \u001B[32m%s\u001B[0m\n", selectedTable)
-	fmt.Printf("SQL query: \u001B[32m%s\u001B[0m\n", sqlQuery)
 	fmt.Printf("Data output target: \u001B[32m%s\u001B[0m\n", selectedOutput)
 
 	fmt.Print("\n\033[33m🚀 Do you want to proceed with the above selections? (yes/no): \033[0m")
@@ -241,58 +233,21 @@ func startDockerContainers(dir string) error {
 }
 
 func checkContainerStatus(ms *pkg.Manuscript) error {
-	containerNames := []string{ms.Name}
-
-	for _, containerName := range containerNames {
-		for i := 0; i < 3; i++ {
-			isRunning, err := isContainerRunning(containerName)
-			if err != nil {
-				return fmt.Errorf("failed to check container %s status: %w", containerName, err)
-			}
-			if isRunning {
+	maxRetries := 10
+	for i := 0; i < maxRetries; i++ {
+		dockers, err := pkg.RunDockerPs()
+		if err != nil {
+			return fmt.Errorf("failed to get docker ps: %w", err)
+		}
+		for _, d := range dockers {
+			if d.Name == fmt.Sprintf("%s-jobmanager-1", ms.Name) && strings.Contains(d.Status, "Up") {
+				fmt.Printf("\033[32m✓ Container %s is running\n", ms.Name)
 				return nil
 			}
-
-			if i < 2 {
-				time.Sleep(5 * time.Second)
-			}
 		}
-		return fmt.Errorf("container %s is not running after 3 attempts", containerName)
+		time.Sleep(5 * time.Second)
 	}
-	return nil
-}
-
-func createSchemaFile(dir string) error {
-	nodeSqlSchema := filepath.Join(dir, "schema/node.sql")
-	err := os.WriteFile(nodeSqlSchema, []byte(static.CreateTableSQL), 0644)
-	if err != nil {
-		return fmt.Errorf("failed to write node.sql file: %w", err)
-	}
-	return nil
-}
-
-func executeSQLCommands(dir string) error {
-	for i := 0; i < 30; i++ {
-		execSQLCmd := []string{"docker", "exec", "-i", "chainbase_postgres", "psql", "-U", "postgres", "-f", "/schema/node.sql"}
-		execSQL := exec.Command(execSQLCmd[0], execSQLCmd[1:]...)
-		err := execSQL.Run()
-		if err != nil {
-			log.Println("waiting for container start...")
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		return nil
-	}
-	return fmt.Errorf("failed to create database and tables")
-}
-
-func createSqlGatewayFile(dir string) error {
-	sqlGatewayFilePath := filepath.Join(dir, "sql-gateway.yaml")
-	err := os.WriteFile(sqlGatewayFilePath, []byte(static.InitSql), 0644)
-	if err != nil {
-		return fmt.Errorf("failed to write sql-gateway.yaml file: %w", err)
-	}
-	return nil
+	return fmt.Errorf("timeout: container %s did not reach 'Up' status after %d attempts", ms.Name, maxRetries)
 }
 
 func isContainerRunning(containerName string) (bool, error) {

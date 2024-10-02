@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func ExecuteStepWithLoading(stepName string, stepFunc func() error) error {
+func ExecuteStepWithLoading(stepName string, stdOut bool, stepFunc func() error) error {
 	done := make(chan struct{})
 	loading := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
@@ -29,8 +29,9 @@ func ExecuteStepWithLoading(stepName string, stepFunc func() error) error {
 	if err != nil {
 		fmt.Printf("\r\033[31m✗\033[0m %s failed!\n", stepName)
 		fmt.Printf("\033[31mError: %v\n", err)
-	} else {
-		fmt.Printf("\r\033[32m\u2714\033[0m %s complete!\n", stepName)
+	}
+	if stdOut {
+		fmt.Printf("\r\033[32m✓\033[0m %s completed successfully!\n", stepName)
 	}
 
 	return err
