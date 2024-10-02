@@ -41,13 +41,11 @@ var jobListCmd = &cobra.Command{
 }
 
 var jobStopCmd = &cobra.Command{
-	Use:   "stop <jobid>",
+	Use:   "stop <job>",
 	Short: "Stop a Flink job",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		jobID := args[0]
-		// Implement the logic to stop a job by jobID here
-		fmt.Printf("Stopping job with ID: %s\n", jobID)
+		JobStop(args[0])
 	},
 }
 

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -61,6 +62,11 @@ func RunDockerPs() ([]ContainerInfo, error) {
 
 		ports := extractPorts(strings.TrimSpace(parts[5]))
 
+		// The container name must include one of the following keywords: manager、postgres
+		if !strings.Contains(parts[6], "manager") && !strings.Contains(parts[6], "postgres") {
+			continue
+		}
+
 		container := ContainerInfo{
 			ContainerID: strings.TrimSpace(parts[0]),
 			Image:       strings.TrimSpace(parts[1]),
@@ -117,5 +123,18 @@ func GetDockerLogs(containerName string) error {
 		return fmt.Errorf("command finished with error: %w", err)
 	}
 
+	return nil
+}
+
+func StopDockerCompose(Name string) error {
+	manuscriptDockerComposeFile := fmt.Sprintf("manuscript/%s/docker-compose.yml", Name)
+	if _, err := os.Stat(manuscriptDockerComposeFile); os.IsNotExist(err) {
+		log.Fatalf("Error: Manuscript %s does not exist", Name)
+	}
+
+	cmd := exec.Command("docker-compose", "-f", manuscriptDockerComposeFile, "down")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to stop container: %w", err)
+	}
 	return nil
 }
