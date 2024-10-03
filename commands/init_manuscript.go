@@ -38,7 +38,12 @@ func executeInitManuscript(ms pkg.Manuscript) {
 			log.Fatalf("\033[31m✗ %s failed: %v\n", fmt.Sprintf("Step %d", i+1), err)
 		}
 	}
-	log.Println("\033[32m✓ All steps completed successfully!")
+	log.Printf("🎉 \033[32mManuscript %s deployment completed successfully!\033[0m\n", ms.Name)
+	log.Printf("\033[32mYou can now list your job with the command: \n👉 \033[33mmanuscript-cli job list\n\n"+
+		"\033[32mIf you need to manually edit the manuscript, "+
+		"you can edit the file '%s' and then manually execute the 'run' command:\n"+
+		"👉 \033[33mmanuscript-cli run %s/manuscript.yaml\n\n", manuscriptName, manuscriptDir)
+	log.Printf("\033[32mYou can now access your manuscript at http://localhost:%s\n", ms.Port)
 }
 
 func InitManuscript() {
@@ -62,7 +67,7 @@ func InitManuscript() {
 	}
 
 	var chains []*client.ChainBaseDatasetListItem
-	err = pkg.ExecuteStepWithLoading("Checking Datasets From Network", true, func() error {
+	err = pkg.ExecuteStepWithLoading("Checking Datasets From Network", false, func() error {
 		c := client.NewChainBaseClient("https://api.chainbase.com")
 		var err error
 		chains, err = c.GetChainBaseDatasetList()

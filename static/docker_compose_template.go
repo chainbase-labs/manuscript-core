@@ -81,5 +81,18 @@ services:
       - ms_network
     restart: unless-stopped
 
+  hasura:
+    image: hasura/graphql-engine:latest
+    ports:
+      - "8099:8080"
+    depends_on:
+      - postgres
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/{{.Database}}
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+    networks:
+      - ms_network
+    restart: unless-stopped
+
 networks:
   ms_network:`
