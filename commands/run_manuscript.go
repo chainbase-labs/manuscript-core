@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"manuscript-core/client"
 	"manuscript-core/pkg"
 	"os"
 	"path/filepath"
@@ -64,15 +63,6 @@ func RunManuscript(args []string) {
 	fmt.Println("\033[32m✓ Manuscript deployment completed successfully!")
 }
 
-func InitFlinkClient(initSql string, flinkClient *client.FlinkClient) (*client.FlinkClient, error) {
-	flinkClient = client.NewFlinkClient("127.0.0.1:8083", initSql)
-	if err := flinkClient.InitializeClient(); err != nil {
-		log.Fatalf("Error: Failed to initialize client: %v", err)
-		return nil, err
-	}
-	return flinkClient, nil
-}
-
 func copyManuscriptFile(manuscriptDir, manuscriptPath string) error {
 	_, fileName := filepath.Split(manuscriptPath)
 	destinationPath := filepath.Join(manuscriptDir, fileName)
@@ -109,23 +99,6 @@ func ParseManuscriptYaml(manuscriptPath string) (*pkg.Manuscript, error) {
 		return &pkg.Manuscript{}, err
 	}
 	return ms, nil
-}
-
-func DeployManuscriptToFlink(client *client.FlinkClient) error {
-	// Deploy the manuscript to flink
-	operationHandle, err := client.ExecuteSQL("select * from zkevm.blocks limit 100;")
-	if err != nil {
-		log.Fatalf("Failed to execute SQL: %v", err)
-	}
-
-	if operationHandle == "" {
-		log.Fatalf("Unexpected operation handle: %s", operationHandle)
-	}
-
-	if err := client.CheckSQLResult(operationHandle, 60); err != nil {
-		log.Fatalf("Failed to check SQL result: %v", err)
-	}
-	return nil
 }
 
 func CheckManuscriptExist(ms *pkg.Manuscript) error {

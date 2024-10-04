@@ -84,7 +84,7 @@ services:
   hasura:
     image: hasura/graphql-engine:latest
     ports:
-      - "8099:8080"
+      - "{{.GraphQLPort}}:8080"
     depends_on:
       - postgres
     environment:
