@@ -41,9 +41,9 @@ func executeInitManuscript(ms pkg.Manuscript) {
 	log.Printf("🎉 \033[32mManuscript %s deployment completed successfully!\033[0m\n", ms.Name)
 	log.Printf("\033[32mYou can now list your job with the command: \n👉 \033[33mmanuscript-cli job list\n\n"+
 		"\033[32mIf you need to manually edit the manuscript, "+
-		"you can edit the file '%s' and then manually execute the 'run' command:\n"+
-		"👉 \033[33mmanuscript-cli run %s/manuscript.yaml\n\n", manuscriptName, manuscriptDir)
-	log.Printf("\033[32mYou can now access your manuscript at http://localhost:%s\n", ms.Port)
+		"you can edit the file '%s/manuscript.yaml' and then manually execute the 'run' command:\n"+
+		"👉 \033[33mmanuscript-cli run %s/manuscript.yaml\n\n", manuscriptDir, manuscriptDir)
+	log.Printf("\033[32mYou can now access your manuscript at http://localhost:%d\n", ms.Port)
 }
 
 func InitManuscript() {
@@ -204,11 +204,16 @@ func createDockerComposeFile(dir string, ms *pkg.Manuscript) error {
 	dockComposeTemplate := static.DockerComposeTemplate
 	switch ms.Sink {
 	case "postgres":
-		port, err := FindAvailablePort(8081, 8181)
+		port, err := FindAvailablePort(8081, 8181, 0)
 		if err != nil {
 			return fmt.Errorf("failed to find available port: %w", err)
 		}
-		ms.Port = strconv.Itoa(port)
+		ms.Port = port
+		graphQLPort, err := FindAvailablePort(8081, 8181, port)
+		if err != nil {
+			return fmt.Errorf("failed to find available port: %w", err)
+		}
+		ms.GraphQLPort = graphQLPort
 		dockComposeTemplate = static.DockerComposeWithPostgresqlContent
 	default:
 	}
@@ -291,7 +296,7 @@ func createTemplateFile(filePath, tmplContent string, data interface{}) error {
 	return nil
 }
 
-func FindAvailablePort(startPort, endPort int) (int, error) {
+func FindAvailablePort(startPort, endPort int, exclude int) (int, error) {
 	listeningPorts, err := pkg.GetListeningPorts()
 	if err != nil {
 		return 0, err
@@ -300,6 +305,9 @@ func FindAvailablePort(startPort, endPort int) (int, error) {
 	portMap := make(map[int]bool)
 	for _, port := range listeningPorts {
 		portMap[port] = true
+	}
+	if exclude != 0 {
+		portMap[exclude] = true
 	}
 
 	for port := startPort; port <= endPort; port++ {

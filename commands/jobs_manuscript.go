@@ -1,13 +1,33 @@
 package commands
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"manuscript-core/client"
 	"manuscript-core/pkg"
+	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
+
+const GraphQLContainerName = "hasura"
+
+type Args struct {
+	Type string `json:"type"`
+	Args struct {
+		Source string `json:"source"`
+		Schema string `json:"schema"`
+		Name   string `json:"name"`
+	} `json:"args"`
+}
+
+type Payload struct {
+	Type string `json:"type"`
+	Args []Args `json:"args"`
+}
 
 func formatTimestamp(ts int64) string {
 	if ts == 0 {
@@ -42,7 +62,7 @@ func ListJobs() {
 			c := client.NewFlinkUiClient(fmt.Sprintf("http://localhost:%s", d.Ports[0]))
 			jobs, err := c.GetJobsList()
 			if err != nil {
-				fmt.Printf("\r🟡 %d: Name: %s | State: \033[33mInitializing...\033[0m \n", jobNumber, strings.Split(d.Name, "-jobmanager-1")[0])
+				fmt.Printf("\r🟡 %d: Name: %s | State: \033[33mInitializing...(may wait for 2 minutes)\033[0m \n", jobNumber, strings.Split(d.Name, "-jobmanager-1")[0])
 			}
 
 			for _, job := range jobs {
@@ -53,7 +73,12 @@ func ListJobs() {
 
 				switch job.State {
 				case "RUNNING":
-					fmt.Printf("\r🟢 %d: Name: \033[34m%s\033[0m | State: \033[32m%s\033[0m | Start Time: %s | Duration: %v\n", jobNumber, jobName, job.State, startTime, duration)
+					graphQLPort := CheckGraphQLContainer(dockers, jobName)
+					if graphQLPort != 0 {
+						fmt.Printf("\r🟢 %d: Name: \033[34m%s\033[0m | State: \033[32m%s\033[0m | Start Time: %s | Duration: %v | GraphQL: http://127.0.0.1:%d\n", jobNumber, jobName, job.State, startTime, duration, graphQLPort)
+					} else {
+						fmt.Printf("\r🟢 %d: Name: \033[34m%s\033[0m | State: \033[32m%s\033[0m | Start Time: %s | Duration: %v\n", jobNumber, jobName, job.State, startTime, duration)
+					}
 				case "CANCELED":
 					fmt.Printf("\r🟡 %d: Name: %s | State: \033[33m%s\033[0m | Start Time: %s | Duration: %v\n", jobNumber, jobName, job.State, startTime, duration)
 				default:
@@ -92,4 +117,67 @@ func JobStop(jobName string) {
 		return nil
 	})
 	fmt.Printf("\rJob \033[33m%s\033[0m stopped successfully.\n", jobName)
+}
+
+func CheckGraphQLContainer(dockers []pkg.ContainerInfo, jobName string) int {
+	graphQLContainerPort := 0
+	for _, d := range dockers {
+		if d.Name == fmt.Sprintf("%s-%s-1", jobName, GraphQLContainerName) {
+			if len(d.Ports) > 0 {
+				port, err := strconv.Atoi(d.Ports[0])
+				if err != nil {
+					log.Fatalf("Error: Failed to convert port to integer: %v", err)
+					return 0
+				}
+				graphQLContainerPort = port
+				trackHasuraTable(jobName, graphQLContainerPort)
+			}
+		}
+	}
+	return graphQLContainerPort
+}
+
+func trackHasuraTable(jobName string, graphQLContainerPort int) {
+	ms, err := ParseManuscriptYaml(fmt.Sprintf("manuscript/%s/manuscript.yaml", jobName))
+	if err != nil {
+		log.Fatalf("Error: Failed to parse manuscript yaml: %v", err)
+	}
+	for _, sink := range ms.Sinks {
+		payload := Payload{
+			Type: "bulk",
+			Args: []Args{
+				{
+					Type: "pg_track_table",
+					Args: struct {
+						Source string `json:"source"`
+						Schema string `json:"schema"`
+						Name   string `json:"name"`
+					}{
+						Source: "default",
+						Schema: "public",
+						Name:   sink.Table,
+					},
+				},
+			},
+		}
+
+		payloadBytes, err := json.Marshal(payload)
+		if err != nil {
+			log.Println("Error marshalling payload:", err)
+		}
+
+		url := fmt.Sprintf("http://127.0.0.1:%d/v1/metadata", graphQLContainerPort)
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(payloadBytes))
+		if err != nil {
+			log.Println("Error creating request:", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Println("Error making request:", err)
+		}
+		defer resp.Body.Close()
+	}
 }

@@ -40,7 +40,8 @@ type Manuscript struct {
 	Database    string      `yaml:"database"`
 	Query       string      `yaml:"query"`
 	Sink        string      `yaml:"sink"`
-	Port        string      `yaml:"port"`
+	Port        int         `yaml:"port"`
+	GraphQLPort int         `yaml:"graphqlPort"`
 }
 
 func ParseYAML(filename string) (*Manuscript, error) {

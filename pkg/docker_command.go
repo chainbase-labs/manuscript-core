@@ -63,7 +63,7 @@ func RunDockerPs() ([]ContainerInfo, error) {
 		ports := extractPorts(strings.TrimSpace(parts[5]))
 
 		// The container name must include one of the following keywords: manager、postgres
-		if !strings.Contains(parts[6], "manager") && !strings.Contains(parts[6], "postgres") {
+		if !strings.Contains(parts[6], "manager") && !strings.Contains(parts[6], "postgres") && !strings.Contains(parts[6], "hasura") {
 			continue
 		}
 
