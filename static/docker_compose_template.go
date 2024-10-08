@@ -5,7 +5,7 @@ version: '3.2'
 name: {{.Name}}
 services:
   jobmanager: 
-    image: ms_flink:cobra-cli-5732e3f
+    image: repository.chainbase.com/network/flink:v1.18-0.4
     user: "flink"
     command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
     ports:
@@ -19,7 +19,7 @@ services:
       - ms_network
 
   taskmanager:
-    image: ms_flink:cobra-cli-5732e3f
+    image: repository.chainbase.com/network/flink:v1.18-0.4
     user: "flink"
     depends_on:
       - jobmanager
@@ -41,7 +41,7 @@ version: '3.2'
 name: {{.Name}}
 services:
   jobmanager: 
-    image: ms_flink:cobra-cli-5732e3f
+    image: repository.chainbase.com/network/flink:v1.18-0.4
     user: "flink"
     command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
     ports:
@@ -55,7 +55,7 @@ services:
       - ms_network
 
   taskmanager:
-    image: ms_flink:cobra-cli-5732e3f
+    image: repository.chainbase.com/network/flink:v1.18-0.4
     user: "flink"
     depends_on:
       - jobmanager
