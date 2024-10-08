@@ -43,9 +43,9 @@ curl -fsSL  https://github.com/Liquidwe/rust-examples/raw/main/install.sh | bash
 
 Here's an example of how to <b>process</b> data from chainbase with manuscript:
 
+1. After installing `manuscript-cli`, you can initialize the Manuscript scripts and environment using the command
 ```bash
-# 1. After installing `manuscript-cli`, you can initialize the Manuscript scripts and environment using the command.
-➜  chainbase manuscript-cli --help
+➜  manuscript-cli --help
 Chainbase Manuscript ™ Build The World\'s Largest Omnichain Data Network 🚀 🚀 🚀
 ─────────────────────────────────────────────────────────────────────────────────
 Usage:
@@ -61,61 +61,63 @@ Flags:
   -h, --help   help for manuscript-cli
 
 Use "manuscript-cli [command] --help" for more information about a command.
-
-# 2. Use the client to initialize the `manuscript.yaml` file for a local standalone container environment.
-➜  chainbase manuscript-cli init
-✓ Step 1 complete!.
-✓ Step 2 complete!.
-✓ Step 3 complete!.
-[+] Running 7/7g...
- ✔ Network manuscript_avs_network                                                                                                                             Created                                                                                                0.0s
- ✔ Container chainbase_jobmanager                                                                                                                             Started                                                                                                0.6s
- ✔ Container chainbase_postgres                                                                                                                               Started                                                                                                0.6s
- ✔ Container chainbase_taskmanager                                                                                                                            Started                                                                                                0.7s
-✓ Step 4 complete!.
-✓ Step 5 complete!.
-✓ Step 6 complete!.
-✓ Step 7 complete!.
-⠦ Step 8 Loading... waiting for container start...
-✓ Step 8 complete!.
-✓ Step 9 complete!.
-✓ All steps completed successfully!
-
-# The initialized Manuscript file is as follows:
-➜  chainbase cat manuscript/manuscript.yaml
-name: demo
-specVersion: v0.1.0
-parallelism: 1
-
-sources:
-  - name: zkevm_blocks
-    type: dataset
-    dataset: zkevm.blocks
-    filter: "block_number > 100000"
-
-transforms:
-  - name: zkevm_blocks_transform
-    sql: >
-      SELECT
-          *
-      FROM zkevm_blocks
-      limit 100
-
-sinks:
-  - name: zkevm_blocks_sink
-    type: print
-    from: zkevm_blocks_transform
-
-
-# 3. Deploy the `manuscript.yaml` file to the Flink cluster for processing data from Chainbase 
-➜  chainbase manuscript-cli deploy manuscript/manuscript.yaml
-⠦ Step 1: Initializing the flink client Loading... Session created: cafd614d-ea5b-450a-85a0-f6d41227aa1a
-⠴ Step 1: Initializing the flink client Loading... Client initialized successfully
-✓ Step 1: Initializing the flink client complete!
-✓ Step 2: Parsing manuscript yaml complete!
-✓ Step 3: Deploy Manuscript to flink complete!.
-✓ Manuscript deployment completed successfully!
 ```
+2. Use the client to initialize the `manuscript.yaml` file for a local standalone container environment
+```bash
+➜  manuscript-cli init
+🏂 1. Enter your manuscript name: (default is demo)
+7...
+6: Polygon_zkEVM (Database: zkevm)
+5: Avalanche (Database: avalanche)
+4: Base (Database: base)
+3: Arbitrum_One (Database: arb1)
+2: Bsc (Database: bsc)
+1: Ethereum (Database: ethereum)
+🏂 1.Enter your chain choice (default is zkevm):
+
+🧲 3.Please select a table from the list below:
+1: blocks
+2: transactionLogs
+3: transactions
+Enter your choice (default is blocks):
+✔ No input provided. Defaulting to table: blocks
+
+📍 3.Please select a data output target:
+1: Postgresql
+2: Print (output to console)
+Enter your choice (default is Postgresql):
+✔ No input provided. Defaulting to output target: postgres
+
+🏄🏄 Summary of your selections:
+Selected manuscript name: demo
+Selected chain: zkevm
+Selected table: blocks
+Data output target: postgres
+
+🚀 Do you want to proceed with the above selections? (yes/no): yes
+···
+✓ Step 5: Start Docker Containers completed successfully!
+⠙ Step 6: Check Container Status Loading... ✓ Container demo is running
+✓ Step 6: Check Container Status completed successfully!
+🎉 Manuscript demo deployment completed successfully!
+You can now list your job with the command:
+👉 manuscript-cli job list
+
+If you need to manually edit the manuscript, you can edit the file 'manuscript/demo/manuscript.yaml' and then manually execute the 'run' command:
+👉 manuscript-cli run manuscript/demo/manuscript.yaml
+
+You can now access your manuscript at http://localhost:8081
+```
+3. List the job to check the status of the job
+```bash
+manuscript-cli job list
+🟢 1: Name: demo | State: RUNNING | Start Time: 2024-10-08 14:26 | Duration: 3 minutes | GraphQL: http://127.0.0.1:8082
+
+manuscript-cli job log demo
+···logs···
+```
+4. Access the GraphQL endpoint to query the data(GraphQL: http://127.0.0.1:8082)
+![graphQL](./images/graphQL.jpg)
 
 ### Key Concepts
 There are two primary objects:
