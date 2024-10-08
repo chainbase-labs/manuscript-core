@@ -147,6 +147,26 @@ Here are some of the planned improvements:
 ## Contributors
 
 <!-- readme: contributors -start -->
+<table>
+	<tbody>
+		<tr>
+            <td align="center">
+                <a href="https://github.com/Liquidwe">
+                    <img src="https://avatars.githubusercontent.com/u/116100070?v=4" width="100;" alt="Liquidwe"/>
+                    <br />
+                    <sub><b>Liquid</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/lxcong">
+                    <img src="https://avatars.githubusercontent.com/u/8024426?v=4" width="100;" alt="lxcong"/>
+                    <br />
+                    <sub><b>lxcong</b></sub>
+                </a>
+            </td>
+		</tr>
+	<tbody>
+</table>
 <!-- readme: contributors -end -->
 
 ## Get Involved 🤝
