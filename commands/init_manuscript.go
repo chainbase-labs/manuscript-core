@@ -16,6 +16,13 @@ import (
 	"time"
 )
 
+const (
+	manuscriptBaseName = "manuscript"
+	manuscriptBaseDir  = "/tmp"
+	manuscriptConfig   = "/tmp/.manuscript_config.ini"
+	networkChainURL    = "https://api.chainbase.com"
+)
+
 func executeInitManuscript(ms pkg.Manuscript) {
 	manuscriptName := strings.ToLower(strings.ReplaceAll(ms.Name, " ", "_"))
 	manuscriptDir := fmt.Sprintf("manuscript/%s", manuscriptName)
@@ -47,8 +54,22 @@ func executeInitManuscript(ms pkg.Manuscript) {
 }
 
 func InitManuscript() {
-	fmt.Printf("\r\033[33m🏂 1. Enter your manuscript name: (default is demo)\033[0m")
+	fmt.Printf("\r\033[33m👋 1. Enter your manuscript base directory (default is /tmp)\u001B[0m: ")
 	reader := bufio.NewReader(os.Stdin)
+	manuscriptDir, _ := reader.ReadString('\n')
+	manuscriptDir = strings.TrimSpace(manuscriptDir)
+	if manuscriptDir == "" {
+		manuscriptDir = manuscriptBaseDir
+	}
+	err := pkg.SaveConfig(manuscriptConfig, &pkg.Config{BaseDir: manuscriptDir})
+	if err != nil {
+		fmt.Printf("Error: Failed to save manuscript config: %v\n", err)
+		return
+	}
+	fmt.Printf("\033[32m✓ Manuscript base directory set to: %s\n\033[0m\n", fmt.Sprintf("%s/%s", manuscriptDir, manuscriptBaseName))
+
+	fmt.Printf("\r\033[33m🏂 2. Enter your manuscript name (default is demo)\u001B[0m: ")
+	reader = bufio.NewReader(os.Stdin)
 	manuscriptName, _ := reader.ReadString('\n')
 	manuscriptName = strings.TrimSpace(manuscriptName)
 	if manuscriptName == "" {
@@ -65,10 +86,11 @@ func InitManuscript() {
 			return
 		}
 	}
+	fmt.Printf("\033[32m✓ Manuscript name set to: %s\n\033[0m\n", manuscriptName)
 
 	var chains []*client.ChainBaseDatasetListItem
 	err = pkg.ExecuteStepWithLoading("Checking Datasets From Network", false, func() error {
-		c := client.NewChainBaseClient("https://api.chainbase.com")
+		c := client.NewChainBaseClient(networkChainURL)
 		var err error
 		chains, err = c.GetChainBaseDatasetList()
 		if err != nil {
@@ -81,13 +103,13 @@ func InitManuscript() {
 		log.Fatalf("\033[31m✗ %s failed: %v\n", fmt.Sprintf("Step %d", 1), err)
 	}
 
-	fmt.Println("\r\033[33m🏂 2.Please select a chainbase network dataset from the list below:\033[0m")
+	fmt.Println("\r\033[33m🏂 3. Please select a chainbase network dataset from the list below:\033[0m")
 	for i := len(chains) - 1; i >= 0; i-- {
 		chain := chains[i]
 		fmt.Printf("%d: %s (Database: %s)\n", i+1, chain.Name, chain.DatabaseName)
 	}
 
-	fmt.Print("\r\033[33m🏂 1.Enter your chain choice (default is zkevm): \033[0m")
+	fmt.Print("\r\033[33m🏂 3. Enter your chain choice (default is zkevm): \033[0m")
 	chainChoice, _ := reader.ReadString('\n')
 	chainChoice = strings.TrimSpace(chainChoice)
 
@@ -103,13 +125,16 @@ func InitManuscript() {
 		}
 		selectedChain = chains[index-1].Name
 		selectedDatabase = chains[index-1].DatabaseName
+		if selectedDatabase == "transactionLogs" {
+			selectedDatabase = "transaction_logs"
+		}
 		defaultChainIndex = index - 1
 		fmt.Printf("\r\033[32m\u2714 You have selected chain: %s\n\033[0m\n", selectedChain)
 	} else {
-		fmt.Printf("No input provided. Defaulting to chain: %s\n\033[0m\n", selectedChain)
+		fmt.Printf("\u001B[32m✔ No input provided. Defaulting to chain: %s\n\033[0m\n", selectedChain)
 	}
 
-	fmt.Println("\r\033[33m🧲 3.Please select a table from the list below:\033[0m")
+	fmt.Println("\r\033[33m🧲 4. Please select a table from the list below:\033[0m")
 	for i, table := range chains[defaultChainIndex].Tables {
 		fmt.Printf("%d: %s\n", i+1, table)
 	}
@@ -134,7 +159,7 @@ func InitManuscript() {
 	defaultSQL := fmt.Sprintf("Select * From %s_%s", selectedDatabase, selectedTable)
 	sqlQuery := defaultSQL
 
-	fmt.Println("\033[33m📍 3.Please select a data output target:\033[0m")
+	fmt.Println("\033[33m📍 4. Please select a data output target:\033[0m")
 	fmt.Println("1: Postgresql")
 	fmt.Println("2: Print (output to console)")
 
