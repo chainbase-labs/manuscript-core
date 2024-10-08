@@ -25,7 +25,7 @@ const (
 
 func executeInitManuscript(ms pkg.Manuscript) {
 	manuscriptName := strings.ToLower(strings.ReplaceAll(ms.Name, " ", "_"))
-	manuscriptDir := fmt.Sprintf("manuscript/%s", manuscriptName)
+	manuscriptDir := fmt.Sprintf("%s/%s", ms.BaseDir, manuscriptName)
 
 	steps := []struct {
 		name string
@@ -54,154 +54,49 @@ func executeInitManuscript(ms pkg.Manuscript) {
 }
 
 func InitManuscript() {
-	fmt.Printf("\r\033[33m👋 1. Enter your manuscript base directory (default is /tmp)\u001B[0m: ")
-	reader := bufio.NewReader(os.Stdin)
-	manuscriptDir, _ := reader.ReadString('\n')
-	manuscriptDir = strings.TrimSpace(manuscriptDir)
-	if manuscriptDir == "" {
-		manuscriptDir = manuscriptBaseDir
+	manuscriptDir := promptInput("👋 1. Enter your manuscript base directory (default is /tmp)\u001B[0m: ", manuscriptBaseDir)
+	if err := pkg.SaveConfig(manuscriptConfig, &pkg.Config{BaseDir: manuscriptDir}); err != nil {
+		logErrorAndReturn("Failed to save manuscript config", err)
 	}
-	err := pkg.SaveConfig(manuscriptConfig, &pkg.Config{BaseDir: manuscriptDir})
+	if strings.HasSuffix(manuscriptDir, "/") {
+		manuscriptDir = strings.TrimSuffix(manuscriptDir, "/")
+	}
+	manuscriptDir = fmt.Sprintf("%s/%s", manuscriptDir, manuscriptBaseName)
+	fmt.Printf("\033[32m✓ Manuscript base directory set to: %s\033[0m\n\n", manuscriptDir)
+
+	manuscriptName := promptInput("🏂 2. Enter your manuscript name (default is demo)\u001B[0m: ", "demo")
+	if checkDockerContainerExists(manuscriptName) {
+		logErrorAndReturn(fmt.Sprintf("Manuscript with name [ %s ] already exists. Please choose a different name.", manuscriptName), nil)
+	}
+	fmt.Printf("\u001B[32m✓ Manuscript name set to: %s\u001B[0m\n\n", manuscriptName)
+
+	chains, err := fetchChainBaseDatasets()
 	if err != nil {
-		fmt.Printf("Error: Failed to save manuscript config: %v\n", err)
-		return
-	}
-	fmt.Printf("\033[32m✓ Manuscript base directory set to: %s\n\033[0m\n", fmt.Sprintf("%s/%s", manuscriptDir, manuscriptBaseName))
-
-	fmt.Printf("\r\033[33m🏂 2. Enter your manuscript name (default is demo)\u001B[0m: ")
-	reader = bufio.NewReader(os.Stdin)
-	manuscriptName, _ := reader.ReadString('\n')
-	manuscriptName = strings.TrimSpace(manuscriptName)
-	if manuscriptName == "" {
-		manuscriptName = "demo"
+		log.Fatalf("Error fetching datasets: %v\n", err)
 	}
 
-	dockers, err := pkg.RunDockerPs()
-	if err != nil {
-		log.Fatalf("Error: Failed to get docker ps: %v", err)
-	}
-	for _, d := range dockers {
-		if d.Name == manuscriptName {
-			fmt.Printf("\033[33mError: Manuscript with name [ %s ] already exists. Please choose a different name.\033[0m\n", manuscriptName)
-			return
-		}
-	}
-	fmt.Printf("\033[32m✓ Manuscript name set to: %s\n\033[0m\n", manuscriptName)
+	selectedChain, selectedDatabase := selectChain(chains, "🏂 3. Please select a chainbase network dataset from the list below: ", "zkevm")
+	selectedTable := selectTable(chains, selectedChain, "🧲 4. Please select a table from the list below: ", "blocks")
 
-	var chains []*client.ChainBaseDatasetListItem
-	err = pkg.ExecuteStepWithLoading("Checking Datasets From Network", false, func() error {
-		c := client.NewChainBaseClient(networkChainURL)
-		var err error
-		chains, err = c.GetChainBaseDatasetList()
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		log.Fatalf("\033[31m✗ %s failed: %v\n", fmt.Sprintf("Step %d", 1), err)
-	}
-
-	fmt.Println("\r\033[33m🏂 3. Please select a chainbase network dataset from the list below:\033[0m")
-	for i := len(chains) - 1; i >= 0; i-- {
-		chain := chains[i]
-		fmt.Printf("%d: %s (Database: %s)\n", i+1, chain.Name, chain.DatabaseName)
-	}
-
-	fmt.Print("\r\033[33m🏂 3. Enter your chain choice (default is zkevm): \033[0m")
-	chainChoice, _ := reader.ReadString('\n')
-	chainChoice = strings.TrimSpace(chainChoice)
-
-	selectedChain := "zkevm"
-	selectedDatabase := "zkevm"
-	defaultChainIndex := 1
-
-	if chainChoice != "" {
-		index, err := strconv.Atoi(chainChoice)
-		if err != nil || index < 1 || index > len(chains) {
-			fmt.Printf("Invalid choice. Please enter a number between 1 and %d.\n", len(chains))
-			return
-		}
-		selectedChain = chains[index-1].Name
-		selectedDatabase = chains[index-1].DatabaseName
-		if selectedDatabase == "transactionLogs" {
-			selectedDatabase = "transaction_logs"
-		}
-		defaultChainIndex = index - 1
-		fmt.Printf("\r\033[32m\u2714 You have selected chain: %s\n\033[0m\n", selectedChain)
-	} else {
-		fmt.Printf("\u001B[32m✔ No input provided. Defaulting to chain: %s\n\033[0m\n", selectedChain)
-	}
-
-	fmt.Println("\r\033[33m🧲 4. Please select a table from the list below:\033[0m")
-	for i, table := range chains[defaultChainIndex].Tables {
-		fmt.Printf("%d: %s\n", i+1, table)
-	}
-
-	fmt.Print("\r\033[33mEnter your choice (default is blocks): \033[0m")
-	tableChoice, _ := reader.ReadString('\n')
-	tableChoice = strings.TrimSpace(tableChoice)
-
-	selectedTable := "blocks"
-	if tableChoice != "" {
-		index, err := strconv.Atoi(tableChoice)
-		if err != nil || index < 1 || index > len(chains[defaultChainIndex].Tables) {
-			fmt.Printf("Invalid choice. Please enter a number between 1 and %d.\n", len(chains[defaultChainIndex].Tables))
-			return
-		}
-		selectedTable = chains[defaultChainIndex].Tables[index-1]
-		fmt.Printf("\r\033[32m\u2714 You have selected table: %s\n\033[0m\n", selectedTable)
-	} else {
-		fmt.Printf("\u001B[32m\u2714 No input provided. Defaulting to table: %s\n\033[0m\n", selectedTable)
-	}
-
-	defaultSQL := fmt.Sprintf("Select * From %s_%s", selectedDatabase, selectedTable)
-	sqlQuery := defaultSQL
-
-	fmt.Println("\033[33m📍 4. Please select a data output target:\033[0m")
-	fmt.Println("1: Postgresql")
-	fmt.Println("2: Print (output to console)")
-
-	fmt.Print("\033[33mEnter your choice (default is Postgresql): ")
-	outputChoice, _ := reader.ReadString('\n')
-	outputChoice = strings.TrimSpace(outputChoice)
-
-	selectedOutput := "postgres"
-	if outputChoice != "" {
-		index, err := strconv.Atoi(outputChoice)
-		if err != nil || index < 1 || index > 2 {
-			fmt.Printf("Invalid choice. Please enter a number between 1 and 2.\n")
-			return
-		}
-		if index == 2 {
-			selectedOutput = "Print"
-		}
-		fmt.Printf("\r\033[32m\u2714 You have selected output target: %s\n", selectedOutput)
-	} else {
-		fmt.Printf("\033[32m\u2714 No input provided. Defaulting to output target: %s\033[0m\n", selectedOutput)
-	}
-
+	outputChoice := promptOutputTarget()
 	fmt.Printf("\n\033[33m🏄🏄 Summary of your selections:\033[0m\n")
 	fmt.Printf("Selected manuscript name: \033[32m%s\033[0m\n", manuscriptName)
 	fmt.Printf("Selected chain: \033[32m%s\033[0m\n", selectedChain)
 	fmt.Printf("Selected table: \u001B[32m%s\u001B[0m\n", selectedTable)
-	fmt.Printf("Data output target: \u001B[32m%s\u001B[0m\n", selectedOutput)
+	fmt.Printf("Data output target: \u001B[32m%s\u001B[0m\n\n", outputChoice)
 
-	fmt.Print("\n\033[33m🚀 Do you want to proceed with the above selections? (yes/no): \033[0m")
-	proceed, _ := reader.ReadString('\n')
-	proceed = strings.TrimSpace(proceed)
-	if proceed == "yes" || proceed == "y" || proceed == "" {
+	if confirmProceed() {
 		ms := pkg.Manuscript{
+			BaseDir:  manuscriptDir,
 			Name:     manuscriptName,
 			Chain:    selectedChain,
 			Table:    selectedTable,
 			Database: selectedDatabase,
-			Query:    sqlQuery,
-			Sink:     selectedOutput,
+			Query:    fmt.Sprintf("Select * From %s_%s", selectedDatabase, selectedTable),
+			Sink:     outputChoice,
 		}
-		executeInitManuscript(ms)
-		return
+		fmt.Printf("\033[32m🚀 Deploying manuscript %s,%s...\033[0m\n", ms.Name, ms.BaseDir)
+		//executeInitManuscript(ms)
 	}
 }
 
@@ -342,4 +237,113 @@ func FindAvailablePort(startPort, endPort int, exclude int) (int, error) {
 	}
 
 	return 0, fmt.Errorf("no available ports in the range %d-%d", startPort, endPort)
+}
+
+func promptInput(prompt, defaultVal string) string {
+	fmt.Printf("\r\033[33m%s\u001B[0m", prompt)
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return defaultVal
+	}
+	return input
+}
+
+func checkDockerContainerExists(manuscriptName string) bool {
+	dockers, err := pkg.RunDockerPs()
+	if err != nil {
+		log.Fatalf("Error fetching Docker containers: %v", err)
+	}
+	for _, d := range dockers {
+		if d.Name == manuscriptName {
+			return true
+		}
+	}
+	return false
+}
+
+func fetchChainBaseDatasets() ([]*client.ChainBaseDatasetListItem, error) {
+	var chains []*client.ChainBaseDatasetListItem
+	err := pkg.ExecuteStepWithLoading("Checking Datasets From Network", false, func() error {
+		c := client.NewChainBaseClient(networkChainURL)
+		var err error
+		chains, err = c.GetChainBaseDatasetList()
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return chains, err
+}
+
+func selectChain(chains []*client.ChainBaseDatasetListItem, prompt, defaultChain string) (string, string) {
+	fmt.Println("\r\033[33m" + prompt + "\u001B[0m")
+	for i := len(chains) - 1; i >= 0; i-- {
+		chain := chains[i]
+		fmt.Printf("%d: %s (Database: %s)\n", i+1, chain.Name, chain.DatabaseName)
+	}
+	chainChoice := promptInput("🏂 3. Enter your chain choice (default is zkevm)\u001B[0m: ", "")
+	if chainChoice == "" {
+		fmt.Printf("\u001B[32m✓ Defaulting to chain: %s\u001B[0m\n\n", defaultChain)
+		return defaultChain, defaultChain
+	}
+	index, err := strconv.Atoi(chainChoice)
+	if err != nil || index < 1 || index > len(chains) {
+		fmt.Printf("Invalid choice. Defaulting to chain: %s\n", defaultChain)
+		return defaultChain, defaultChain
+	}
+	fmt.Printf("\u001B[32m✓ Selected chain: %s\n\n", chains[index-1].Name)
+	return chains[index-1].Name, chains[index-1].DatabaseName
+}
+
+func selectTable(chains []*client.ChainBaseDatasetListItem, selectedChain, prompt, defaultTable string) string {
+	defaultChainIndex := 1
+	fmt.Println("\r\033[33m" + prompt + "\u001B[0m")
+	for i, table := range chains[defaultChainIndex].Tables {
+		fmt.Printf("%d: %s\n", i+1, table)
+	}
+	tableChoice := promptInput("Enter your choice(default is blocks)\u001B[0m: ", "")
+	if tableChoice == "" {
+		fmt.Printf("\u001B[32m✓ Defaulting to table: %s\u001B[0m\n\n", defaultTable)
+		return defaultTable
+	}
+	index, err := strconv.Atoi(tableChoice)
+	if err != nil || index < 1 || index > len(chains[defaultChainIndex].Tables) {
+		fmt.Printf("Invalid choice. Defaulting to table: %s\n", defaultTable)
+		return defaultTable
+	}
+	tableName := chains[defaultChainIndex].Tables[index-1]
+	if tableName == "transactionLogs" {
+		tableName = "transaction_logs"
+	}
+	fmt.Printf("\u001B[32m✓ Selected table: %s\u001B[0m\n\n", tableName)
+	return tableName
+}
+
+func promptOutputTarget() string {
+	fmt.Println("\033[33m📍 4. Please select a data output target:\033[0m")
+	fmt.Println("1: Postgresql")
+	fmt.Println("2: Print (output to console)")
+	outputChoice := promptInput("Enter your choice(default is Postgresql)\u001B[0m: ", "1")
+	output := "Postgresql"
+	if outputChoice == "2" {
+		output = "Print"
+	}
+	fmt.Printf("\u001B[32m✓ Selected output target: %s\u001B[0m\n", output)
+	return output
+}
+
+func confirmProceed() bool {
+	proceed := promptInput("🚀 Do you want to proceed with the above selections? (yes/no): ", "yes")
+	return proceed == "yes" || proceed == "y" || proceed == ""
+}
+
+func logErrorAndReturn(message string, err error) {
+	if err != nil {
+		fmt.Printf("\033[31mError: %s: %v\033[0m\n", message, err)
+	} else {
+		fmt.Printf("\033[31mError: %s\033[0m\n", message)
+	}
+	return
 }
