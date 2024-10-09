@@ -127,7 +127,7 @@ func GetDockerLogs(containerName string) error {
 }
 
 func StopDockerCompose(Name string) error {
-	manuscriptDockerComposeFile := fmt.Sprintf("manuscript/%s/docker-compose.yml", Name)
+	manuscriptDockerComposeFile := Name
 	if _, err := os.Stat(manuscriptDockerComposeFile); os.IsNotExist(err) {
 		log.Fatalf("Error: Manuscript %s does not exist", Name)
 	}

@@ -6,6 +6,8 @@ import (
 	"os"
 )
 
+var env string
+
 func Execute(args []string) error {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -17,95 +19,111 @@ func Execute(args []string) error {
 var initCmd = &cobra.Command{
 	Use:     "init",
 	Aliases: []string{"ini", "in", "i"},
-	Short:   "Initialize and start local Flink containers",
-	Long:    "Initialize Manuscript Repository and start Flink containers",
+	Short:   "Initialize and start local manuscript containers",
+	Long:    "Initialize Manuscript Repository and start manuscript containers",
 	Args:    cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		InitManuscript()
 	},
 }
 
-var jobCmd = &cobra.Command{
-	Use:     "job",
-	Aliases: []string{"jo", "j"},
-	Short:   "Manage Flink jobs",
-	Long:    "Manage Flink jobs, such as listing, stopping, and viewing logs of jobs",
-}
-
 var jobListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all Flink jobs",
+	Short: "List all manuscript jobs",
 	Run: func(cmd *cobra.Command, args []string) {
 		ListJobs()
 	},
 }
 
 var jobStopCmd = &cobra.Command{
-	Use:   "stop <job>",
-	Short: "Stop a Flink job",
+	Use:   "stop <job_name>",
+	Short: "Stop a manuscript job",
+	Long:  "Stop a manuscript job",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		JobStop(args[0])
 	},
 }
 
-var jobLogCmd = &cobra.Command{
-	Use:   "log <jobid>",
-	Short: "View logs of a Flink job",
+var jobLogsCmd = &cobra.Command{
+	Use:   "logs <job_name>",
+	Short: "View logs of a manuscript job",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		JobLogs(args[0])
 	},
 }
 
-var runManuscript = &cobra.Command{
-	Use:     "run <manuscript-file>",
-	Aliases: []string{"r"},
-	Short:   "Run Manuscript on the local Flink cluster",
-	Long:    "Run Manuscript on the local Flink cluster",
+var deployManuscript = &cobra.Command{
+	Use:     "deploy <manuscript-file>",
+	Aliases: []string{"d"},
+	Short:   "Deploy Manuscript to a local environment or the Chainbase network.",
+	Long:    "Deploy Manuscript to a local environment or the Chainbase network.",
+	Example: "manuscript-cli deploy /data/manuscript/demo/manuscript.yaml --env=local",
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		RunManuscript(args)
-	},
-}
-
-var deployManuscript = &cobra.Command{
-	Use:     "deploy <coming soon>",
-	Aliases: []string{"d"},
-	Short:   "<coming soon> deploy manuscript to chainbase network",
-	Long:    "<coming soon> deploy manuscript to chainbase network",
-	Args:    cobra.ExactArgs(0),
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Coming soon...")
+		switch env {
+		case "local":
+			fmt.Println("Deploying to local environment...")
+		case "chainbase":
+			fmt.Println("Deploying to Chainbase network...")
+		default:
+			fmt.Println("Unknown environment. Please specify --env=local or --env=chainbase")
+		}
 	},
 }
 
 func init() {
-	// Add the subcommands to the jobCmd
-	jobCmd.AddCommand(jobListCmd)
-	jobCmd.AddCommand(jobStopCmd)
-	jobCmd.AddCommand(jobLogCmd)
+	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		// List of commands to display in the help menu
+		commands := []*cobra.Command{
+			cmd.Commands()[3],
+			cmd.Commands()[4],
+			cmd.Commands()[5],
+			cmd.Commands()[6],
+			cmd.Commands()[1],
+		}
+
+		maxNameLen := 0
+		for _, c := range commands {
+			if len(c.Name()) > maxNameLen {
+				maxNameLen = len(c.Name())
+			}
+		}
+
+		fmt.Printf("\n" +
+			"\033[33m ██████\033[0m ██    ██   ████   ████████ ███    ██ ███████    ████    ██████  ████████\n" +
+			"\033[32m██\033[0m      ██    ██  ██  ██     ██    ████   ██ ██    ██  ██  ██  ██    ██ ██      \n" +
+			"\033[32m██\033[0m      ██    ██ ██    ██    ██    ██ ██  ██ ██    ██ ██    ██ ██       ██      \n" +
+			"\033[32m██\033[0m      ████████ ████████    ██    ██  ██ ██ ███████  ████████  ██████  ██████  \n" +
+			"\033[32m██\033[0m      ██    ██ ██    ██    ██    ██   ████ ██    ██ ██    ██       ██ ██      \n" +
+			"\033[32m██\033[0m      ██    ██ ██    ██    ██    ██    ███ ██    ██ ██    ██ ██    ██ ██      \n" +
+			"\033[33m ██████\033[0m ██    ██ ██    ██ ████████ ██     ██ ███████  ██    ██  ██████  ████████\n\n" +
+			"Chainbase Manuscript ™ Build The World's Largest Omnichain Data Network 🚀 🚀 🚀\n" +
+			"─────────────────────────────────────────────────────────────────────────────────\n")
+		fmt.Printf("Usage:\n  %s\n\n", cmd.UseLine())
+		fmt.Println("Available Commands:")
+
+		for _, c := range commands {
+			fmt.Printf("  %-*s   %s\n", maxNameLen, c.Name(), c.Short)
+		}
+	})
 
 	// Add jobCmd and other commands to the root command
 	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(jobCmd)
-	rootCmd.AddCommand(runManuscript)
+
+	// Add jobCmd to the root command
+	rootCmd.AddCommand(jobListCmd)
+	rootCmd.AddCommand(jobStopCmd)
+	rootCmd.AddCommand(jobLogsCmd)
 
 	// Add deployManuscript to root command
+	deployManuscript.Flags().StringVar(&env, "env", "", "Specify the environment to deploy (e.g., local or chainbase)")
+	deployManuscript.MarkFlagRequired("env")
 	rootCmd.AddCommand(deployManuscript)
 	rootCmd.CompletionOptions.HiddenDefaultCmd = true
 }
 
 var rootCmd = &cobra.Command{
-	Use: "manuscript-cli",
-	Long: "\n" +
-		"\033[33m ██████\033[0m ██    ██   ████   ████████ ███    ██ ███████    ████    ██████  ████████\n" +
-		"\033[32m██\033[0m      ██    ██  ██  ██     ██    ████   ██ ██    ██  ██  ██  ██    ██ ██      \n" +
-		"\033[32m██\033[0m      ██    ██ ██    ██    ██    ██ ██  ██ ██    ██ ██    ██ ██       ██      \n" +
-		"\033[32m██\033[0m      ████████ ████████    ██    ██  ██ ██ ███████  ████████  ██████  ██████  \n" +
-		"\033[32m██\033[0m      ██    ██ ██    ██    ██    ██   ████ ██    ██ ██    ██       ██ ██      \n" +
-		"\033[32m██\033[0m      ██    ██ ██    ██    ██    ██    ███ ██    ██ ██    ██ ██    ██ ██      \n" +
-		"\033[33m ██████\033[0m ██    ██ ██    ██ ████████ ██     ██ ███████  ██    ██  ██████  ████████\n\n" +
-		"Chainbase Manuscript ™ Build The World's Largest Omnichain Data Network 🚀 🚀 🚀\n" +
-		"─────────────────────────────────────────────────────────────────────────────────",
+	Use: "manuscript-cli [command]",
 }

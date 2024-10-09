@@ -5,7 +5,7 @@ version: '3.2'
 name: {{.Name}}
 services:
   jobmanager: 
-    image: repository.chainbase.com/network/flink:v1.18-0.4
+    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.0
     user: "flink"
     command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
     ports:
@@ -19,7 +19,7 @@ services:
       - ms_network
 
   taskmanager:
-    image: repository.chainbase.com/network/flink:v1.18-0.4
+    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.0
     user: "flink"
     depends_on:
       - jobmanager
@@ -41,7 +41,7 @@ version: '3.2'
 name: {{.Name}}
 services:
   jobmanager: 
-    image: repository.chainbase.com/network/flink:v1.18-0.4
+    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.0
     user: "flink"
     command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
     ports:
@@ -55,7 +55,7 @@ services:
       - ms_network
 
   taskmanager:
-    image: repository.chainbase.com/network/flink:v1.18-0.4
+    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.0
     user: "flink"
     depends_on:
       - jobmanager
@@ -82,7 +82,7 @@ services:
     restart: unless-stopped
 
   hasura:
-    image: hasura/graphql-engine:latest
+    image: repository.chainbase.com/manuscript-node/graphql-engine:latest
     ports:
       - "{{.GraphQLPort}}:8080"
     depends_on:

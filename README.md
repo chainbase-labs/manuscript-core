@@ -43,26 +43,22 @@ curl -fsSL  https://github.com/Liquidwe/rust-examples/raw/main/install.sh | bash
 
 Here's an example of how to <b>process</b> data from chainbase with manuscript:
 
-1. After installing `manuscript-cli`, you can initialize the Manuscript scripts and environment using the command
+#### 1. After installing `manuscript-cli`, you can initialize the Manuscript scripts and environment using the command
 ```bash
 ➜  manuscript-cli --help
 Chainbase Manuscript ™ Build The World\'s Largest Omnichain Data Network 🚀 🚀 🚀
 ─────────────────────────────────────────────────────────────────────────────────
 Usage:
-  manuscript-cli [command]
+  manuscript-cli [command] [flags]
 
 Available Commands:
-  deploy      Deploy manuscript to flink cluster
-  help        Help about any command
-  init        Initialize and start Flink containers
-  job         Initialize and start Flink containers
-
-Flags:
-  -h, --help   help for manuscript-cli
-
-Use "manuscript-cli [command] --help" for more information about a command.
+  init     Initialize and start local manuscript containers
+  list     List all manuscript jobs
+  logs     View logs of a manuscript job
+  stop     Stop a manuscript job
+  deploy   Deploy Manuscript to a local environment or the Chainbase network.
 ```
-2. Use the client to initialize the `manuscript.yaml` file for a local standalone container environment
+#### 2. **manuscript-cli init**: Use the client to initialize the `manuscript.yaml` file for a local standalone container environment
 ```bash
 ➜  manuscript-cli init
 🏂 1. Enter your manuscript name: (default is demo)
@@ -100,24 +96,42 @@ Data output target: postgres
 ⠙ Step 6: Check Container Status Loading... ✓ Container demo is running
 ✓ Step 6: Check Container Status completed successfully!
 🎉 Manuscript demo deployment completed successfully!
-You can now list your job with the command:
-👉 manuscript-cli job list
+You can now list your job with the command: 
+👉 manuscript-cli list
 
-If you need to manually edit the manuscript, you can edit the file 'manuscript/demo/manuscript.yaml' and then manually execute the 'run' command:
-👉 manuscript-cli run manuscript/demo/manuscript.yaml
-
-You can now access your manuscript at http://localhost:8081
+If you need to manually edit the manuscript, you can edit the file '/Users/azroa/github/manuscript/demo/manuscript.yaml' and then manually execute the 'run' command:
+👉 vim /Users/azroa/github/manuscript/demo/manuscript.yaml
+👉 manuscript-cli deploy /Users/azroa/github/manuscript/demo/manuscript.yaml --env=local
 ```
-3. List the job to check the status of the job
+#### 3. List the job to check the status of the job
 ```bash
-manuscript-cli job list
+manuscript-cli list
 🟢 1: Name: demo | State: RUNNING | Start Time: 2024-10-08 14:26 | Duration: 3 minutes | GraphQL: http://127.0.0.1:8082
 
-manuscript-cli job log demo
+manuscript-cli logs demo
 ···logs···
 ```
-4. Access the GraphQL endpoint to query the data(GraphQL: http://127.0.0.1:8082)
+#### 4. Access the GraphQL endpoint to query the data(GraphQL: http://127.0.0.1:8082)
 ![graphQL](./images/graphQL.jpg)
+
+#### 5. Deploy the Manuscript to the Local Environment or the Chainbase Network(the network is coming soon...)
+```bash
+# 1. cat the manuscript_config.ini file
+➜  ~ cat $HOME/.manuscript_config.ini
+baseDir = /Users/azroa/github
+
+[demo]
+name = demo
+···
+
+# 2. vim the manuscript.yaml file
+vim ~/github/manuscript/demo/manuscript.yaml
+
+# 3. Deploy the Manuscript to the Local Environment
+manuscript-cli deploy ~/github/manuscript/demo/manuscript.yaml --env=local
+or
+manuscript-cli deploy ~/github/manuscript/demo/manuscript.yaml --env=chainbase
+```
 
 ### Key Concepts
 There are two primary objects:
