@@ -7,14 +7,15 @@ import (
 	"manuscript-core/pkg"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
-func RunManuscript(args []string) {
+func DeployManuscript(args []string) {
 	if len(args) < 1 {
 		log.Fatalf("Error: Manuscript path is required as the first argument.")
 	}
 	manuscriptPath := args[0]
-	var ms *pkg.Manuscript
+	var ms pkg.Manuscript
 	var manuscriptDir string
 
 	if _, err := os.Stat(manuscriptPath); os.IsNotExist(err) {
@@ -31,7 +32,31 @@ func RunManuscript(args []string) {
 			if err != nil {
 				return err
 			}
-			manuscriptDir = fmt.Sprintf("manuscript/%s", ms.Name)
+			if len(ms.Sinks) != 0 {
+				ms.Table = ms.Sinks[0].Table
+				ms.Database = ms.Sinks[0].Database
+			}
+			if len(ms.Sources) != 0 {
+				ms.Chain = ms.Sources[0].Dataset
+			}
+			if len(ms.Transforms) != 0 {
+				ms.Query = ms.Transforms[0].SQL
+			}
+
+			manuscriptDir = getHomeDir()
+			msConfig, err := pkg.LoadConfig(manuscriptConfig)
+			if err != nil {
+				logErrorAndReturn("Failed to load manuscript config", err)
+			}
+			if msConfig.BaseDir != "" {
+				manuscriptDir = msConfig.BaseDir
+			}
+
+			if strings.HasSuffix(manuscriptDir, "/") {
+				manuscriptDir = strings.TrimSuffix(manuscriptDir, "/")
+			}
+			manuscriptDir = fmt.Sprintf("%s/%s/%s", manuscriptDir, manuscriptBaseName, ms.Name)
+
 			if len(ms.Sinks) != 0 {
 				if ms.Sinks[0].Type == "postgres" {
 					ms.Sink = "postgres"
@@ -48,10 +73,10 @@ func RunManuscript(args []string) {
 		}},
 		{"Step 3: Create Directory", func() error { return createDirectory(manuscriptDir) }},
 		{"Step 4: Create ManuscriptFile", func() error { return copyManuscriptFile(manuscriptDir, manuscriptPath) }},
-		{"Step 5: Create DockerComposeFile", func() error { return createDockerComposeFile(manuscriptDir, ms) }},
+		{"Step 5: Create DockerComposeFile", func() error { return createDockerComposeFile(manuscriptDir, &ms) }},
 		{"Step 6: Check Docker Installed", func() error { return checkDockerInstalled() }},
 		{"Step 7: Start Docker Containers", func() error { return startDockerContainers(manuscriptDir) }},
-		{"Step 8: Check Container Status", func() error { return checkContainerStatus(ms) }},
+		{"Step 8: Check Container Status", func() error { return checkContainerStatus(&ms) }},
 	}
 
 	for _, step := range steps {
@@ -61,6 +86,18 @@ func RunManuscript(args []string) {
 		}
 	}
 	fmt.Println("\033[32m✓ Manuscript deployment completed successfully!")
+	log.Printf("\033[32mYou can now list your job with the command: \n👉 \033[33mmanuscript-cli list\n\n"+
+		"\033[32mIf you need to manually edit the manuscript, "+
+		"you can edit the file '%s/manuscript.yaml' and then manually execute the 'run' command:\n"+
+		"👉 \u001B[33mvim %s/manuscript.yaml\n"+
+		"👉 \033[33mmanuscript-cli deploy %s/manuscript.yaml --env=local\n\n", manuscriptDir, manuscriptDir, manuscriptDir)
+	log.Printf("\033[32mYou can now access your manuscript at http://localhost:%d\n", ms.Port)
+
+	err := pkg.SaveConfig(manuscriptConfig, &pkg.Config{Manuscripts: []pkg.Manuscript{ms}})
+	if err != nil {
+		fmt.Printf("Failed to save manuscript config: %v", err)
+		return
+	}
 }
 
 func copyManuscriptFile(manuscriptDir, manuscriptPath string) error {
@@ -92,16 +129,16 @@ func copyManuscriptFile(manuscriptDir, manuscriptPath string) error {
 	return nil
 }
 
-func ParseManuscriptYaml(manuscriptPath string) (*pkg.Manuscript, error) {
+func ParseManuscriptYaml(manuscriptPath string) (pkg.Manuscript, error) {
 	ms, err := pkg.ParseYAML(manuscriptPath)
 	if err != nil {
 		log.Fatalf("Error: Failed to parse manuscript yaml: %v", err)
-		return &pkg.Manuscript{}, err
+		return pkg.Manuscript{}, err
 	}
-	return ms, nil
+	return *ms, nil
 }
 
-func CheckManuscriptExist(ms *pkg.Manuscript) error {
+func CheckManuscriptExist(ms pkg.Manuscript) error {
 	dockers, err := pkg.RunDockerPs()
 	if err != nil {
 		log.Fatalf("Error: Failed to get docker ps: %v", err)

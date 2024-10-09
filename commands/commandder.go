@@ -64,9 +64,9 @@ var deployManuscript = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		switch env {
 		case "local":
-			fmt.Println("Deploying to local environment...")
+			DeployManuscript(args)
 		case "chainbase":
-			fmt.Println("Deploying to Chainbase network...")
+			fmt.Println("Deploying to Chainbase network...coming soon!")
 		default:
 			fmt.Println("Unknown environment. Please specify --env=local or --env=chainbase")
 		}
