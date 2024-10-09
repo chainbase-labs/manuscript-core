@@ -191,9 +191,19 @@ func checkDockerInstalled() error {
 }
 
 func startDockerContainers(dir string) error {
-	cmd := exec.Command("docker-compose", "-f", filepath.Join(dir, "docker-compose.yml"), "up", "-d")
+	var cmd *exec.Cmd
+
+	if _, err := exec.LookPath("docker-compose"); err == nil {
+		cmd = exec.Command("docker-compose", "-f", filepath.Join(dir, "docker-compose.yml"), "up", "-d")
+	} else if _, err := exec.LookPath("docker"); err == nil {
+		cmd = exec.Command("docker", "compose", "-f", filepath.Join(dir, "docker-compose.yml"), "up", "-d")
+	} else {
+		return fmt.Errorf("neither 'docker-compose' nor 'docker compose' command found")
+	}
+
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+
 	err := cmd.Run()
 	if err != nil {
 		return fmt.Errorf("failed to start Docker containers: %w", err)
