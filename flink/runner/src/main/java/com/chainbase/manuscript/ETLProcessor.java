@@ -22,6 +22,10 @@ import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.ArrayList;
 
+import com.chainbase.udf.DecodeEvent;
+import com.chainbase.udf.DecodeFunction;
+import com.chainbase.udf.EthCallRequest;
+
 public class ETLProcessor {
     private static final Logger logger = LoggerFactory.getLogger(ETLProcessor.class);
     private Map<String, Object> config;
@@ -143,19 +147,9 @@ public class ETLProcessor {
     }
 
     private void registerUDFs() {
-        String udfJar = "oss://network-testnet/flink-udf/flink-udf-1.0-SNAPSHOT.jar";
-        tEnv.executeSql(String.format(
-                "CREATE TEMPORARY SYSTEM FUNCTION Decode_Event AS 'com.chainbase.udf.DecodeEvent' " +
-                        "LANGUAGE JAVA USING JAR '%s'", udfJar
-        ));
-        tEnv.executeSql(String.format(
-                "CREATE TEMPORARY SYSTEM FUNCTION Decode_Function AS 'com.chainbase.udf.DecodeFunction' " +
-                        "LANGUAGE JAVA USING JAR '%s'", udfJar
-        ));
-        tEnv.executeSql(String.format(
-                "CREATE TEMPORARY SYSTEM FUNCTION Eth_Call AS 'com.chainbase.udf.EthCallRequest' " +
-                        "LANGUAGE JAVA USING JAR '%s'", udfJar
-        ));
+        tEnv.createTemporarySystemFunction("Decode_Event", DecodeEvent.class);
+        tEnv.createTemporarySystemFunction("Decode_Function", DecodeFunction.class);
+        tEnv.createTemporarySystemFunction("Eth_Call", EthCallRequest.class);
     }
 
     private void createSources() {
