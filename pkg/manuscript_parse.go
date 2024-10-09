@@ -29,6 +29,7 @@ type Sink struct {
 }
 
 type Manuscript struct {
+	BaseDir     string      `yaml:"baseDir"`
 	Name        string      `yaml:"name"`
 	SpecVersion string      `yaml:"specVersion"`
 	Parallelism int         `yaml:"parallelism"`
