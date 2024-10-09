@@ -8,12 +8,8 @@ import (
 	"manuscript-core/client"
 	"manuscript-core/pkg"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 )
-
-const GraphQLContainerName = "hasura"
 
 type Args struct {
 	Type string `json:"type"`
@@ -56,34 +52,31 @@ func ListJobs() {
 		}
 
 		jobNumber := 0
-		for _, d := range dockers {
-			if d.Ports == nil {
-				continue
-			}
-			c := client.NewFlinkUiClient(fmt.Sprintf("http://localhost:%s", d.Ports[0]))
-			jobs, err := c.GetJobsList()
-			if err != nil {
-				fmt.Printf("\r🟡 %d: Name: %s | State: \033[33mInitializing...(may wait for 2 minutes)\033[0m \n", jobNumber, strings.Split(d.Name, "-jobmanager-1")[0])
-			}
+		manuscripts, err := pkg.LoadConfig(manuscriptConfig)
+		for _, m := range manuscripts.Manuscripts {
+			if m.Port != 0 {
+				c := client.NewFlinkUiClient(fmt.Sprintf("http://localhost:%d", m.Port))
+				jobs, err := c.GetJobsList()
+				if err != nil {
+					fmt.Printf("\r🟡 Manuscript: \u001B[34m%s\u001B[0m | State: \033[33mInitializing...(may wait for 2 minutes)\033[0m\n", m.Name)
+				}
+				if len(jobs) == 0 && err == nil {
+					fmt.Printf("\r🟡 Manuscript: \u001B[34m%s\u001B[0m | State: \033[33mInitializing...\033[0m\n", m.Name)
+				}
+				for _, job := range jobs {
+					jobNumber++
+					startTime := formatTimestamp(job.StartTime)
+					duration := formatDurationToMinutes(job.Duration)
 
-			for _, job := range jobs {
-				jobNumber++
-				startTime := formatTimestamp(job.StartTime)
-				duration := formatDurationToMinutes(job.Duration)
-				jobName := strings.Split(d.Name, "-jobmanager-1")[0]
-
-				switch job.State {
-				case "RUNNING":
-					graphQLPort := CheckGraphQLContainer(dockers, jobName)
-					if graphQLPort != 0 {
-						fmt.Printf("\r🟢 %d: Name: \033[34m%s\033[0m | State: \033[32m%s\033[0m | Start Time: %s | Duration: %v | GraphQL: http://127.0.0.1:%d\n", jobNumber, jobName, job.State, startTime, duration, graphQLPort)
-					} else {
-						fmt.Printf("\r🟢 %d: Name: \033[34m%s\033[0m | State: \033[32m%s\033[0m | Start Time: %s | Duration: %v\n", jobNumber, jobName, job.State, startTime, duration)
+					switch job.State {
+					case "RUNNING":
+						trackHasuraTable(m.Name)
+						fmt.Printf("\r🟢 %d: Manuscript: \033[32m%s\033[0m | State: \033[32m%s\033[0m | Start Time: %s | Duration: %v | GraphQL: http://127.0.0.1:%d\n", jobNumber, m.Name, job.State, startTime, duration, m.GraphQLPort)
+					case "CANCELED":
+						fmt.Printf("\r🟡 %d: Manuscript: %s | State: \033[33m%s\033[0m | Start Time: %s | Duration: %v\n", jobNumber, m.Name, job.State, startTime, duration)
+					default:
+						fmt.Printf("\r⚪️ %d: Manuscript: %s | State: %s | Start Time: %s | Duration: %v\n", jobNumber, m.Name, job.State, startTime, duration)
 					}
-				case "CANCELED":
-					fmt.Printf("\r🟡 %d: Name: %s | State: \033[33m%s\033[0m | Start Time: %s | Duration: %v\n", jobNumber, jobName, job.State, startTime, duration)
-				default:
-					fmt.Printf("\r⚪️ %d: Name: %s | State: %s | Start Time: %s | Duration: %v\n", jobNumber, jobName, job.State, startTime, duration)
 				}
 			}
 		}
@@ -125,25 +118,7 @@ func JobStop(jobName string) {
 	fmt.Printf("\rJob \033[33m%s\033[0m stopped successfully.\n", jobName)
 }
 
-func CheckGraphQLContainer(dockers []pkg.ContainerInfo, jobName string) int {
-	graphQLContainerPort := 0
-	for _, d := range dockers {
-		if d.Name == fmt.Sprintf("%s-%s-1", jobName, GraphQLContainerName) {
-			if len(d.Ports) > 0 {
-				port, err := strconv.Atoi(d.Ports[0])
-				if err != nil {
-					log.Fatalf("Error: Failed to convert port to integer: %v", err)
-					return 0
-				}
-				graphQLContainerPort = port
-				trackHasuraTable(jobName, graphQLContainerPort)
-			}
-		}
-	}
-	return graphQLContainerPort
-}
-
-func trackHasuraTable(jobName string, graphQLContainerPort int) {
+func trackHasuraTable(jobName string) {
 	msConfig, err := pkg.LoadConfig(manuscriptConfig)
 	if err != nil {
 		log.Fatalf("Error: Failed to load manuscript config: %v", err)
@@ -176,18 +151,22 @@ func trackHasuraTable(jobName string, graphQLContainerPort int) {
 			log.Println("Error marshalling payload:", err)
 		}
 
-		url := fmt.Sprintf("http://127.0.0.1:%d/v1/metadata", graphQLContainerPort)
-		req, err := http.NewRequest("POST", url, bytes.NewBuffer(payloadBytes))
-		if err != nil {
-			log.Println("Error creating request:", err)
-		}
-		req.Header.Set("Content-Type", "application/json")
+		for _, m := range msConfig.Manuscripts {
+			if m.Name == jobName {
+				url := fmt.Sprintf("http://127.0.0.1:%d/v1/metadata", m.GraphQLPort)
+				req, err := http.NewRequest("POST", url, bytes.NewBuffer(payloadBytes))
+				if err != nil {
+					log.Println("Error creating request:", err)
+				}
+				req.Header.Set("Content-Type", "application/json")
 
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			log.Println("Error making request:", err)
+				c := &http.Client{}
+				_, err = c.Do(req)
+				if err != nil {
+					return
+				}
+			}
 		}
-		defer resp.Body.Close()
+
 	}
 }

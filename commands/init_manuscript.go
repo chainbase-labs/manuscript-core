@@ -55,11 +55,17 @@ func executeInitManuscript(ms pkg.Manuscript) {
 		"👉 \u001B[33mvim %s/manuscript.yaml\n"+
 		"👉 \033[33mmanuscript-cli deploy %s/manuscript.yaml --env=local\n\n", manuscriptDir, manuscriptDir, manuscriptDir)
 	log.Printf("\033[32mYou can now access your manuscript at http://localhost:%d\n", ms.Port)
+
+	err := pkg.SaveConfig(manuscriptConfig, &pkg.Config{Manuscripts: []pkg.Manuscript{ms}})
+	if err != nil {
+		fmt.Printf("Failed to save manuscript config: %v", err)
+		return
+	}
 }
 
 func InitManuscript() {
 	// Check if manuscript config exists
-	manuscriptDir := manuscriptBaseDir
+	manuscriptDir := getHomeDir()
 	msConfig, err := pkg.LoadConfig(manuscriptConfig)
 	if err != nil {
 		logErrorAndReturn("Failed to load manuscript config", err)
@@ -73,6 +79,7 @@ func InitManuscript() {
 	manuscriptDir = promptInput(prompt, manuscriptDir)
 	if err := pkg.SaveConfig(manuscriptConfig, &pkg.Config{BaseDir: manuscriptDir}); err != nil {
 		logErrorAndReturn("Failed to save manuscript config", err)
+		return
 	}
 	if strings.HasSuffix(manuscriptDir, "/") {
 		manuscriptDir = strings.TrimSuffix(manuscriptDir, "/")
@@ -95,6 +102,7 @@ func InitManuscript() {
 
 	outputChoice := promptOutputTarget()
 	fmt.Printf("\n\033[33m🏄🏄 Summary of your selections:\033[0m\n")
+	fmt.Printf("Selected manuscript base directory: \033[32m%s\033[0m\n", manuscriptDir)
 	fmt.Printf("Selected manuscript name: \033[32m%s\033[0m\n", manuscriptName)
 	fmt.Printf("Selected chain: \033[32m%s\033[0m\n", selectedChain)
 	fmt.Printf("Selected table: \u001B[32m%s\u001B[0m\n", selectedTable)
@@ -140,12 +148,27 @@ func createDockerComposeFile(dir string, ms *pkg.Manuscript) error {
 	dockComposeTemplate := static.DockerComposeTemplate
 	switch ms.Sink {
 	case defaultSink:
-		port, err := FindAvailablePort(8081, 8181, 0)
+		m, err := pkg.LoadConfig(manuscriptConfig)
+		if err != nil {
+			return fmt.Errorf("failed to load manuscript config: %w", err)
+		}
+		var excludePorts []int
+		for _, m := range m.Manuscripts {
+			if m.Name == ms.Name {
+				ms.Port = m.Port
+				ms.GraphQLPort = m.GraphQLPort
+				dockComposeTemplate = static.DockerComposeWithPostgresqlContent
+				return createTemplateFile(composeFilePath, dockComposeTemplate, ms)
+			}
+			excludePorts = append(excludePorts, m.Port, m.GraphQLPort)
+		}
+		port, err := FindAvailablePort(8081, 8181, excludePorts)
 		if err != nil {
 			return fmt.Errorf("failed to find available port: %w", err)
 		}
 		ms.Port = port
-		graphQLPort, err := FindAvailablePort(8081, 8181, port)
+		excludePorts = append(excludePorts, port)
+		graphQLPort, err := FindAvailablePort(8081, 8181, excludePorts)
 		if err != nil {
 			return fmt.Errorf("failed to find available port: %w", err)
 		}
@@ -168,9 +191,19 @@ func checkDockerInstalled() error {
 }
 
 func startDockerContainers(dir string) error {
-	cmd := exec.Command("docker-compose", "-f", filepath.Join(dir, "docker-compose.yml"), "up", "-d")
+	var cmd *exec.Cmd
+
+	if _, err := exec.LookPath("docker-compose"); err == nil {
+		cmd = exec.Command("docker-compose", "-f", filepath.Join(dir, "docker-compose.yml"), "up", "-d")
+	} else if _, err := exec.LookPath("docker"); err == nil {
+		cmd = exec.Command("docker", "compose", "-f", filepath.Join(dir, "docker-compose.yml"), "up", "-d")
+	} else {
+		return fmt.Errorf("neither 'docker-compose' nor 'docker compose' command found")
+	}
+
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+
 	err := cmd.Run()
 	if err != nil {
 		return fmt.Errorf("failed to start Docker containers: %w", err)
@@ -232,7 +265,7 @@ func createTemplateFile(filePath, tmplContent string, data interface{}) error {
 	return nil
 }
 
-func FindAvailablePort(startPort, endPort int, exclude int) (int, error) {
+func FindAvailablePort(startPort, endPort int, exclude []int) (int, error) {
 	listeningPorts, err := pkg.GetListeningPorts()
 	if err != nil {
 		return 0, err
@@ -242,8 +275,8 @@ func FindAvailablePort(startPort, endPort int, exclude int) (int, error) {
 	for _, port := range listeningPorts {
 		portMap[port] = true
 	}
-	if exclude != 0 {
-		portMap[exclude] = true
+	for _, port := range exclude {
+		portMap[port] = true
 	}
 
 	for port := startPort; port <= endPort; port++ {
@@ -362,4 +395,12 @@ func logErrorAndReturn(message string, err error) {
 		fmt.Printf("\033[31mError: %s\033[0m\n", message)
 	}
 	return
+}
+
+func getHomeDir() string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatalf("Failed to get user home directory: %v\n", err)
+	}
+	return homeDir
 }
