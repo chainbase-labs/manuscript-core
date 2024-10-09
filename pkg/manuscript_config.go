@@ -3,6 +3,7 @@ package pkg
 import (
 	"gopkg.in/ini.v1"
 	"os"
+	"strings"
 )
 
 type Config struct {
@@ -11,6 +12,14 @@ type Config struct {
 }
 
 func LoadConfig(filePath string) (*Config, error) {
+	if strings.Contains(filePath, "$HOME") {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return nil, err
+		}
+		filePath = strings.Replace(filePath, "$HOME", homeDir, 1)
+	}
+
 	cfg, err := ini.Load(filePath)
 	if err != nil {
 		return nil, err
@@ -37,6 +46,14 @@ func SaveConfig(filePath string, newConfig *Config) error {
 		if os.IsNotExist(err) {
 			return err
 		}
+	}
+
+	if strings.Contains(filePath, "$HOME") {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return err
+		}
+		filePath = strings.Replace(filePath, "$HOME", homeDir, 1)
 	}
 
 	cfg, err := ini.Load(filePath)

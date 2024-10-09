@@ -18,9 +18,12 @@ import (
 
 const (
 	manuscriptBaseName = "manuscript"
-	manuscriptBaseDir  = "/tmp"
-	manuscriptConfig   = "/tmp/.manuscript_config.ini"
+	manuscriptBaseDir  = "$HOME"
+	manuscriptConfig   = "$HOME/.manuscript_config.ini"
 	networkChainURL    = "https://api.chainbase.com"
+	defaultDatabase    = "zkevm"
+	defaultTable       = "blocks"
+	defaultSink        = "postgres"
 )
 
 func executeInitManuscript(ms pkg.Manuscript) {
@@ -46,15 +49,28 @@ func executeInitManuscript(ms pkg.Manuscript) {
 		}
 	}
 	log.Printf("🎉 \033[32mManuscript %s deployment completed successfully!\033[0m\n", ms.Name)
-	log.Printf("\033[32mYou can now list your job with the command: \n👉 \033[33mmanuscript-cli job list\n\n"+
+	log.Printf("\033[32mYou can now list your job with the command: \n👉 \033[33mmanuscript-cli list\n\n"+
 		"\033[32mIf you need to manually edit the manuscript, "+
 		"you can edit the file '%s/manuscript.yaml' and then manually execute the 'run' command:\n"+
-		"👉 \033[33mmanuscript-cli run %s/manuscript.yaml\n\n", manuscriptDir, manuscriptDir)
+		"👉 \u001B[33mvim %s/manuscript.yaml\n"+
+		"👉 \033[33mmanuscript-cli deploy %s/manuscript.yaml --env=local\n\n", manuscriptDir, manuscriptDir, manuscriptDir)
 	log.Printf("\033[32mYou can now access your manuscript at http://localhost:%d\n", ms.Port)
 }
 
 func InitManuscript() {
-	manuscriptDir := promptInput("👋 1. Enter your manuscript base directory (default is /tmp)\u001B[0m: ", manuscriptBaseDir)
+	// Check if manuscript config exists
+	manuscriptDir := manuscriptBaseDir
+	msConfig, err := pkg.LoadConfig(manuscriptConfig)
+	if err != nil {
+		logErrorAndReturn("Failed to load manuscript config", err)
+	}
+	if msConfig.BaseDir != "" {
+		manuscriptDir = msConfig.BaseDir
+	}
+
+	// Prompt user for manuscript name, chain, table, and output target
+	prompt := fmt.Sprintf("👋 1. Enter your manuscript base directory (default is %s)\u001B[0m: ", manuscriptDir)
+	manuscriptDir = promptInput(prompt, manuscriptDir)
 	if err := pkg.SaveConfig(manuscriptConfig, &pkg.Config{BaseDir: manuscriptDir}); err != nil {
 		logErrorAndReturn("Failed to save manuscript config", err)
 	}
@@ -69,14 +85,13 @@ func InitManuscript() {
 		logErrorAndReturn(fmt.Sprintf("Manuscript with name [ %s ] already exists. Please choose a different name.", manuscriptName), nil)
 	}
 	fmt.Printf("\u001B[32m✓ Manuscript name set to: %s\u001B[0m\n\n", manuscriptName)
-
 	chains, err := fetchChainBaseDatasets()
 	if err != nil {
 		log.Fatalf("Error fetching datasets: %v\n", err)
 	}
 
-	selectedChain, selectedDatabase := selectChain(chains, "🏂 3. Please select a chainbase network dataset from the list below: ", "zkevm")
-	selectedTable := selectTable(chains, selectedChain, "🧲 4. Please select a table from the list below: ", "blocks")
+	selectedChain, selectedDatabase := selectChain(chains, "🏂 3. Please select a chainbase network dataset from the list below: ", defaultDatabase)
+	selectedTable := selectTable(chains, selectedChain, "🧲 4. Please select a table from the list below: ", defaultTable)
 
 	outputChoice := promptOutputTarget()
 	fmt.Printf("\n\033[33m🏄🏄 Summary of your selections:\033[0m\n")
@@ -85,6 +100,7 @@ func InitManuscript() {
 	fmt.Printf("Selected table: \u001B[32m%s\u001B[0m\n", selectedTable)
 	fmt.Printf("Data output target: \u001B[32m%s\u001B[0m\n\n", outputChoice)
 
+	// Confirm user selections
 	if confirmProceed() {
 		ms := pkg.Manuscript{
 			BaseDir:  manuscriptDir,
@@ -96,7 +112,7 @@ func InitManuscript() {
 			Sink:     outputChoice,
 		}
 		fmt.Printf("\033[32m🚀 Deploying manuscript %s,%s...\033[0m\n", ms.Name, ms.BaseDir)
-		//executeInitManuscript(ms)
+		executeInitManuscript(ms)
 	}
 }
 
@@ -123,7 +139,7 @@ func createDockerComposeFile(dir string, ms *pkg.Manuscript) error {
 	composeFilePath := filepath.Join(dir, "docker-compose.yml")
 	dockComposeTemplate := static.DockerComposeTemplate
 	switch ms.Sink {
-	case "postgres":
+	case defaultSink:
 		port, err := FindAvailablePort(8081, 8181, 0)
 		if err != nil {
 			return fmt.Errorf("failed to find available port: %w", err)
@@ -326,7 +342,7 @@ func promptOutputTarget() string {
 	fmt.Println("1: Postgresql")
 	fmt.Println("2: Print (output to console)")
 	outputChoice := promptInput("Enter your choice(default is Postgresql)\u001B[0m: ", "1")
-	output := "Postgresql"
+	output := defaultSink
 	if outputChoice == "2" {
 		output = "Print"
 	}
