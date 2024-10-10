@@ -1,5 +1,5 @@
 version: '3.2'
-name: manuscript-contract-evt-decode
+name: contract_evt_decode
 services:
   jobmanager:
     image: ${MS_FLINK_IMAGE:-ms_flink}
@@ -9,6 +9,7 @@ services:
       - ${MANUSCRIPT_DATA_PATH:-./data}/statuspoint/checkpoint:/opt/flink/checkpoint
       - ${MANUSCRIPT_DATA_PATH:-./data}/statuspoint/savepoint:/opt/flink/savepoint
       - ${MANUSCRIPT_DATA_PATH:-./data}/log:/opt/flink/log
+      - ${MANUSCRIPT_DATA_PATH:-./data}/slink_files:/opt/flink/sink_file_path
       - ${MANUSCRIPT_PATH:-./manuscript.yaml}:/opt/flink/manuscript.yaml
     networks:
       - ms_network
@@ -24,9 +25,23 @@ services:
       - ${MANUSCRIPT_DATA_PATH:-./data}/statuspoint/checkpoint:/opt/flink/checkpoint
       - ${MANUSCRIPT_DATA_PATH:-./data}/statuspoint/savepoint:/opt/flink/savepoint
       - ${MANUSCRIPT_DATA_PATH:-./data}/log:/opt/flink/log
+      - ${MANUSCRIPT_DATA_PATH:-./data}/slink_files:/opt/flink/sink_file_path
       - ${MANUSCRIPT_PATH:-./manuscript.yaml}:/opt/flink/manuscript.yaml
     networks:
       - ms_network
+
+  postgres:
+    image: postgres:16.4
+    volumes:
+      - ${MANUSCRIPT_DATA_PATH:-./data}/postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-public}
+    networks:
+      - ms_network
+    restart: unless-stopped
+    restart: unless-stopped
 
 networks:
   ms_network:
