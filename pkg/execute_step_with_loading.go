@@ -16,7 +16,7 @@ func ExecuteStepWithLoading(stepName string, stdOut bool, stepFunc func() error)
 			case <-done:
 				return
 			default:
-				fmt.Printf("\r%s %s Loading... ", loading[i%len(loading)], stepName)
+				fmt.Printf("\r%s %s Loading...", loading[i%len(loading)], stepName)
 				time.Sleep(100 * time.Millisecond)
 				i++
 			}
