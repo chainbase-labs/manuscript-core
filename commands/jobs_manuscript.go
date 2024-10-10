@@ -51,7 +51,8 @@ func ListJobs() {
 			log.Fatalf("Error: Failed to get docker ps: %v", err)
 		}
 		if len(dockers) == 0 {
-			log.Fatalf("Error: No flink jobmanager found")
+			fmt.Println("\r🟡 There are no jobs running...")
+			return nil
 		}
 
 		jobNumber := 0
@@ -110,7 +111,12 @@ func JobLogs(jobName string) {
 
 func JobStop(jobName string) {
 	_ = pkg.ExecuteStepWithLoading("Stop job", false, func() error {
-		err := pkg.StopDockerCompose(jobName)
+		msConfig, err := pkg.LoadConfig(manuscriptConfig)
+		if err != nil {
+			log.Fatalf("Error: Failed to load manuscript config: %v", err)
+			return err
+		}
+		err = pkg.StopDockerCompose(fmt.Sprintf("%s/%s/%s/docker-compose.yml", msConfig.BaseDir, manuscriptBaseName, jobName))
 		if err != nil {
 			log.Fatalf("Error: Failed to stop job: %v", err)
 		}
@@ -138,7 +144,11 @@ func CheckGraphQLContainer(dockers []pkg.ContainerInfo, jobName string) int {
 }
 
 func trackHasuraTable(jobName string, graphQLContainerPort int) {
-	ms, err := ParseManuscriptYaml(fmt.Sprintf("manuscript/%s/manuscript.yaml", jobName))
+	msConfig, err := pkg.LoadConfig(manuscriptConfig)
+	if err != nil {
+		log.Fatalf("Error: Failed to load manuscript config: %v", err)
+	}
+	ms, err := ParseManuscriptYaml(fmt.Sprintf("%s/%s/%s/manuscript.yaml", msConfig.BaseDir, manuscriptBaseName, jobName))
 	if err != nil {
 		log.Fatalf("Error: Failed to parse manuscript yaml: %v", err)
 	}
