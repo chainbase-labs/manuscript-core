@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"gopkg.in/ini.v1"
 	"os"
+	"runtime"
 	"strings"
 )
 
 type Config struct {
 	BaseDir     string
+	SystemInfo  string
 	Manuscripts []Manuscript
 }
 
@@ -80,6 +82,9 @@ func SaveConfig(filePath string, newConfig *Config) error {
 		filePath = strings.Replace(filePath, "$HOME", homeDir, 1)
 	}
 
+	// Get system info
+	newConfig.SystemInfo = runtime.GOOS
+
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
 		_, err := os.Create(filePath)
@@ -95,6 +100,7 @@ func SaveConfig(filePath string, newConfig *Config) error {
 
 	if newConfig.BaseDir != "" {
 		cfg.Section("").Key("baseDir").SetValue(newConfig.BaseDir)
+		cfg.Section("").Key("systemInfo").SetValue(newConfig.SystemInfo)
 	}
 
 	for _, manuscript := range newConfig.Manuscripts {

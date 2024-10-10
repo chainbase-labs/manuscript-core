@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"text/template"
@@ -24,6 +25,8 @@ const (
 	defaultDatabase    = "zkevm"
 	defaultTable       = "blocks"
 	defaultSink        = "postgres"
+	graphQLImage       = "repository.chainbase.com/manuscript-node/graphql-engine:latest"
+	graphQLARMImage    = "repository.chainbase.com/manuscript-node/graphql-engine-arm64:latest"
 )
 
 func executeInitManuscript(ms pkg.Manuscript) {
@@ -152,6 +155,12 @@ func createDockerComposeFile(dir string, ms *pkg.Manuscript) error {
 		if err != nil {
 			return fmt.Errorf("failed to load manuscript config: %w", err)
 		}
+
+		ms.GraphQLImage = graphQLImage
+		if runtime.GOARCH == "arm64" || runtime.GOARCH == "arm" {
+			ms.GraphQLImage = graphQLARMImage
+		}
+
 		var excludePorts []int
 		for _, m := range m.Manuscripts {
 			if m.Name == ms.Name {
