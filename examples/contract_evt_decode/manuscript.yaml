@@ -1,4 +1,4 @@
-name: sink_postgres_demo
+name: contract_evt_decode
 specVersion: v0.1.0
 parallelism: 1
 

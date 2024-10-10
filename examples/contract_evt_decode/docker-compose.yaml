@@ -1,5 +1,5 @@
 version: '3.2'
-name: sync_rawdata_to_file
+name: contract_evt_decode
 services:
   jobmanager:
     image: ${MS_FLINK_IMAGE:-ms_flink}
