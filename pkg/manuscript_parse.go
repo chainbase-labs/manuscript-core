@@ -29,20 +29,21 @@ type Sink struct {
 }
 
 type Manuscript struct {
-	BaseDir     string      `yaml:"baseDir"`
-	Name        string      `yaml:"name"`
-	SpecVersion string      `yaml:"specVersion"`
-	Parallelism int         `yaml:"parallelism"`
-	Sources     []Source    `yaml:"sources"`
-	Transforms  []Transform `yaml:"transforms"`
-	Sinks       []Sink      `yaml:"sinks"`
-	Chain       string      `yaml:"chain"`
-	Table       string      `yaml:"table"`
-	Database    string      `yaml:"database"`
-	Query       string      `yaml:"query"`
-	Sink        string      `yaml:"sink"`
-	Port        int         `yaml:"port"`
-	GraphQLPort int         `yaml:"graphqlPort"`
+	BaseDir      string      `yaml:"baseDir"`
+	Name         string      `yaml:"name"`
+	SpecVersion  string      `yaml:"specVersion"`
+	Parallelism  int         `yaml:"parallelism"`
+	Sources      []Source    `yaml:"sources"`
+	Transforms   []Transform `yaml:"transforms"`
+	Sinks        []Sink      `yaml:"sinks"`
+	Chain        string      `yaml:"chain"`
+	Table        string      `yaml:"table"`
+	Database     string      `yaml:"database"`
+	Query        string      `yaml:"query"`
+	Sink         string      `yaml:"sink"`
+	Port         int         `yaml:"port"`
+	GraphQLImage string      `yaml:"graphqlImage"`
+	GraphQLPort  int         `yaml:"graphqlPort"`
 }
 
 func ParseYAML(filename string) (*Manuscript, error) {
