@@ -34,7 +34,7 @@ The vision of Manuscript is to realize “data trade” within the Chainbase net
 ### Install Manuscript Client
 ```shell
 # For macOs
-curl -fsSL  https://github.com/Liquidwe/rust-examples/raw/main/install.sh | bash
+curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install.sh | bash
 ```
 ### Requirements
 [Docker Desktop 25.1+](https://www.docker.com/products/docker-desktop/)
