@@ -72,7 +72,7 @@ Available Commands:
 1: Ethereum (Database: ethereum)
 🏂 1.Enter your chain choice (default is zkevm):
 
-🧲 3.Please select a table from the list below:
+🧲 2.Please select a table from the list below:
 1: blocks
 2: transactionLogs
 3: transactions
