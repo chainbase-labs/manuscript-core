@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -128,13 +127,34 @@ func GetDockerLogs(containerName string) error {
 
 func StopDockerCompose(Name string) error {
 	manuscriptDockerComposeFile := Name
+
 	if _, err := os.Stat(manuscriptDockerComposeFile); os.IsNotExist(err) {
-		log.Fatalf("Error: Manuscript %s does not exist", Name)
+		return fmt.Errorf("error: Manuscript %s does not exist", Name)
 	}
 
-	cmd := exec.Command("docker-compose", "-f", manuscriptDockerComposeFile, "down")
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to stop container: %w", err)
+	if _, err := exec.LookPath("docker"); err == nil {
+		cmd := exec.Command("docker", "compose", "-f", manuscriptDockerComposeFile, "down")
+		err = runCommand(cmd)
+		if err == nil {
+			return nil
+		}
+		fmt.Println("Failed to stop container using 'docker compose', trying 'docker-compose':", err)
 	}
-	return nil
+
+	if _, err := exec.LookPath("docker-compose"); err == nil {
+		cmd := exec.Command("docker-compose", "-f", manuscriptDockerComposeFile, "down")
+		err = runCommand(cmd)
+		if err == nil {
+			return nil
+		}
+		return fmt.Errorf("failed to stop container using 'docker-compose': %w", err)
+	}
+
+	return fmt.Errorf("neither 'docker-compose' nor 'docker compose' command found")
+}
+
+func runCommand(cmd *exec.Cmd) error {
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
