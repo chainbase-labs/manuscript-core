@@ -202,22 +202,35 @@ func checkDockerInstalled() error {
 func startDockerContainers(dir string) error {
 	var cmd *exec.Cmd
 
+	// Check if 'docker' exists first and prefer 'docker compose' if available
+	if _, err := exec.LookPath("docker"); err == nil {
+		cmd = exec.Command("docker", "compose", "-f", filepath.Join(dir, "docker-compose.yml"), "up", "-d")
+		err = runCommand(cmd)
+		if err == nil {
+			return nil
+		}
+
+		fmt.Println("Failed to start containers using 'docker compose', trying 'docker-compose':", err)
+	}
+
+	// If 'docker-compose' exists, fallback to it
 	if _, err := exec.LookPath("docker-compose"); err == nil {
 		cmd = exec.Command("docker-compose", "-f", filepath.Join(dir, "docker-compose.yml"), "up", "-d")
-	} else if _, err := exec.LookPath("docker"); err == nil {
-		cmd = exec.Command("docker", "compose", "-f", filepath.Join(dir, "docker-compose.yml"), "up", "-d")
-	} else {
-		return fmt.Errorf("neither 'docker-compose' nor 'docker compose' command found")
+		err = runCommand(cmd)
+		if err == nil {
+			return nil
+		}
+
+		return fmt.Errorf("failed to start Docker containers using 'docker-compose': %w", err)
 	}
 
+	return fmt.Errorf("neither 'docker-compose' nor 'docker compose' command found")
+}
+
+func runCommand(cmd *exec.Cmd) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-
-	err := cmd.Run()
-	if err != nil {
-		return fmt.Errorf("failed to start Docker containers: %w", err)
-	}
-	return nil
+	return cmd.Run()
 }
 
 func checkContainerStatus(ms *pkg.Manuscript) error {
