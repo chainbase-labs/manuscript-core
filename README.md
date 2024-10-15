@@ -152,7 +152,7 @@ Here are some of the planned improvements:
 - [x] Support Chainbase Network Streaming Lakehouse.
 - [x] Support Flink application mode.
 - [x] Support Schema Registry.
-- [ ] Support for user-defined functions (UDFs) for blockchain data parsing, such as decoding contract events and functions
+- [x] Support for user-defined functions (UDFs) for blockchain data parsing, such as decoding contract events and functions
 - [ ] Support custom advanced data processing logic with JAVA and Rust APIs.
 - [ ] Support local lightweight k8s environment deployment.
 - [ ] Support distributed edge node coordinators.
