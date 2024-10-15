@@ -33,8 +33,9 @@ The vision of Manuscript is to realize “data trade” within the Chainbase net
 
 ## Getting Started 🏄
 ### Install Manuscript Client
+> ⚠️ **Note**: The manuscript data is only being trialed on the testnet and locally. Please do not use it in a production environment.
 ```shell
-# For macOs
+# For Linux and MacOS
 curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install.sh | bash
 ```
 ### Requirements
@@ -100,7 +101,7 @@ Data output target: postgres
 You can now list your job with the command: 
 👉 manuscript-cli list
 
-If you need to manually edit the manuscript, you can edit the file '/Users/azroa/github/manuscript/demo/manuscript.yaml' and then manually execute the 'run' command:
+If you need to manually edit the manuscript, you can edit the file '/Users/azroa/github/manuscript/demo/manuscript.yaml' and then manually execute the 'deploy' command:
 👉 vim /Users/azroa/github/manuscript/demo/manuscript.yaml
 👉 manuscript-cli deploy /Users/azroa/github/manuscript/demo/manuscript.yaml --env=local
 ```
