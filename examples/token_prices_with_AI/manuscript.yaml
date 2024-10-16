@@ -1,0 +1,21 @@
+name: btc_price_to_file
+specVersion: v0.1.0
+parallelism: 3
+
+sources:
+  - name: btc_prices
+    type: dataset
+    dataset: token.token_usd_daily
+
+transforms:
+  - name: btc_price_transform
+    sql: >
+      SELECT
+          *
+      FROM btc_prices
+
+sinks:
+  - name: btc_price_sink_file
+    type: filesystem
+    from: btc_price_transform
+    file_name: 2024_btc_prices.json

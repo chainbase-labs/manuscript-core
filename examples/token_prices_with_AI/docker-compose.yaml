@@ -1,0 +1,34 @@
+name: demo
+services:
+  jobmanager:
+    image: repository.chainbase.com/manuscript-node/manuscript-node:latest
+    user: "flink"
+    command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./data/statuspoint/checkpoint:/opt/flink/checkpoint
+      - ./data/statuspoint/savepoint:/opt/flink/savepoint
+      - ./data/log:/opt/flink/log
+      - ./manuscript.yaml:/opt/flink/manuscript.yaml
+    networks:
+      - ms_network
+
+  taskmanager:
+    image: repository.chainbase.com/manuscript-node/manuscript-node:latest
+    user: "flink"
+    depends_on:
+      - jobmanager
+    command: "taskmanager"
+    scale: 1
+    volumes:
+      - ./data/statuspoint/checkpoint:/opt/flink/checkpoint
+      - ./data/statuspoint/savepoint:/opt/flink/savepoint
+      - ./data/log:/opt/flink/log
+      - ./data/sink_file_path:/opt/flink/sink_file_path
+      - ./manuscript.yaml:/opt/flink/manuscript.yaml
+    networks:
+      - ms_network
+
+networks:
+  ms_network:
