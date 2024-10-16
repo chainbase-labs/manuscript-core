@@ -94,7 +94,7 @@ Data output target: postgres
 
 🚀 Do you want to proceed with the above selections? (yes/no): yes
 ···
-✓ Step 5: Start Docker Containers completed successfully!
+✓ Step 5: Start Docker Containers, which was completed successfully!
 ⠙ Step 6: Check Container Status Loading... ✓ Container demo is running
 ✓ Step 6: Check Container Status completed successfully!
 🎉 Manuscript demo deployment completed successfully!
