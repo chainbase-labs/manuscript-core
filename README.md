@@ -34,6 +34,7 @@ The vision of Manuscript is to realize “data trade” within the Chainbase net
 ## ✨ Videos
 
 <https://github.com/user-attachments/assets/80dfb1c2-3a4e-4e85-bd2b-12d5ca0b5639>
+
 <https://github.com/user-attachments/assets/205e64ec-3d93-4330-a58d-9dd8cf1962e9>
 
 ## Getting Started 🏄
