@@ -8,7 +8,7 @@ body:
       label: Self Checks
       description: "To make sure we get to you in time, please check the following :"
       options:
-        - label: I have searched for existing issues [search for existing issues](https://github.com/langgenius/dify/issues), including closed ones.
+        - label: I have searched for existing issues [search for existing issues](https://github.com/chainbase-labs/manuscript-core/issues), including closed ones.
           required: true
         - label: I have searched for existing pull requests [search for existing pull requests](https://github.com/chainbase-labs/manuscript-core/pulls), including closed ones.
           required: true
