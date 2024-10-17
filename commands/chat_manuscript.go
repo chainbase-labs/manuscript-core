@@ -122,7 +122,7 @@ func ChatWithLLM(job pkg.Manuscript) {
 			prompt := fmt.Sprintf("The PostgreSQL database table with the following information:%s\n"+
 				"The user's question is: '%s'\n"+
 				"Please help user convert the question into SQL according to the above schema. Directly output plain text SQL, without any additional explanation or content."+
-				"Note: If there is no LIMIT keyword in the SQL, proactively add a LIMIT 10", tableSchema, userInput)
+				"Note: If it's a SELECT * FROM query and there is no LIMIT keyword, proactively add a LIMIT 10; in all other cases, do not add the limit proactively.", tableSchema, userInput)
 
 			fmt.Printf("Processing your question...\n")
 

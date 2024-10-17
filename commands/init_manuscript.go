@@ -165,6 +165,9 @@ func createDockerComposeFile(dir string, ms *pkg.Manuscript) error {
 		for _, m := range m.Manuscripts {
 			if m.Name == ms.Name {
 				ms.Port = m.Port
+				ms.DbPort = m.DbPort
+				ms.DbUser = m.DbUser
+				ms.DbPassword = m.DbPassword
 				ms.GraphQLPort = m.GraphQLPort
 				dockComposeTemplate = static.DockerComposeWithPostgresqlContent
 				return createTemplateFile(composeFilePath, dockComposeTemplate, ms)
