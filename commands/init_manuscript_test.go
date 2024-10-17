@@ -66,3 +66,7 @@ func cleanupDockerEnvironment(t *testing.T, composeFilePath string) {
 		t.Fatalf("Failed to clean up Docker environment: %v", err)
 	}
 }
+
+func TestVersion(t *testing.T) {
+
+}
