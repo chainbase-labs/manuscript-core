@@ -1,0 +1,21 @@
+name: "📚 Documentation Issue"
+description: Report issues in our documentation
+labels:
+  - documentation
+body:
+  - type: checkboxes
+    attributes:
+      label: Self Checks
+      description: "To make sure we get to you in time, please check the following :"
+      options:
+        - label: I have searched for existing issues [search for existing issues](https://github.com/chainbase-labs/manuscript-core/issues), including closed ones.
+          required: true
+        - label: I have searched for existing pull requests [search for existing pull requests](https://github.com/chainbase-labs/manuscript-core/pulls), including closed ones.
+          required: true
+
+  - type: textarea
+    attributes:
+      label: Provide a description of requested docs changes
+      placeholder: Briefly describe which document needs to be corrected and why.
+    validations:
+      required: true
