@@ -165,6 +165,9 @@ func createDockerComposeFile(dir string, ms *pkg.Manuscript) error {
 		for _, m := range m.Manuscripts {
 			if m.Name == ms.Name {
 				ms.Port = m.Port
+				ms.DbPort = m.DbPort
+				ms.DbUser = m.DbUser
+				ms.DbPassword = m.DbPassword
 				ms.GraphQLPort = m.GraphQLPort
 				dockComposeTemplate = static.DockerComposeWithPostgresqlContent
 				return createTemplateFile(composeFilePath, dockComposeTemplate, ms)
@@ -181,6 +184,11 @@ func createDockerComposeFile(dir string, ms *pkg.Manuscript) error {
 		if err != nil {
 			return fmt.Errorf("failed to find available port: %w", err)
 		}
+		dbPort, err := FindAvailablePort(15432, 15532, excludePorts)
+		if err != nil {
+			return fmt.Errorf("failed to find available port: %w", err)
+		}
+		ms.DbPort = dbPort
 		ms.GraphQLPort = graphQLPort
 		dockComposeTemplate = static.DockerComposeWithPostgresqlContent
 	default:

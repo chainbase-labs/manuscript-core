@@ -42,6 +42,9 @@ type Manuscript struct {
 	Query        string      `yaml:"query"`
 	Sink         string      `yaml:"sink"`
 	Port         int         `yaml:"port"`
+	DbPort       int         `yaml:"dbPort"`
+	DbUser       string      `yaml:"dbUser"`
+	DbPassword   string      `yaml:"dbPassword"`
 	GraphQLImage string      `yaml:"graphqlImage"`
 	GraphQLPort  int         `yaml:"graphqlPort"`
 }
