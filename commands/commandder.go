@@ -54,6 +54,17 @@ var jobLogsCmd = &cobra.Command{
 	},
 }
 
+var chatCmd = &cobra.Command{
+	Use:     "chat <job_name>",
+	Aliases: []string{"c"},
+	Short:   "Chat with the dataset AI",
+	Long:    "Chat with the dataset AI",
+	Args:    cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		Chat(args[0])
+	},
+}
+
 var deployManuscript = &cobra.Command{
 	Use:     "deploy <manuscript-file>",
 	Aliases: []string{"d"},
@@ -77,11 +88,12 @@ func init() {
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		// List of commands to display in the help menu
 		commands := []*cobra.Command{
-			cmd.Commands()[3],
 			cmd.Commands()[4],
 			cmd.Commands()[5],
 			cmd.Commands()[6],
-			cmd.Commands()[1],
+			cmd.Commands()[7],
+			cmd.Commands()[2],
+			cmd.Commands()[0],
 		}
 
 		maxNameLen := 0
@@ -116,6 +128,9 @@ func init() {
 	rootCmd.AddCommand(jobListCmd)
 	rootCmd.AddCommand(jobStopCmd)
 	rootCmd.AddCommand(jobLogsCmd)
+
+	// Add chatCmd to the root command
+	rootCmd.AddCommand(chatCmd)
 
 	// Add deployManuscript to root command
 	deployManuscript.Flags().StringVar(&env, "env", "", "Specify the environment to deploy (e.g., local or chainbase)")

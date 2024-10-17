@@ -71,6 +71,8 @@ services:
 
   postgres:
     image: postgres:16.4
+    ports:
+      - "{{.DbPort}}:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     environment:

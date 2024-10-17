@@ -57,6 +57,9 @@ func LoadConfig(filePath string) (*Config, error) {
 			Query:       section.Key("query").String(),
 			Sink:        section.Key("sink").String(),
 			Port:        section.Key("port").MustInt(8080),
+			DbPort:      section.Key("dbPort").MustInt(15432),
+			DbUser:      section.Key("dbUser").MustString("postgres"),
+			DbPassword:  section.Key("dbPassword").MustString("postgres"),
 			GraphQLPort: section.Key("graphqlPort").MustInt(8081),
 		}
 
@@ -104,6 +107,11 @@ func SaveConfig(filePath string, newConfig *Config) error {
 	}
 
 	for _, manuscript := range newConfig.Manuscripts {
+		if manuscript.DbUser == "" {
+			manuscript.DbUser = "postgres"
+			manuscript.DbPassword = "postgres"
+		}
+
 		section := cfg.Section(manuscript.Name)
 		section.Key("baseDir").SetValue(manuscript.BaseDir)
 		section.Key("name").SetValue(manuscript.Name)
@@ -115,6 +123,9 @@ func SaveConfig(filePath string, newConfig *Config) error {
 		section.Key("query").SetValue(manuscript.Query)
 		section.Key("sink").SetValue(manuscript.Sink)
 		section.Key("port").SetValue(strings.TrimSpace(fmt.Sprintf("%d", manuscript.Port)))
+		section.Key("dbPort").SetValue(strings.TrimSpace(fmt.Sprintf("%d", manuscript.DbPort)))
+		section.Key("dbUser").SetValue(strings.TrimSpace(fmt.Sprintf("%s", manuscript.DbUser)))
+		section.Key("dbPassword").SetValue(strings.TrimSpace(fmt.Sprintf("%s", manuscript.DbPassword)))
 		section.Key("graphqlPort").SetValue(strings.TrimSpace(fmt.Sprintf("%d", manuscript.GraphQLPort)))
 	}
 
