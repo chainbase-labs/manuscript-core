@@ -180,6 +180,20 @@ Here are some of the planned improvements:
                     <sub><b>lxcong</b></sub>
                 </a>
             </td>
+            <td align="center">
+                <a href="https://github.com/XdpCs">
+                    <img src="https://avatars.githubusercontent.com/u/72180730?v=4" width="100;" alt="XdpCs"/>
+                    <br />
+                    <sub><b>Alan Xu</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/nnsW3">
+                    <img src="https://avatars.githubusercontent.com/u/146735585?v=4" width="100;" alt="nnsW3"/>
+                    <br />
+                    <sub><b>Elias Rad</b></sub>
+                </a>
+            </td>
 		</tr>
 	<tbody>
 </table>
