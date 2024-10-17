@@ -12,6 +12,8 @@ body:
           required: true
         - label: I have searched for existing issues [search for existing issues](https://github.com/chainbase-labs/manuscript-core/issues), including closed ones.
           required: true
+        - label: I have searched for existing pull requests [search for existing pull requests](https://github.com/chainbase-labs/manuscript-core/pulls), including closed ones.
+          required: true
 
   - type: textarea
     attributes:
