@@ -1,0 +1,31 @@
+name: "⭐ Feature or enhancement request"
+description: Propose something new.
+labels:
+  - enhancement
+body:
+  - type: checkboxes
+    attributes:
+      label: Self Checks
+      description: "To make sure we get to you in time, please check the following :"
+      options:
+        - label: I have searched for existing issues [search for existing issues](https://github.com/chainbase-labs/manuscript-core/issues), including closed ones.
+          required: true
+        - label: I have searched for existing pull requests [search for existing pull requests](https://github.com/chainbase-labs/manuscript-core/pulls), including closed ones.
+          required: true
+
+  - type: textarea
+    attributes:
+      label: 1. Is this request related to a challenge you're experiencing? Tell me about your story.
+      placeholder: Please describe the specific scenario or problem you're facing as clearly as possible.
+    validations:
+      required: true
+  - type: checkboxes
+    attributes:
+      label: 2. Could you assist us with this feature?
+      description: Let us know! We'd love to have you on board.
+      options:
+        - label: I am interested in contributing to this feature.
+          required: false
+  - type: markdown
+    attributes:
+      value: Please limit one request per issue.
