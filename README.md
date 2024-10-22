@@ -3,14 +3,13 @@
 [![GitHub Version](https://img.shields.io/github/tag-pre/Liquidwe/rust-examples?label=Version&color=D4B68C)](https://github.com/chainbase-labs/manuscript-core/releases)
 ![PyPI License](https://img.shields.io/pypi/l/quixstreams?label=Licence&color=D4B68C)
 [![Docs](https://img.shields.io/badge/docs-chainbase.com-0345b2?label=Docs&color=D4B68C)](https://docs.chainbase.com/core-concepts/manuscript/overview#core-values-and-capabilities-of-manuscript)
-<a href="https://codecov.io/gh/kool-dev/kool"><img src="https://codecov.io/gh/kool-dev/kool/branch/main/graph/badge.svg" alt="codecov"></a>
-[![Tests on Linux, MacOS and Windows](https://github.com/gohugoio/hugo/workflows/Test/badge.svg)](https://github.com)
-[![Go Report Card](https://goreportcard.com/badge/github.com/gohugoio/hugo)](https://goreportcard.com)\
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fkubescape%2Fkubescape.svg?type=shield&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Fkubescape%2Fkubescape?ref=badge_shield&issueType=license)
+<a href="https://codecov.io/gh/chainbase-labs/manuscript-core"><img src="https://codecov.io/gh/chainbase-labs/manuscript-core/branch/main/graph/badge.svg" alt="codecov"></a>
+[![Tests on Linux, MacOS and Windows](https://github.com/chainbase-labs/manuscript-core/actions/workflows/test.yml/badge.svg)](https://github.com//chainbase-labs/manuscript-core/actions?query=workflow%3Acodecov)
+[![Go Report Card](https://goreportcard.com/badge/github.com/chainbase-labs/manuscript-core)](https://goreportcard.com)
 [![X](https://img.shields.io/twitter/url?&color=D4B68C&label=&style=social&url=https%3A%2F%2Fx.com%2FchainbaseHQ)](https://x.com/chainbaseHQ)
 [![Community Slack](https://img.shields.io/badge/Community%20Slack-blueviolet?logo=slack)](https://join.slack.com/share/enQtNzc4NDI3Mzk2Njg3MS1hZjdhOGY0ZTU5ODk3ZmY0NDAzN2JiY2YxMjNmOTY5NmEwNWNhMDhiMWE0M2I1ZDc2YzI1NDQ3ZDhhMWQ4Zjg0?cdn_fallback=1)
-[![Discord](https://img.shields.io/badge/Chainbase-0345b2?logo=Discord)](https://discord.gg/YnAavwwR)
-[![Telegram](https://img.shields.io/badge/Chainbase-0345b2?logo=Telegram)](https://te.me/ChainbaseNetwork)
+[![Discord](https://img.shields.io/badge/Chainbase-0345b2?logo=Discord)](https://discord.com/channels/933995010158907422/935156893872185344)
+[![Telegram](https://img.shields.io/badge/Chainbase-0345b2?logo=Telegram)](https://t.me/ChainbaseNetwork)
 
 # Build The World's Largest Omnichain Data Network
 Chainbase is a global blockchain data network with an extensive dataset and cluster worldwide. If we compare Chainbase’s global data network to a country, then Manuscript would be the language of this data network nation. Manuscript plays a crucial role in the Chainbase ecosystem, serving as a bridge connecting various data, services, and users.
@@ -208,7 +207,7 @@ Here are some of the planned improvements:
 ## Get Involved 🤝
 
 - Please use [GitHub issues](https://github.com/chainbase-labs/manuscript-core/issues) to report bugs and suggest new features.
-- Join the [Manuscript Community On Telegram](https://te.me/ChainbaseNetwork), a vibrant group of developers, data engineers and newcomers to blockchain data, who are learning and leveraging Manuscript for real-time data processing.
+- Join the [Manuscript Community On Telegram](https://t.me/ChainbaseNetwork), a vibrant group of developers, data engineers and newcomers to blockchain data, who are learning and leveraging Manuscript for real-time data processing.
 - Follow us on [X](https://x.com/chainbaseHQ) where we share our latest tutorials, forthcoming community events and the occasional meme.
 - If you have any questions or feedback - write to us at support@chainbase.com!
 

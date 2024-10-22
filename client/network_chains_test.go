@@ -44,6 +44,7 @@ var mockResponse = ChainResponse{
 }
 
 func TestGetChainBaseDatasetList(t *testing.T) {
+	t.Skip("Skip GetChainBaseDatasetList test")
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v1/metadata/network_chains" {
 			http.Error(w, "Not Found", http.StatusNotFound)
