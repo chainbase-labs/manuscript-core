@@ -1,6 +1,6 @@
 # This is a workflow to help you test the unit case and show codecov
 
-name: "build and codecov"
+name: "test"
 
 on:
   push:
