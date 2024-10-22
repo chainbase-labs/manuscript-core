@@ -8,7 +8,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/chainbase-labs/manuscript-core)](https://goreportcard.com)
 [![X](https://img.shields.io/twitter/url?&color=D4B68C&label=&style=social&url=https%3A%2F%2Fx.com%2FchainbaseHQ)](https://x.com/chainbaseHQ)
 [![Community Slack](https://img.shields.io/badge/Community%20Slack-blueviolet?logo=slack)](https://join.slack.com/share/enQtNzc4NDI3Mzk2Njg3MS1hZjdhOGY0ZTU5ODk3ZmY0NDAzN2JiY2YxMjNmOTY5NmEwNWNhMDhiMWE0M2I1ZDc2YzI1NDQ3ZDhhMWQ4Zjg0?cdn_fallback=1)
-[![Discord](https://img.shields.io/badge/Chainbase-0345b2?logo=Discord)](https://discord.gg/YnAavwwR)
+[![Discord](https://img.shields.io/badge/Chainbase-0345b2?logo=Discord)](https://discord.com/channels/933995010158907422/935156893872185344)
 [![Telegram](https://img.shields.io/badge/Chainbase-0345b2?logo=Telegram)](https://te.me/ChainbaseNetwork)
 
 # Build The World's Largest Omnichain Data Network
