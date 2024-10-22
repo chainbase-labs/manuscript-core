@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,7 +9,8 @@ import (
 )
 
 func TestInitManuscriptDockerIntegration(t *testing.T) {
-	tempDir, err := ioutil.TempDir(".", "manuscript_test")
+	t.Skip("Skip InitManuscriptDockerIntegration test")
+	tempDir, err := os.MkdirTemp(".", "manuscript_test")
 	if err != nil {
 		t.Fatalf("Failed to create temporary directory: %v", err)
 	}

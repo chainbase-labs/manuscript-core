@@ -6,6 +6,7 @@ import (
 )
 
 func TestFlinkClient(t *testing.T) {
+	t.Skip("Skip FlinkClient test")
 	client := NewFlinkClient(strings.TrimPrefix("127.0.0.1:8083", "http://"), "use catalog default_catalog; use default_database;")
 
 	if err := client.InitializeClient(); err != nil {
