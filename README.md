@@ -198,13 +198,6 @@ Here are some of the planned improvements:
                     <sub><b>Elias Rad</b></sub>
                 </a>
             </td>
-            <td align="center">
-                <a href="https://github.com/Silas-Xu">
-                    <img src="https://avatars.githubusercontent.com/u/177614389?v=4" width="100;" alt="Silas-Xu"/>
-                    <br />
-                    <sub><b>Silas</b></sub>
-                </a>
-            </td>
 		</tr>
 	<tbody>
 </table>
