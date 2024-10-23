@@ -2,7 +2,7 @@
 
 [![GitHub Version](https://img.shields.io/github/tag-pre/chainbase-labs/manuscript-core?label=Version&color=D4B68C)](https://github.com/chainbase-labs/manuscript-core/releases)
 ![PyPI License](https://img.shields.io/pypi/l/quixstreams?label=Licence&color=D4B68C)
-[![Docs](https://img.shields.io/badge/docs-chainbase.com-0345b2?label=Docs&color=D4B68C)](https://docs.chainbase.com/core-concepts/manuscript/overview)
+[![Docs](https://img.shields.io/badge/docs-chainbase.com-0345b2?label=Docs&color=D4B68C)](https://docs.chainbase.com/core-concepts/manuscript/overview#core-values-and-capabilities-of-manuscript)
 <a href="https://codecov.io/gh/chainbase-labs/manuscript-core"><img src="https://codecov.io/gh/chainbase-labs/manuscript-core/branch/main/graph/badge.svg" alt="codecov"></a>
 [![Tests on Linux, MacOS and Windows](https://github.com/chainbase-labs/manuscript-core/actions/workflows/test.yml/badge.svg)](https://github.com//chainbase-labs/manuscript-core/actions?query=workflow%3Acodecov)
 [![Go Report Card](https://goreportcard.com/badge/github.com/chainbase-labs/manuscript-core)](https://goreportcard.com)  
