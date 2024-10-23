@@ -3,3 +3,4 @@
 flink/runner/target
 examples/*/data/
 manuscript/
+dist/
