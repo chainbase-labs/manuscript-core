@@ -228,7 +228,7 @@ Here are some of the planned improvements:
             </td>
             <td align="center">
                 <a href="https://github.com/Liquidwe">
-                    <img src="./images/wechat.png" width="150;" alt="Liquidwe"/>
+                    <img src="./images/telegram.png" width="150;" alt="Liquidwe"/>
                     <br />
                 </a>
             </td>
