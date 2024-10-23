@@ -5,7 +5,7 @@
 [![Docs](https://img.shields.io/badge/docs-chainbase.com-0345b2?label=Docs&color=D4B68C)](https://docs.chainbase.com/core-concepts/manuscript/overview)
 <a href="https://codecov.io/gh/chainbase-labs/manuscript-core"><img src="https://codecov.io/gh/chainbase-labs/manuscript-core/branch/main/graph/badge.svg" alt="codecov"></a>
 [![Tests on Linux, MacOS and Windows](https://github.com/chainbase-labs/manuscript-core/actions/workflows/test.yml/badge.svg)](https://github.com//chainbase-labs/manuscript-core/actions?query=workflow%3Acodecov)
-[![Go Report Card](https://goreportcard.com/badge/github.com/chainbase-labs/manuscript-core)](https://goreportcard.com)
+[![Go Report Card](https://goreportcard.com/badge/github.com/chainbase-labs/manuscript-core)](https://goreportcard.com)  
 [![X](https://img.shields.io/twitter/url?&color=D4B68C&label=&style=social&url=https%3A%2F%2Fx.com%2FchainbaseHQ)](https://x.com/chainbaseHQ)
 [![Discord](https://img.shields.io/badge/Chainbase-0345b2?logo=Discord)](https://discord.com/channels/933995010158907422/935156893872185344)
 [![Telegram](https://img.shields.io/badge/Chainbase-0345b2?logo=Telegram)](https://t.me/ChainbaseNetwork)
@@ -209,6 +209,25 @@ Here are some of the planned improvements:
 - Join the [Manuscript Community On Telegram](https://t.me/ChainbaseNetwork), a vibrant group of developers, data engineers and newcomers to blockchain data, who are learning and leveraging Manuscript for real-time data processing.
 - Follow us on [X](https://x.com/chainbaseHQ) where we share our latest tutorials, forthcoming community events and the occasional meme.
 - If you have any questions or feedback - write to us at support@chainbase.com!
+
+<table>
+	<tbody>
+		<tr>
+            <td align="center">
+                <a href="https://github.com/Liquidwe">
+                    <img src="./images/discord.png" width="150;" alt="Liquidwe"/>
+                    <br />
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/Liquidwe">
+                    <img src="./images/wechat.png" width="150;" alt="Liquidwe"/>
+                    <br />
+                </a>
+            </td>
+		</tr>
+	<tbody>
+</table>
 
 ## License 📗
 
