@@ -2,15 +2,12 @@ package commands
 
 import (
 	"bufio"
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"io/ioutil"
 	"log"
+	"manuscript-core/client"
 	"manuscript-core/pkg"
-	"net/http"
 	"os"
 	"os/signal"
 	"regexp"
@@ -19,27 +16,18 @@ import (
 )
 
 const (
-	openaiAPIURL = "https://api.openai.com/v1/chat/completions"
-	openaiMode   = "gpt-4o-mini"
+	ChatGPT int = iota + 1
+	Gemini
 )
 
-type ChatGPTRequest struct {
-	Model    string          `json:"model"`
-	Messages []ChatGPTPrompt `json:"messages"`
-}
+const (
+	chatGPTModel = "gpt-4o-mini"
+	geminiModel  = "gemini-1.5-flash"
+)
 
-type ChatGPTPrompt struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
-type ChatGPTResponse struct {
-	Choices []struct {
-		Message struct {
-			Role    string `json:"role"`
-			Content string `json:"content"`
-		} `json:"message"`
-	} `json:"choices"`
+type LLMClient interface {
+	Name() string
+	SendRequest(prompt string) (string, error)
 }
 
 type TextToSQLRequest struct {
@@ -54,10 +42,12 @@ func Chat(manuscript string) {
 	jobName := fmt.Sprintf("%s-postgres-1", manuscript)
 	dockers, err := pkg.RunDockerPs()
 	if err != nil {
-		log.Fatalf("Error: Failed to get postgres ps: %v", err)
+		fmt.Printf("Error: Failed to get postgres ps: %v", err)
+		return
 	}
 	if len(dockers) == 0 {
-		log.Fatalf("Error: No manuscript postgres found")
+		fmt.Println("No manuscript postgres found")
+		return
 	}
 	for _, d := range dockers {
 		if d.Name == jobName {
@@ -67,7 +57,15 @@ func Chat(manuscript string) {
 			}
 			for _, m := range manuscripts.Manuscripts {
 				if m.Name == manuscript {
-					ChatWithLLM(m)
+					model := promptInput("Manuscript currently offers the following two types of model integration:\n1. ChatGPT\n2. Gemini\nSelect model to use(default ChatGPT): ", "1")
+					chat, err := newChatClient(model)
+					if err != nil {
+						log.Printf("Failed to create chat client: %v", err)
+						return
+					}
+
+					ChatWithLLM(m, chat)
+					break
 				}
 			}
 			break
@@ -75,16 +73,32 @@ func Chat(manuscript string) {
 	}
 }
 
-func ChatWithLLM(job pkg.Manuscript) {
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
-		log.Fatalf("Error: Please set the environment variable OPENAI_API_KEY")
+func newChatClient(model string) (LLMClient, error) {
+	switch model {
+	case "1":
+		apiKey := os.Getenv("OPENAI_API_KEY")
+		if apiKey == "" {
+			return nil, fmt.Errorf("OPENAI_API_KEY environment variable not set, please set it to your OpenAI API key. You can obtain an API key from https://platform.openai.com")
+		}
+		return &client.ChatGPTClient{
+			APIKey: apiKey,
+			Model:  chatGPTModel,
+		}, nil
+	case "2":
+		apiKey := os.Getenv("GEMINI_API_KEY")
+		if apiKey == "" {
+			return nil, fmt.Errorf("GEMINI_API_KEY environment variable not set, please set it to your Gemini API key. You can obtain an API key from https://ai.google.dev/gemini-api/docs/models/gemini")
+		}
+		return &client.GeminiClient{
+			APIKey: apiKey,
+			Model:  geminiModel,
+		}, nil
+	default:
+		return nil, fmt.Errorf("error: unknown model %s", model)
 	}
-	model := os.Getenv("OPENAI_MODEL")
-	if model == "" {
-		model = openaiMode
-	}
+}
 
+func ChatWithLLM(job pkg.Manuscript, client LLMClient) {
 	signalChannel := make(chan os.Signal, 1)
 	signal.Notify(signalChannel, syscall.SIGINT, syscall.SIGTERM)
 
@@ -104,7 +118,7 @@ func ChatWithLLM(job pkg.Manuscript) {
 
 	go func() {
 		for {
-			fmt.Print("You: ")
+			fmt.Print("🏄🏼‍You: ")
 			userInput, _ := reader.ReadString('\n')
 			userInput = strings.TrimSpace(userInput)
 			inputChannel <- userInput
@@ -126,19 +140,19 @@ func ChatWithLLM(job pkg.Manuscript) {
 
 			fmt.Printf("Processing your question...\n")
 
-			response, err := sendToChatGPT(prompt, apiKey, model)
+			response, err := client.SendRequest(prompt)
 			if err != nil {
 				fmt.Printf("Error getting response: %v\n", err)
 				continue
 			}
-
-			fmt.Printf("AI: %s\n", response)
 
 			sqlQuery, err := extractSQL(response)
 			if err != nil {
 				fmt.Printf("Error extracting SQL: %v\n", err)
 				continue
 			}
+			fmt.Printf("🔎%s: \u001B[32m%s\u001B[0m\nExecuting SQL......\n", client.Name(), sqlQuery)
+
 			executeSQL(pool, sqlQuery)
 
 		case <-signalChannel:
@@ -158,59 +172,6 @@ func extractSQL(response string) (string, error) {
 	}
 
 	return strings.TrimSpace(response), nil
-}
-
-func sendToChatGPT(prompt string, apiKey, model string) (string, error) {
-	requestData := ChatGPTRequest{
-		Model: model,
-		Messages: []ChatGPTPrompt{
-			{
-				Role:    "system",
-				Content: "You are a helpful assistant.",
-			},
-			{
-				Role:    "user",
-				Content: prompt,
-			},
-		},
-	}
-
-	requestBody, err := json.Marshal(requestData)
-	if err != nil {
-		return "", fmt.Errorf("error encoding request: %v", err)
-	}
-
-	req, err := http.NewRequest("POST", openaiAPIURL, bytes.NewBuffer(requestBody))
-	if err != nil {
-		return "", fmt.Errorf("error creating request: %v", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("error sending request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("error reading response: %v", err)
-	}
-
-	var chatGPTResponse ChatGPTResponse
-	err = json.Unmarshal(body, &chatGPTResponse)
-	if err != nil {
-		return "", fmt.Errorf("error decoding response: %v", err)
-	}
-
-	if len(chatGPTResponse.Choices) > 0 {
-		return chatGPTResponse.Choices[0].Message.Content, nil
-	}
-
-	return "", fmt.Errorf("no valid response from ChatGPT")
 }
 
 func connectToDB(ms pkg.Manuscript) (*pgxpool.Pool, error) {
@@ -266,4 +227,5 @@ func executeSQL(pool *pgxpool.Pool, sqlQuery string) {
 		}
 		fmt.Println()
 	}
+	fmt.Println("Do you have any other questions? Type 'exit' to quit.")
 }
