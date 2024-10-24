@@ -7,6 +7,7 @@ before:
     - go mod download
 
 builds:
+  - id: "manuscript-cli"
   - env:
       - CGO_ENABLED=0
     goos:
