@@ -15,18 +15,14 @@ import (
 	"syscall"
 )
 
-const (
-	ChatGPT int = iota + 1
-	Gemini
-)
-
-const (
-	chatGPTModel = "gpt-4o-mini"
-	geminiModel  = "gemini-1.5-flash"
-)
+var modelNames = map[int]string{
+	1: "ChatGPT",
+	2: "Gemini",
+	3: "Gaia",
+}
 
 type LLMClient interface {
-	Name() string
+	GPTName() string
 	SendRequest(prompt string) (string, error)
 }
 
@@ -36,6 +32,16 @@ type TextToSQLRequest struct {
 
 type TextToSQLResponse struct {
 	Sql string `json:"sql"`
+}
+
+func generateModelPrompt() string {
+	var sb strings.Builder
+	sb.WriteString("Manuscript currently offers the following types of model integration:\n")
+	for i, name := range modelNames {
+		sb.WriteString(fmt.Sprintf("%d. %s\n", i, name))
+	}
+	sb.WriteString("Select model to use (default ChatGPT): ")
+	return sb.String()
 }
 
 func Chat(manuscript string) {
@@ -57,7 +63,8 @@ func Chat(manuscript string) {
 			}
 			for _, m := range manuscripts.Manuscripts {
 				if m.Name == manuscript {
-					model := promptInput("Manuscript currently offers the following two types of model integration:\n1. ChatGPT\n2. Gemini\nSelect model to use(default ChatGPT): ", "1")
+					prompt := generateModelPrompt()
+					model := promptInput(prompt, "1")
 					chat, err := newChatClient(model)
 					if err != nil {
 						log.Printf("Failed to create chat client: %v", err)
@@ -78,20 +85,35 @@ func newChatClient(model string) (LLMClient, error) {
 	case "1":
 		apiKey := os.Getenv("OPENAI_API_KEY")
 		if apiKey == "" {
-			return nil, fmt.Errorf("OPENAI_API_KEY environment variable not set, please set it to your OpenAI API key. You can obtain an API key from https://platform.openai.com")
+			return nil, fmt.Errorf("OPENAI_API_KEY environment variable not set, please set it to your OpenAI API key. You can obtain an API key from https://platform.openai.com, if you want change the model, please set `OPENAI_MODEL` environment variable to the model name")
 		}
 		return &client.ChatGPTClient{
-			APIKey: apiKey,
-			Model:  chatGPTModel,
+			Name:    "ChatGPT",
+			BaseURL: os.Getenv("OPENAI_API_BASE"),
+			APIKey:  apiKey,
+			Model:   os.Getenv("OPENAI_MODEL"),
 		}, nil
 	case "2":
 		apiKey := os.Getenv("GEMINI_API_KEY")
 		if apiKey == "" {
-			return nil, fmt.Errorf("GEMINI_API_KEY environment variable not set, please set it to your Gemini API key. You can obtain an API key from https://ai.google.dev/gemini-api/docs/models/gemini")
+			return nil, fmt.Errorf("GEMINI_API_KEY environment variable not set, please set it to your Gemini API key. You can obtain an API key from https://ai.google.dev/gemini-api/docs/models/gemini, if you want change the model, please set `GEMINI_MODEL` environment variable to the model name")
 		}
 		return &client.GeminiClient{
+			Name:   "Gemini",
 			APIKey: apiKey,
-			Model:  geminiModel,
+			Model:  os.Getenv("GEMINI_MODEL"),
+		}, nil
+	case "3":
+		baseUrl := os.Getenv("OPENAI_API_BASE")
+		if baseUrl == "" {
+			fmt.Printf("OPENAI_API_BASE environment variable not set, using default Gaia API base: %s\n", client.GaiaApiBase)
+			baseUrl = client.GaiaApiBase
+		}
+		return &client.ChatGPTClient{
+			Name:    "Gaia",
+			BaseURL: baseUrl,
+			APIKey:  os.Getenv("OPENAI_API_KEY"),
+			Model:   "",
 		}, nil
 	default:
 		return nil, fmt.Errorf("error: unknown model %s", model)
@@ -151,7 +173,7 @@ func ChatWithLLM(job pkg.Manuscript, client LLMClient) {
 				fmt.Printf("Error extracting SQL: %v\n", err)
 				continue
 			}
-			fmt.Printf("🔎%s: \u001B[32m%s\u001B[0m\nExecuting SQL......\n", client.Name(), sqlQuery)
+			fmt.Printf("🔎%s: \u001B[32m%s\u001B[0m\nExecuting SQL......\n", client.GPTName(), sqlQuery)
 
 			executeSQL(pool, sqlQuery)
 
