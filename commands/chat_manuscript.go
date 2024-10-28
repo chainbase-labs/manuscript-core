@@ -173,7 +173,7 @@ func ChatWithLLM(job pkg.Manuscript, client LLMClient) {
 				fmt.Printf("Error extracting SQL: %v\n", err)
 				continue
 			}
-			fmt.Printf("🔎🔎 \033[34m%s\033[0m: \u001B[32m%s\u001B[0m\nExecuting SQL......\n", client.GPTName(), sqlQuery)
+			fmt.Printf("🔎🔎 \033[33m%s\033[0m: \u001B[32m%s\u001B[0m\nExecuting SQL......\n", client.GPTName(), sqlQuery)
 
 			executeSQL(pool, sqlQuery)
 
