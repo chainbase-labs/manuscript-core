@@ -15,8 +15,8 @@ import (
 	"syscall"
 )
 
-var modelNames = map[int]string{
-	1: "ChatGPT",
+var Provider = map[int]string{
+	1: "Openai",
 	2: "Gemini",
 	3: "Gaia",
 }
@@ -36,8 +36,8 @@ type TextToSQLResponse struct {
 
 func generateModelPrompt() string {
 	var sb strings.Builder
-	sb.WriteString("Manuscript currently offers the following types of model integration:\n")
-	for i, name := range modelNames {
+	sb.WriteString("Manuscript currently offers the following types of provider integration:\n")
+	for i, name := range Provider {
 		sb.WriteString(fmt.Sprintf("%d. %s\n", i, name))
 	}
 	sb.WriteString("Select model to use (default ChatGPT): ")
@@ -88,7 +88,7 @@ func newChatClient(model string) (LLMClient, error) {
 			return nil, fmt.Errorf("OPENAI_API_KEY environment variable not set, please set it to your OpenAI API key. You can obtain an API key from https://platform.openai.com, if you want change the model, please set `OPENAI_MODEL` environment variable to the model name")
 		}
 		return &client.ChatGPTClient{
-			Name:    "ChatGPT",
+			Name:    Provider[1],
 			BaseURL: os.Getenv("OPENAI_API_BASE"),
 			APIKey:  apiKey,
 			Model:   os.Getenv("OPENAI_MODEL"),
@@ -99,7 +99,7 @@ func newChatClient(model string) (LLMClient, error) {
 			return nil, fmt.Errorf("GEMINI_API_KEY environment variable not set, please set it to your Gemini API key. You can obtain an API key from https://ai.google.dev/gemini-api/docs/models/gemini, if you want change the model, please set `GEMINI_MODEL` environment variable to the model name")
 		}
 		return &client.GeminiClient{
-			Name:   "Gemini",
+			Name:   Provider[2],
 			APIKey: apiKey,
 			Model:  os.Getenv("GEMINI_MODEL"),
 		}, nil
@@ -110,7 +110,7 @@ func newChatClient(model string) (LLMClient, error) {
 			baseUrl = client.GaiaApiBase
 		}
 		return &client.ChatGPTClient{
-			Name:    "Gaia",
+			Name:    Provider[3],
 			BaseURL: baseUrl,
 			APIKey:  os.Getenv("OPENAI_API_KEY"),
 			Model:   "",
@@ -173,7 +173,7 @@ func ChatWithLLM(job pkg.Manuscript, client LLMClient) {
 				fmt.Printf("Error extracting SQL: %v\n", err)
 				continue
 			}
-			fmt.Printf("🔎%s: \u001B[32m%s\u001B[0m\nExecuting SQL......\n", client.GPTName(), sqlQuery)
+			fmt.Printf("🔎🔎 \033[33m%s\033[0m: \u001B[32m%s\u001B[0m\nExecuting SQL......\n", client.GPTName(), sqlQuery)
 
 			executeSQL(pool, sqlQuery)
 
