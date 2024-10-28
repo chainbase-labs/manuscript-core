@@ -6,7 +6,10 @@ import (
 	"os"
 )
 
-var env string
+var (
+	env     string
+	version = "1.0.3"
+)
 
 func Execute(args []string) error {
 	if err := rootCmd.Execute(); err != nil {
@@ -84,6 +87,14 @@ var deployManuscript = &cobra.Command{
 	},
 }
 
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Show the version of manuscript-cli",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("manuscript-cli version %s\n", version)
+	},
+}
+
 func init() {
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		// List of commands to display in the help menu
@@ -114,7 +125,7 @@ func init() {
 			"Chainbase Manuscript ™ Build The World's Largest Omnichain Data Network 🚀 🚀 🚀\n" +
 			"─────────────────────────────────────────────────────────────────────────────────\n")
 		fmt.Printf("Usage:\n  %s\n\n", cmd.UseLine())
-		fmt.Println("Available Commands:")
+		fmt.Printf("Available Commands (%s):\n", version)
 
 		for _, c := range commands {
 			fmt.Printf("  %-*s   %s\n", maxNameLen, c.Name(), c.Short)
@@ -131,6 +142,8 @@ func init() {
 
 	// Add chatCmd to the root command
 	rootCmd.AddCommand(chatCmd)
+
+	rootCmd.AddCommand(versionCmd)
 
 	// Add deployManuscript to root command
 	deployManuscript.Flags().StringVar(&env, "env", "", "Specify the environment to deploy (e.g., local or chainbase)")
