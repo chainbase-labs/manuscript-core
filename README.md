@@ -33,7 +33,7 @@ The vision of Manuscript is to realize “data trade” within the Chainbase net
 
 <https://github.com/user-attachments/assets/80dfb1c2-3a4e-4e85-bd2b-12d5ca0b5639>
 
-<https://github.com/user-attachments/assets/205e64ec-3d93-4330-a58d-9dd8cf1962e9>
+<https://github.com/user-attachments/assets/7ac316a8-ffc1-4381-a268-7f07292ad200>
 
 ## Getting Started 🏄
 ### Install Manuscript Client
