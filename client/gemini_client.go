@@ -8,9 +8,13 @@ import (
 	"net/http"
 )
 
-const geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models"
+const (
+	geminiUrl   = "https://generativelanguage.googleapis.com/v1beta/models"
+	geminiModel = "gemini-1.5-flash"
+)
 
 type GeminiClient struct {
+	Name   string
 	APIKey string
 	Model  string
 }
@@ -49,8 +53,8 @@ type GeminiResponse struct {
 	ModelVersion string `json:"modelVersion"`
 }
 
-func (g *GeminiClient) Name() string {
-	return "Gemini"
+func (g *GeminiClient) GPTName() string {
+	return g.Name
 }
 
 func (g *GeminiClient) SendRequest(prompt string) (string, error) {
@@ -69,6 +73,10 @@ func (g *GeminiClient) SendRequest(prompt string) (string, error) {
 	requestBody, err := json.Marshal(requestData)
 	if err != nil {
 		return "", fmt.Errorf("error encoding request: %v", err)
+	}
+
+	if g.Model == "" {
+		g.Model = geminiModel
 	}
 
 	apiURL := fmt.Sprintf("%s/%s:generateContent?key=%s", geminiUrl, g.Model, g.APIKey)

@@ -9,12 +9,16 @@ import (
 )
 
 const (
-	openaiAPIURL = "https://api.openai.com/v1/chat/completions"
+	chatGPTModel  = "gpt-4o-mini"
+	OpenaiApiBase = "https://api.openai.com/v1/chat/completions"
+	GaiaApiBase   = "https://llama.us.gaianet.network/v1/chat/completions"
 )
 
 type ChatGPTClient struct {
-	APIKey string
-	Model  string
+	Name    string
+	BaseURL string
+	APIKey  string
+	Model   string
 }
 
 type ChatGPTRequest struct {
@@ -36,8 +40,8 @@ type ChatGPTResponse struct {
 	} `json:"choices"`
 }
 
-func (c *ChatGPTClient) Name() string {
-	return "ChatGPT"
+func (c *ChatGPTClient) GPTName() string {
+	return c.Name
 }
 
 func (c *ChatGPTClient) SendRequest(prompt string) (string, error) {
@@ -60,7 +64,13 @@ func (c *ChatGPTClient) SendRequest(prompt string) (string, error) {
 		return "", fmt.Errorf("error encoding request: %v", err)
 	}
 
-	req, err := http.NewRequest("POST", openaiAPIURL, bytes.NewBuffer(requestBody))
+	if c.BaseURL == "" {
+		c.BaseURL = OpenaiApiBase
+	}
+	if c.Model == "" {
+		c.Model = chatGPTModel
+	}
+	req, err := http.NewRequest("POST", c.BaseURL, bytes.NewBuffer(requestBody))
 	if err != nil {
 		return "", fmt.Errorf("error creating request: %v", err)
 	}
@@ -90,5 +100,7 @@ func (c *ChatGPTClient) SendRequest(prompt string) (string, error) {
 		return chatGPTResponse.Choices[0].Message.Content, nil
 	}
 
-	return "", fmt.Errorf("no valid response from ChatGPT")
+	fmt.Println(chatGPTResponse)
+
+	return "", fmt.Errorf("no valid response from %s", c.Name)
 }
