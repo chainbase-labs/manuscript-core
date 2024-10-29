@@ -154,7 +154,6 @@ public class ETLProcessor {
         tEnv.createTemporarySystemFunction("Decode_Function", DecodeFunction.class);
         tEnv.createTemporarySystemFunction("Eth_Call", EthCallRequest.class);
 
-        // 注册自定义函数
         tEnv.createTemporarySystemFunction("ROW_TO_JSON", RowToJsonFunction.class);
         tEnv.createTemporarySystemFunction("ARRAY_TO_JSON", ArrayToJsonFunction.class);
     }
