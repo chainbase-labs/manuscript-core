@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -36,7 +36,7 @@ func (fc *FlinkClient) CreateSession() error {
 		return fmt.Errorf("failed to create session, status: %s", resp.Status)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read response: %v", err)
 	}
@@ -67,7 +67,7 @@ func (fc *FlinkClient) ExecuteSQL(sql string) (string, error) {
 		return "", fmt.Errorf("failed to execute sql, status: %s", resp.Status)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read response: %v", err)
 	}
@@ -95,7 +95,7 @@ func (fc *FlinkClient) CheckSQLResult(operationHandle string, timeout int) error
 		defer resp.Body.Close()
 
 		if resp.StatusCode == http.StatusOK {
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				return fmt.Errorf("failed to read response: %v", err)
 			}
