@@ -358,9 +358,9 @@ public class ETLProcessor {
                 sink.get("name"), flinkSchema, primaryKey, host, port, database,
                 schemaName, tableName, username, password
         );
-        logger.info("Executing SQL for PostgresSQL sink: {}", sql);
+        logger.info("Executing SQL for PostgreSQL sink: {}", sql);
         tEnv.executeSql(sql);
-        logger.info("PostgresSQL sink created successfully.");
+        logger.info("PostgreSQL sink created successfully.");
     }
 
     private void createStarrocksSink(Map<String, Object> sink) {
