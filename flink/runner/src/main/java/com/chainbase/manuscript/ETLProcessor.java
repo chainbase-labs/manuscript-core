@@ -1,30 +1,33 @@
 package com.chainbase.manuscript;
 
+import com.chainbase.udf.*;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableColumn;
 import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
-import org.apache.flink.configuration.Configuration;
-import org.yaml.snakeyaml.Yaml;
+import org.apache.flink.table.catalog.Column;
+import org.apache.flink.table.catalog.ResolvedSchema;
+import org.apache.flink.table.expressions.Expression;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.Yaml;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.sql.ResultSet;
-import java.util.Map;
-import java.util.List;
-import java.util.stream.Collectors;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-import com.chainbase.udf.DecodeEvent;
-import com.chainbase.udf.DecodeFunction;
-import com.chainbase.udf.EthCallRequest;
+import static org.apache.flink.table.api.Expressions.$;
+import static org.apache.flink.table.api.Expressions.call;
 
 public class ETLProcessor {
     private static final Logger logger = LoggerFactory.getLogger(ETLProcessor.class);
@@ -150,6 +153,9 @@ public class ETLProcessor {
         tEnv.createTemporarySystemFunction("Decode_Event", DecodeEvent.class);
         tEnv.createTemporarySystemFunction("Decode_Function", DecodeFunction.class);
         tEnv.createTemporarySystemFunction("Eth_Call", EthCallRequest.class);
+
+        tEnv.createTemporarySystemFunction("ROW_TO_JSON", RowToJsonFunction.class);
+        tEnv.createTemporarySystemFunction("ARRAY_TO_JSON", ArrayToJsonFunction.class);
     }
 
     private void createSources() {
@@ -212,9 +218,15 @@ public class ETLProcessor {
     private String getSchemaFromTransform(String transformName) {
         Table table = tEnv.from(transformName);
         List<TableColumn> columns = table.getSchema().getTableColumns();
-        return columns.stream()
-                .map(col -> "`" + col.getName() + "` " + col.getType().toString())
-                .collect(Collectors.joining(", "));
+        return columns.stream().map(col -> {
+            switch (col.getType().getLogicalType().getTypeRoot()) {
+                case ARRAY:
+                case ROW:
+                    return "`" + col.getName() + "` STRING";
+                default:
+                    return "`" + col.getName() + "` " + col.getType().toString();
+            }
+        }).collect(Collectors.joining(", "));
     }
 
     private String getPostgresSchemaFromTransform(String transformName) {
@@ -280,7 +292,9 @@ public class ETLProcessor {
                 } else if (baseType.startsWith("TIMESTAMP(")) {
                     return baseType.replace("TIMESTAMP", "TIMESTAMP") + " WITHOUT TIME ZONE";
                 } else if (baseType.startsWith("ARRAY")) {
-                    return baseType;
+                    return "TEXT";
+                } else if (baseType.startsWith("ROW")) {
+                    return "TEXT";
                 }
                 throw new IllegalArgumentException("Unsupported Flink type: " + flinkType);
         }
@@ -403,6 +417,31 @@ public class ETLProcessor {
         logger.info("Filesystem sink created successfully.");
     }
 
+
+    public Table castTableColumns(Table sourceTable) {
+        ResolvedSchema schema = sourceTable.getResolvedSchema();
+
+        List<Expression> expressions = new ArrayList<>();
+
+        for (Column column : schema.getColumns()) {
+            String columnName = column.getName();
+
+            switch (column.getDataType().getLogicalType().getTypeRoot()) {
+                case ARRAY:
+                    expressions.add(call("ARRAY_TO_JSON", $(columnName)).as(columnName));
+                    break;
+                case ROW:
+                    expressions.add(call("ROW_TO_JSON", $(columnName)).as(columnName));
+                    break;
+                default:
+                    expressions.add($(columnName));
+                    break;
+            }
+        }
+
+        return sourceTable.select(expressions.toArray(new Expression[0]));
+    }
+
     public void execute() throws Exception {
         registerUDFs();
         createSources();
@@ -413,8 +452,11 @@ public class ETLProcessor {
         List<TableResult> results = new ArrayList<>();
 
         for (Map<String, Object> sink : sinks) {
-            TableResult result = tEnv.from(sink.get("from").toString())
-                                     .executeInsert(sink.get("name").toString());
+            Table sourceTable = tEnv.from(sink.get("from").toString());
+
+            Table castTable = castTableColumns(sourceTable);
+
+            TableResult result = castTable.executeInsert(sink.get("name").toString());
             results.add(result);
         }
 
