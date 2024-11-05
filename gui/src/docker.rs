@@ -20,7 +20,7 @@ impl DockerManager {
         }
     }
 
-    pub async fn setup(&self, sender: Option<mpsc::Sender<AppUpdate>>) -> Result<String, String> {
+    pub async fn setup(&self, sender: Option<mpsc::Sender<AppUpdate>>, sql: Option<String>) -> Result<String, String> {
         // Step 1: Check Docker installation
         if let Some(sender) = &sender {
             let _ = sender.send(AppUpdate::SetupProgress(SetupStep::CheckingDocker, SetupStepStatus::InProgress)).await;
@@ -49,7 +49,7 @@ impl DockerManager {
         if let Some(sender) = &sender {
             let _ = sender.send(AppUpdate::SetupProgress(SetupStep::SubmitSQLTask, SetupStepStatus::InProgress)).await;
         }
-        let (session_handle, operation_handle) = self.submit_sql_task().await?;
+        let (session_handle, operation_handle) = self.submit_sql_task(sql.as_deref()).await?;
 
         // Step 5: Wait for execution results
         if let Some(sender) = &sender {
@@ -116,7 +116,7 @@ impl DockerManager {
         Ok(())
     }
 
-    async fn submit_sql_task(&self) -> Result<(String, String), String> {
+    async fn submit_sql_task(&self, sql: Option<&str>) -> Result<(String, String), String> {
         // Step 1: Get session
         let session_handle = self.create_session().await?;
         
@@ -127,7 +127,7 @@ impl DockerManager {
         self.use_catalog(&session_handle).await?;
         
         // Step 4: Submit SQL query
-        let operation_handle = self.submit_query(&session_handle).await?;
+        let operation_handle = self.submit_query(&session_handle, sql).await?;
         
         Ok((session_handle, operation_handle))
     }
@@ -169,7 +169,7 @@ impl DockerManager {
                 return Err(format!("Failed to create valid session after {} attempts", max_attempts));
             }
 
-            sleep(Duration::from_secs(5)).await;
+            sleep(Duration::from_secs(2)).await;
         }
     }
 
@@ -216,15 +216,25 @@ impl DockerManager {
             return Err(format!("Use catalog failed: {}", errors));
         }
 
-        sleep(Duration::from_secs(5)).await;
+        sleep(Duration::from_secs(2)).await;
         Ok(())
     }
 
-    async fn submit_query(&self, session_handle: &str) -> Result<String, String> {
+    async fn submit_query(&self, session_handle: &str, sql: Option<&str>) -> Result<String, String> {
         let client = reqwest::Client::new();
-        let response = client.post(format!("{}/v1/sessions/{}/statements", self.api_endpoint, session_handle))
+        let url = format!("{}/v1/sessions/{}/statements", self.api_endpoint, session_handle);
+
+        // Check if SQL is empty
+        let statement = match sql {
+            Some(s) if !s.trim().is_empty() => s,
+            _ => return Err("No SQL query provided".to_string())
+        };
+
+        let body = serde_json::json!({ "statement": statement });
+
+        let response = client.post(&url)
             .header("Content-Type", "application/json")
-            .json(&serde_json::json!({ "statement": "select * from zkevm.blocks limit 10" }))
+            .json(&body)
             .send()
             .await
             .map_err(|e| format!("Failed to submit query: {}", e))?;
@@ -259,7 +269,22 @@ impl DockerManager {
 
             // Check for errors
             if let Some(errors) = json.get("errors") {
-                return Err(format!("Error in results: {}", errors));
+                let error_str = errors.to_string();
+                // Use raw string to handle escape sequences
+                let lines: Vec<&str> = error_str.split(r"\n").collect();
+                let mut caused_by_errors = Vec::new();
+                
+                for line in lines {
+                    if line.starts_with("Caused by:") {
+                        caused_by_errors.push(line.to_string());
+                    }
+                }
+
+                if !caused_by_errors.is_empty() {
+                    return Err(caused_by_errors.join(r"\n")); 
+                } else {
+                    return Err(format!("Error in results: {}", errors));
+                }
             }
 
             match json.get("resultType").and_then(|rt| rt.as_str()) {

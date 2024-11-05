@@ -817,8 +817,9 @@ impl App {
         }
         
         let sender = self.update_sender.clone();
+        let sql = self.saved_sql.clone();
         
-        match self.docker_manager.setup(sender).await {
+        match self.docker_manager.setup(sender, sql).await {
             Ok(msg) => {
                 if !self.should_cancel_setup {
                     if let Some(sender) = &self.update_sender {
