@@ -18,7 +18,7 @@ fn title_block(title: &str) -> Block<'_> {
 
 // Also need to define CUSTOM_LABEL_COLOR and GAUGE2_COLOR constants
 const CUSTOM_LABEL_COLOR: Color = Color::White;
-const GAUGE2_COLOR: Style = Style::new().fg(Color::Green);
+const GAUGE2_COLOR: Style = Style::new().fg(Color::Rgb(10, 100, 100));
 
 pub fn draw(frame: &mut ratatui::Frame, app: &App) {
 
@@ -373,7 +373,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &App) {
                         frame.render_widget(sql_paragraph, right_chunks[0]);
 
                             let results_block = Block::bordered()
-                                .title(" Results ")
+                                .title(" Console ")
                                 .title_alignment(Alignment::Center)
                                 .border_set(border::THICK);
                             frame.render_widget(results_block, right_chunks[1]);
@@ -391,7 +391,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &App) {
 
                             if app.state == AppState::Started {
                                 let label = Span::styled(
-                                    format!("{:.1}/100", app.progress1()),
+                                    format!("{:.1}%", app.progress1()),
                                     Style::new().italic().bold().fg(CUSTOM_LABEL_COLOR),
                                 );
                                 let gauge = Gauge::default()
@@ -420,7 +420,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &App) {
                             let progress_widget = Paragraph::new(progress_lines)
                                 .alignment(Alignment::Left)
                                 .wrap(ratatui::widgets::Wrap { trim: true })
-                                .block(Block::default().padding(Padding::horizontal(4))); // Add padding to indent text
+                                .block(Block::default().padding(Padding::horizontal(4)));
                             frame.render_widget(progress_widget, gauge_chunks[4]);
 
                         

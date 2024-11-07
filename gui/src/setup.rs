@@ -19,7 +19,7 @@ impl DockerManager {
             image: "repository.chainbase.com/manuscript-node/manuscript-debug:latest".to_string(),
             api_endpoint: "http://127.0.0.1:18083".to_string(),
             catalog_statement: r#"CREATE CATALOG paimon WITH ( 
-                'type' = 'paimon', 
+                'type' = 'paimon',
                 'warehouse' = 'oss://network-testnet/warehouse',
                 'table-default.merge-engine' = 'deduplicate',
                 'table-default.changelog-producer' = 'input',
@@ -144,8 +144,11 @@ impl DockerManager {
         
         // Step 3: Use catalog
         self.use_catalog(&session_handle).await?;
+
+        // Step 4: Set runtime mode to batch
+        self.set_runtime_mode(&session_handle).await?;
         
-        // Step 4: Submit SQL query
+        // Step 5: Submit SQL query
         let operation_handle = self.submit_query(&session_handle, sql).await?;
         
         Ok((session_handle, operation_handle))
@@ -250,7 +253,7 @@ impl DockerManager {
         let body = serde_json::json!({ "statement": statement });
 
         let mut retries = 0;
-        let max_retries = 5;
+        let max_retries = 10;
         
         loop {
             match client.post(&url)
@@ -346,6 +349,28 @@ impl DockerManager {
             }
             sleep(Duration::from_secs(5)).await;
         }
+    }
+
+    async fn set_runtime_mode(&self, session_handle: &str) -> Result<(), String> {
+        let client = reqwest::Client::new();
+        let response = client.post(format!("{}/v1/sessions/{}/statements", self.api_endpoint, session_handle))
+            .header("Content-Type", "application/json")
+            .json(&serde_json::json!({ "statement": "SET 'execution.runtime-mode' = 'batch';" }))
+            .send()
+            .await
+            .map_err(|e| format!("Failed to set runtime mode: {}", e))?;
+
+        // Check for errors in response
+        let json: serde_json::Value = response.json()
+            .await
+            .map_err(|e| format!("Failed to parse runtime mode response: {}", e))?;
+
+        if let Some(errors) = json.get("errors") {
+            return Err(format!("Set runtime mode failed: {}", errors));
+        }
+
+        sleep(Duration::from_secs(2)).await;
+        Ok(())
     }
 }
 
