@@ -758,6 +758,11 @@ impl App {
         if let Some(chain) = self.chains.get(self.selected_chain_index) {
             if let Some(table_index) = self.selected_table_index {
                 if let Some(table_name) = chain.dataDictionary.keys().nth(table_index) {
+                    let table_name = if table_name == "transactionLogs" {
+                        "transaction_logs"
+                    } else {
+                        table_name
+                    };
                     return format!("SELECT *\nFROM {}.{}\nLIMIT 10", chain.name.to_lowercase(), table_name);
                 }
             }
