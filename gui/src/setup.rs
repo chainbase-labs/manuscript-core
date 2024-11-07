@@ -10,6 +10,7 @@ use crate::app::SetupStepStatus;
 pub struct DockerManager {
     image: String,
     api_endpoint: String,
+    catalog_statement: String,
 }
 
 impl DockerManager {
@@ -17,6 +18,24 @@ impl DockerManager {
         Self {
             image: "repository.chainbase.com/manuscript-node/manuscript-debug:latest".to_string(),
             api_endpoint: "http://127.0.0.1:18083".to_string(),
+            catalog_statement: r#"CREATE CATALOG paimon WITH ( 
+                'type' = 'paimon', 
+                'warehouse' = 'oss://network-testnet/warehouse',
+                'table-default.merge-engine' = 'deduplicate',
+                'table-default.changelog-producer' = 'input',
+                'table-default.metastore.partitioned-table' = 'false',
+                'table-default.lookup.cache-file-retention' = '1 h',
+                'table-default.lookup.cache-max-memory-size' = '256 mb',
+                'table-default.lookup.cache-max-disk-size' = '10 gb',
+                'table-default.log.scan.remove-normalize' = 'true',
+                'table-default.changelog-producer.row-deduplicate' = 'false',
+                'table-default.consumer.expiration-time' = '24 h',
+                'table-default.streaming-read-mode' = 'file',
+                'table-default.orc.bloom.filter.fpp' = '0.00001',
+                'table-default.scan.plan-sort-partition' = 'true',
+                'table-default.snapshot.expire.limit' = '10000',
+                'table-default.snapshot.num.retained.max' = '2000'
+            );"#.to_string(),
         }
     }
 
@@ -135,7 +154,7 @@ impl DockerManager {
     async fn create_session(&self) -> Result<String, String> {
         let client = reqwest::Client::new();
         let mut attempts = 0;
-        let max_attempts = 5;
+        let max_attempts = 10;
 
         loop {
             match client.post(format!("{}/v1/sessions", self.api_endpoint))
@@ -175,12 +194,10 @@ impl DockerManager {
 
     async fn create_catalog(&self, session_handle: &str) -> Result<(), String> {
         let client = reqwest::Client::new();
-        // TODO: add catalog
-        let statement = r#""#;
-
+        
         let response = client.post(format!("{}/v1/sessions/{}/statements", self.api_endpoint, session_handle))
             .header("Content-Type", "application/json")
-            .json(&serde_json::json!({ "statement": statement }))
+            .json(&serde_json::json!({ "statement": self.catalog_statement }))
             .send()
             .await
             .map_err(|e| format!("Failed to create catalog: {}", e))?;
@@ -232,25 +249,45 @@ impl DockerManager {
 
         let body = serde_json::json!({ "statement": statement });
 
-        let response = client.post(&url)
-            .header("Content-Type", "application/json")
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| format!("Failed to submit query: {}", e))?;
+        let mut retries = 0;
+        let max_retries = 5;
+        
+        loop {
+            match client.post(&url)
+                .header("Content-Type", "application/json")
+                .json(&body)
+                .send()
+                .await {
+                    Ok(response) => {
+                        match response.json::<serde_json::Value>().await {
+                            Ok(json) => {
+                                if let Some(errors) = json.get("errors") {
+                                    return Err(format!("Query submission failed: {}", errors));
+                                }
 
-        let json: serde_json::Value = response.json()
-            .await
-            .map_err(|e| format!("Failed to parse query response: {}", e))?;
+                                return json.get("operationHandle")
+                                    .and_then(|h| h.as_str())
+                                    .map(String::from)
+                                    .ok_or_else(|| "Invalid operation handle format".to_string())
+                            },
+                            Err(e) => {
+                                println!("Failed to parse query response: {}", e);
+                                if retries >= max_retries {
+                                    return Err(format!("Failed to parse query response after {} retries: {}", max_retries, e));
+                                }
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        if retries >= max_retries {
+                            return Err(format!("Failed to submit query after {} retries: {}", max_retries, e));
+                        }
+                    }
+            }
 
-        if let Some(errors) = json.get("errors") {
-            return Err(format!("Query submission failed: {}", errors));
+            retries += 1;
+            sleep(Duration::from_secs(5)).await;
         }
-
-        json.get("operationHandle")
-            .and_then(|h| h.as_str())
-            .map(String::from)
-            .ok_or_else(|| "Invalid operation handle format".to_string())
     }
 
     async fn wait_for_results(&self, session_handle: &str, operation_handle: &str) -> Result<serde_json::Value, String> {

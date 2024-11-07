@@ -13,7 +13,7 @@ use ratatui::buffer::Buffer;
 use ratatui::widgets::{Gauge, Widget,block::Title,Block,Borders, Padding, Paragraph};
 
 use crate::ui;
-use crate::docker::DockerManager;
+use crate::setup::DockerManager;
 
 #[derive(Debug)]
 pub struct App {
