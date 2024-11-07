@@ -296,8 +296,14 @@ impl DockerManager {
     async fn wait_for_results(&self, session_handle: &str, operation_handle: &str) -> Result<serde_json::Value, String> {
         let client = reqwest::Client::new();
         let mut next_uri = format!("/v1/sessions/{}/operations/{}/result/0", session_handle, operation_handle);
+        let mut retries = 0;
+        let max_retries = 60;
 
         loop {
+            if retries >= max_retries {
+                return Err(format!("Timeout waiting for results after {} retries", max_retries));
+            }
+
             let response = client.get(format!("{}{}", self.api_endpoint, next_uri))
                 .send()
                 .await
@@ -347,6 +353,7 @@ impl DockerManager {
                     return Err("Unknown result type".to_string())
                 }
             }
+            retries += 1;
             sleep(Duration::from_secs(5)).await;
         }
     }

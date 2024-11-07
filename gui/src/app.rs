@@ -10,7 +10,8 @@ use ratatui::style::{Style, Color,palette::tailwind, Stylize};
 use ratatui::text::{Line, Span, Text};
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::buffer::Buffer;
-use ratatui::widgets::{Gauge, Widget,block::Title,Block,Borders, Padding, Paragraph};
+use ratatui::widgets::{Gauge, Widget,block::Title,Block,Borders, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState};
+use ratatui::symbols::scrollbar;
 
 use crate::ui;
 use crate::setup::DockerManager;
@@ -38,7 +39,7 @@ pub struct App {
     sql_receiver: Option<mpsc::Receiver<Result<serde_json::Value, String>>>,
     pub sql_timer: u64,  // Add this field for the timer
     pub docker_manager: DockerManager,
-    pub docker_status: Option<String>,
+    pub docker_msg: Option<String>,
     pub docker_setup_in_progress: bool,
     pub docker_setup_timer: u64,  // Add this new field
     pub setup_progress: f64,  // Add this field
@@ -51,6 +52,8 @@ pub struct App {
     pub update_sender: Option<mpsc::Sender<AppUpdate>>,
     pub update_receiver: Option<mpsc::Receiver<AppUpdate>>,
     pub current_setup_step: Option<SetupStep>,
+    pub vertical_scroll: usize,
+    pub vertical_scroll_state: ratatui::widgets::ScrollbarState,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -93,7 +96,7 @@ impl Clone for App {
             sql_receiver: None,  // Don't clone the receiver
             sql_timer: self.sql_timer,
             docker_manager: self.docker_manager.clone(),
-            docker_status: self.docker_status.clone(),
+            docker_msg: self.docker_msg.clone(),
             docker_setup_in_progress: self.docker_setup_in_progress,
             docker_setup_timer: self.docker_setup_timer,  // Initialize the timer
             setup_progress: self.setup_progress,
@@ -106,6 +109,8 @@ impl Clone for App {
             update_sender: self.update_sender.clone(),
             update_receiver: None,
             current_setup_step: self.current_setup_step.clone(),
+            vertical_scroll: self.vertical_scroll,
+            vertical_scroll_state: self.vertical_scroll_state.clone(),
         }
     }
 }
@@ -140,7 +145,7 @@ pub struct DataDictionaryItem {
 
 #[derive(Clone, Debug)]
 pub enum AppUpdate {
-    DockerStatus(String),
+    SteupResult(String),
     SetupProgress(SetupStep, SetupStepStatus),
     SetupComplete,
     SetupFailed(String, SetupStep),
@@ -207,7 +212,7 @@ impl App {
             sql_receiver: Some(sql_receiver),
             sql_timer: 0,  // Initialize timer
             docker_manager: DockerManager::new(),
-            docker_status: None,
+            docker_msg: None,
             docker_setup_in_progress: false,
             docker_setup_timer: 0,  // Initialize the timer
             setup_progress: 0.0,
@@ -220,6 +225,8 @@ impl App {
             update_sender: Some(update_sender),
             update_receiver: Some(update_receiver),
             current_setup_step: None,
+            vertical_scroll: 0,
+            vertical_scroll_state: ratatui::widgets::ScrollbarState::default(),
         }
     }
 
@@ -271,6 +278,7 @@ impl App {
         }
     }
 
+    // TODO: Remove this mock data once we have real data
     fn mock_blocks_data() -> ExampleData {
         ExampleData {
             columns: vec![
@@ -437,8 +445,8 @@ impl App {
             if let Some(receiver) = &mut self.update_receiver {
                 match receiver.try_recv() {
                     Ok(update) => match update {
-                        AppUpdate::DockerStatus(status) => {
-                            self.docker_status = Some(status);
+                        AppUpdate::SteupResult(msg) => {
+                            self.docker_msg = Some(msg);
                         },
                         AppUpdate::SetupProgress(step, status) => {
                             self.current_setup_step = Some(step.clone());
@@ -458,7 +466,7 @@ impl App {
                             self.current_setup_step = None;
                         },
                         AppUpdate::SetupFailed(error, step) => {
-                            self.docker_status = Some(format!("Error: {}", error));
+                            self.docker_msg = Some(format!("Error: {}", error));
                             self.state = AppState::Running;
                             self.setup_state = SetupState::Failed(error);
                             self.docker_setup_timer = 0;
@@ -469,7 +477,7 @@ impl App {
                     },
                     Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {},
                     Err(_) => {
-                        self.docker_status = Some("Channel closed".to_string());
+                        self.docker_msg = Some("Channel closed".to_string());
                     }
                 }
             }
@@ -492,20 +500,6 @@ impl App {
             self.state = AppState::Running;
             self.docker_setup_timer = 0;
         }
-    }
-
-    pub fn render_gauge1(&self, area: Rect, buf: &mut Buffer) {
-        let title = title_block("Gauge with ratio and custom label");
-        let label = Span::styled(
-            format!("{:.1}/100", self.progress1),
-            Style::new().italic().bold().fg(CUSTOM_LABEL_COLOR),
-        );
-        Gauge::default()
-            .block(title)
-            .gauge_style(GAUGE2_COLOR)
-            .ratio(self.progress1 / 100.0)
-            .label(label)
-            .render(area, buf);
     }
 
     pub fn update_example_data(&mut self) {
@@ -638,13 +632,21 @@ impl App {
                                 self.scroll_offset = self.selected_chain_index;
                             }
                         }
-                    } else {
+                    }
+                    
+                    if self.show_tables  && self.saved_sql.is_none() {
                         if let Some(index) = self.selected_table_index {
                             if index > 0 {
                                 self.selected_table_index = Some(index - 1);
                                 self.update_example_data();
                             }
                         }
+                    }
+
+                    if self.saved_sql.is_some() {
+                    self.vertical_scroll = self.vertical_scroll.saturating_sub(1);
+                    self.vertical_scroll_state =
+                    self.vertical_scroll_state.position(self.vertical_scroll);
                     }
                 }
                 KeyCode::Down => {
@@ -655,7 +657,9 @@ impl App {
                                 self.scroll_offset = self.selected_chain_index - visible_height + 1;
                             }
                         }
-                    } else {
+                    }
+
+                    if self.show_tables && self.saved_sql.is_none() {
                         if let Some(index) = self.selected_table_index {
                             let tables_len = self.chains[self.selected_chain_index].dataDictionary.len();
                             if index < tables_len - 1 {
@@ -663,6 +667,12 @@ impl App {
                                 self.update_example_data();
                             }
                         }
+                    }
+
+                    if self.saved_sql.is_some() {
+                        self.vertical_scroll = self.vertical_scroll.saturating_add(1);
+                        self.vertical_scroll_state =
+                        self.vertical_scroll_state.position(self.vertical_scroll);
                     }
                 }
                 KeyCode::Enter => {
@@ -770,53 +780,12 @@ impl App {
         String::new()
     }
 
-    // Add a new method to handle SQL response
-    pub fn handle_sql_response(&mut self, json: serde_json::Value) {
-
-        if let Some(error) = json.get("error") {
-            self.sql_error = Some(error.to_string());
-            self.sql_executing = false;
-            return;
-        }
-
-        // Process columns if available
-        if let Some(columns) = json.get("columns").and_then(|c| c.as_array()) {
-            self.sql_columns = columns.iter()
-                .filter_map(|col| {
-                    Some(Column {
-                        name: col.get("name")?.as_str()?.to_string(),
-                        type_: col.get("type")?.as_str()?.to_string(),
-                    })
-                })
-                .collect();
-        }
-
-        // Process data if available
-        if let Some(data) = json.get("data").and_then(|d| d.as_array()) {
-            self.sql_data = data.iter()
-                .filter_map(|row| row.as_array().cloned())
-                .collect();
-        }
-
-        // Update status
-        if let Some(stats) = json.get("stats") {
-            if let Some(state) = stats.get("state").and_then(|s| s.as_str()) {
-                self.sql_result = Some(format!("Query status: {}", state));
-                if state == "FINISHED" {
-                    println!("Debug: {}", self.sql_data.len());
-                    self.sql_executing = false;
-                    self.sql_result = Some(format!("Query completed: {} rows returned", self.sql_data.len()));
-                }
-            }
-        }
-    }
-
     pub async fn setup_docker(&mut self) {
         self.docker_setup_in_progress = true;
         self.docker_setup_timer = 0;
         
         if let Some(sender) = &self.update_sender {
-            let _ = sender.send(AppUpdate::DockerStatus(
+            let _ = sender.send(AppUpdate::SteupResult(
                 "Setting up Docker environment...".to_string()
             )).await;
         }
@@ -829,7 +798,7 @@ impl App {
                 if !self.should_cancel_setup {
                     if let Some(sender) = &self.update_sender {
                         let _ = sender.send(AppUpdate::SetupComplete).await;
-                        let _ = sender.send(AppUpdate::DockerStatus(msg)).await;
+                        let _ = sender.send(AppUpdate::SteupResult(msg)).await;
                     }
                 }
             },
@@ -891,7 +860,15 @@ impl App {
             )));
         }
 
-        if let Some(status) = &self.docker_status {
+        Text::from(lines)
+    }
+
+    pub fn get_setup_progress_msg(&self) -> Text {
+        let mut lines = vec![
+            Line::from(""),
+        ];
+
+        if let Some(status) = &self.docker_msg {
             lines.push(Line::from(""));
             if let SetupState::Failed(_) = self.setup_state {
                 lines.push(Line::from(
@@ -901,7 +878,6 @@ impl App {
                 lines.push(Line::from(status.clone()));
             }
         }
-
         Text::from(lines)
     }
 
@@ -909,6 +885,7 @@ impl App {
         self.progress1
     }
 }
+
 
 const GAUGE1_COLOR: Color = tailwind::RED.c800;
 const CUSTOM_LABEL_COLOR: Color = tailwind::SLATE.c200;

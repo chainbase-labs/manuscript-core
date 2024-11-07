@@ -4,7 +4,7 @@ use ratatui::{
     style::{Stylize, Color, Style, Modifier},
     symbols::border,
     text::{Line, Text, Span},
-    widgets::{block::{Position, Title}, Block, List, ListItem, Paragraph, Widget, Tabs, Clear, Gauge, Padding, BorderType},
+    widgets::{block::{Position, Title}, Block, List, ListItem, Paragraph, Widget, Tabs, Clear, Gauge, Padding, BorderType, Scrollbar, ScrollbarOrientation},
 };
 use crate::app::App;
 use crate::app::AppState;
@@ -20,7 +20,7 @@ fn title_block(title: &str) -> Block<'_> {
 const CUSTOM_LABEL_COLOR: Color = Color::White;
 const GAUGE2_COLOR: Style = Style::new().fg(Color::Rgb(10, 100, 100));
 
-pub fn draw(frame: &mut ratatui::Frame, app: &App) {
+pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
 
 
     // Create tabs
@@ -270,7 +270,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &App) {
  ########   #######   ########";
 
  const LOGO_LETTER: &str = "
- ██████╗██╗  ██╗ █████╗ ██╗███╗   ██╗██████╗  █████╗ ███████╗███████╗
+ █████╗██╗  ██╗ █████╗ ██╗███╗   ██╗██████╗  █████╗ ███████╗███████╗
 ██╔════╝██║  ██║██╔══██╗██║████╗  ██║██╔══██╗██╔══██╗██╔════╝██╔════╝
 ██║     ███████║███████║██║██╔██╗ ██║██████╔╝███████║███████╗█████╗  
 ██║     ██╔══██║██╔══██║██║██║╚██╗██║██╔══██╗██╔══██║╚════██║██╔══╝  
@@ -372,23 +372,24 @@ pub fn draw(frame: &mut ratatui::Frame, app: &App) {
                             .wrap(ratatui::widgets::Wrap { trim: true });
                         frame.render_widget(sql_paragraph, right_chunks[0]);
 
-                            let results_block = Block::bordered()
+                            let console_block = Block::bordered()
                                 .title(" Console ")
                                 .title_alignment(Alignment::Center)
                                 .border_set(border::THICK);
-                            frame.render_widget(results_block, right_chunks[1]);
+                            frame.render_widget(console_block, right_chunks[1]);
 
                             let gauge_chunks = Layout::default()
                                 .direction(Direction::Vertical)
                                 .constraints([
                                     Constraint::Length(1),
                                     Constraint::Length(1),
-                                    Constraint::Length(1),
                                     Constraint::Length(2),  
+                                    Constraint::Length(8),
                                     Constraint::Min(0),
                                 ])
                                 .split(right_chunks[1]);
 
+                            // 1. Progress gauge
                             if app.state == AppState::Started {
                                 let label = Span::styled(
                                     format!("{:.1}%", app.progress1()),
@@ -402,6 +403,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &App) {
                                 frame.render_widget(gauge, gauge_chunks[1]);
                             }
 
+                            // 2. Docker status
                             let docker_status = if app.docker_setup_in_progress {
                                 format!("Docker setup in progress... ({} seconds)", app.docker_setup_timer / 10)
                             } else {
@@ -414,14 +416,29 @@ pub fn draw(frame: &mut ratatui::Frame, app: &App) {
                             .alignment(Alignment::Center)
                             .block(Block::default()
                                 .padding(Padding::horizontal(1)));
-                            frame.render_widget(docker_status_widget, gauge_chunks[3]);
+                            frame.render_widget(docker_status_widget, gauge_chunks[2]);
 
-                            let progress_lines = app.get_setup_progress_lines();
-                            let progress_widget = Paragraph::new(progress_lines)
+                            // 3. Setup progress
+                            let steup_msg_lines = app.get_setup_progress_lines();
+                            let progress_widget = Paragraph::new(steup_msg_lines)
                                 .alignment(Alignment::Left)
                                 .wrap(ratatui::widgets::Wrap { trim: true })
                                 .block(Block::default().padding(Padding::horizontal(4)));
-                            frame.render_widget(progress_widget, gauge_chunks[4]);
+                            frame.render_widget(progress_widget, gauge_chunks[3]);
+
+                            // 4. Setup progress msg
+                            let paragraph = Paragraph::new(app.get_setup_progress_msg())
+                                .gray()
+                                .block(Block::default().padding(Padding::horizontal(4)))
+                                .scroll((app.vertical_scroll as u16, 0));
+                            frame.render_widget(paragraph, gauge_chunks[4]);
+                            frame.render_stateful_widget(
+                                Scrollbar::new(ScrollbarOrientation::VerticalRight)
+                                    .begin_symbol(Some("↑"))
+                                    .end_symbol(Some("↓")),
+                                chunks[1],
+                                &mut app.vertical_scroll_state,
+                        );
 
                         
                     } else {
