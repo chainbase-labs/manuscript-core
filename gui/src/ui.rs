@@ -4,7 +4,7 @@ use ratatui::{
     style::{Stylize, Color, Style, Modifier},
     symbols::border,
     text::{Line, Text, Span},
-    widgets::{block::{Position, Title}, Block, List, ListItem, Paragraph, Widget, Tabs, Clear, Gauge, Padding},
+    widgets::{block::{Position, Title}, Block, List, ListItem, Paragraph, Widget, Tabs, Clear, Gauge, Padding, BorderType},
 };
 use crate::app::App;
 use crate::app::AppState;
@@ -139,9 +139,15 @@ pub fn draw(frame: &mut ratatui::Frame, app: &App) {
                         .enumerate()
                         .map(|(i, table_name)| {
                             let content = if Some(i) == app.selected_table_index {
-                                Line::from(table_name.clone().bold().green())
+                                Line::from(vec![
+                                    format!("{:<1}. ", i + 1).bold().green(),
+                                    table_name.clone().bold().green()
+                                ])
                             } else {
-                                Line::from(table_name.clone())
+                                Line::from(vec![
+                                    format!("{:<1}.", i + 1).white(),
+                                    table_name.clone().into()
+                                ])
                             };
                             ListItem::new(content)
                         })
@@ -292,14 +298,14 @@ pub fn draw(frame: &mut ratatui::Frame, app: &App) {
 
                     // Render the symbol logo in magenta
                     let logo = Paragraph::new(LOGO)
-                        .style(Style::default().fg(Color::Magenta))
+                        .style(Style::default().fg(Color::Cyan))
                         .alignment(Alignment::Center);
                     frame.render_widget(logo, layout[1]);
 
                     // Render the text logo below in cyan
                     let logo_letter = Paragraph::new(LOGO_LETTER)
-                        // .style(Style::default().fg(Color::Magenta))
-                        .style(Style::default().fg(Color::Cyan))
+                        .style(Style::default().fg(Color::Magenta))
+                        // .style(Style::default().fg(Color::Cyan))
                         .alignment(Alignment::Center);
                     frame.render_widget(logo_letter, layout[2]);
 
@@ -347,9 +353,19 @@ pub fn draw(frame: &mut ratatui::Frame, app: &App) {
                             .split(chunks[1]);
 
                         let sql_block = Block::bordered()
-                            .title(" Saved SQL (Press 'e' to edit) ")
+                            .border_type(BorderType::Double)
+                            .title(" SQL Editor ")
                             .title_alignment(Alignment::Center)
-                            .border_set(border::THICK);
+                            .style(Style::default().bg(Color::Rgb(10, 100, 100)))
+                            .title_bottom(Line::from(vec![
+                                "   Press ".white(),
+                                "R".green().bold(), 
+                                " to run, ".white(),
+                                "E".red().bold(),
+                                " to edit, ".white(), 
+                                "D".blue().bold(),
+                                " to deploy  ".white()
+                            ]).right_aligned()).padding(Padding::horizontal(1));
 
                         let sql_paragraph = Paragraph::new(app.saved_sql.as_ref().unwrap().as_str())
                             .block(sql_block)
@@ -389,7 +405,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &App) {
                             let docker_status = if app.docker_setup_in_progress {
                                 format!("Docker setup in progress... ({} seconds)", app.docker_setup_timer / 10)
                             } else {
-                                "Manuscript debug console".to_string()
+                                "🏄🏻 Manuscript console: Debug your SQL before deploying it locally or to the network.".to_string()
                             };
 
                             let docker_status_widget = Paragraph::new(Text::from(
@@ -488,6 +504,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &App) {
             .title(" SQL Editor (Esc → Save & Esc) ")
             .title_alignment(Alignment::Center)
             .border_set(border::THICK)
+            .style(Style::default().bg(Color::Rgb(10, 100, 100)))
             .title_style(Style::default()
                 .fg(Color::Yellow)
                 .bold()
