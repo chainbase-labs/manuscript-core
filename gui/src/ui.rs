@@ -4,7 +4,7 @@ use ratatui::{
     style::{Stylize, Color, Style, Modifier},
     symbols::{self,border, Marker},
     text::{Line, Text, Span},
-    widgets::{block::{Position, Title}, Block, List, ListItem, Paragraph, Widget, Tabs, Clear, Gauge, Padding, BorderType, Scrollbar, ScrollbarOrientation, Borders, Dataset, Chart, Axis},
+    widgets::{block::{Position, Title}, Block, List, ListItem, Paragraph, Widget, Tabs, Clear, Gauge, Padding, BorderType, Scrollbar, ScrollbarOrientation, Borders, Dataset, Chart, Axis, canvas::{Canvas, Circle, Map, MapResolution, Points, Rectangle},},
 };
 use crate::app::App;
 use crate::app::AppState;
@@ -498,10 +498,17 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
         }
         1 => {
             // Tab 2 content
-            let tab2_text = Paragraph::new("tab2 text")
-                .block(Block::bordered().title("Tab 2"))
+            let tab2_text = Paragraph::new("Manuscript Jobs")
+                .block(Block::bordered())
                 .alignment(Alignment::Center);
             frame.render_widget(tab2_text, main_chunks[1]);
+
+            let horizontal =
+            Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)]);
+            let vertical = Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]);
+            let [left, right] = horizontal.areas(frame.area());
+            let [draw, map] = vertical.areas(right);
+            frame.render_widget(map_canvas(&app), map);
         }
         _ => unreachable!(),
     }
@@ -646,4 +653,19 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
             frame.render_widget(result_text, result_window);
         }
     }
+}
+
+fn map_canvas(app: &App) -> impl Widget + '_ {
+    Canvas::default()
+        .block(Block::bordered())
+        .marker(app.marker)
+        .paint(|ctx| {
+            ctx.draw(&Map {
+                color: Color::Green,
+                resolution: MapResolution::High,
+            });
+            ctx.print(app.x, -app.y, "Avs Node".yellow());
+        })
+        .x_bounds([-180.0, 180.0])
+        .y_bounds([-90.0, 90.0])
 }

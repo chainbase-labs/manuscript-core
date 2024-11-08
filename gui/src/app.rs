@@ -13,7 +13,7 @@ use ratatui::buffer::Buffer;
 use ratatui::widgets::{Gauge, Widget,block::Title,Block,Borders, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState};
 use ratatui::symbols::scrollbar;
 use std::time::{Instant};
-
+use ratatui::symbols::Marker;
 use crate::ui;
 use crate::setup::DockerManager;
 
@@ -26,6 +26,7 @@ pub struct App {
     pub scroll_offset: usize,
     pub exit: bool,
     pub current_tab: usize,
+    pub marker: Marker,
     pub example_data: Option<ExampleData>,
     pub sql_input: String,
     pub show_sql_window: bool,
@@ -60,6 +61,8 @@ pub struct App {
     pub signal2: SinSignal,
     pub data2: Vec<(f64, f64)>,
     pub window: [f64; 2],
+    pub x: f64,
+    pub y: f64,
 }
 
 #[derive(Debug, Clone,)]
@@ -127,6 +130,7 @@ impl Clone for App {
             scroll_offset: self.scroll_offset,
             exit: self.exit,
             current_tab: self.current_tab,
+            marker: self.marker,
             example_data: self.example_data.clone(),
             sql_input: self.sql_input.clone(),
             show_sql_window: self.show_sql_window,
@@ -157,10 +161,12 @@ impl Clone for App {
             vertical_scroll: self.vertical_scroll,
             vertical_scroll_state: self.vertical_scroll_state.clone(),
             signal1: self.signal1.clone(),
-            data1: self.data1.clone(),
+            data1: self.data1.clone(),   
             signal2: self.signal2.clone(),
             data2: self.data2.clone(),
             window: self.window.clone(),
+            x: self.x,
+            y: self.y,
         }
     }
 }
@@ -252,8 +258,9 @@ impl App {
             show_tables: false,
             scroll_offset: 0,
             exit: false,
-            current_tab: 0,  // Add this line
-            example_data: None,  // Changed: Initialize as None
+            current_tab: 0,
+            marker: Marker::Braille,
+            example_data: None,
             sql_input: String::new(),
             show_sql_window: false,
             sql_cursor_position: 0,
@@ -287,6 +294,8 @@ impl App {
             signal2: signal2,
             data2: data2,
             window: [0.0, 20.0],
+            x: 0.0,
+            y: 0.0,
         }
     }
 
