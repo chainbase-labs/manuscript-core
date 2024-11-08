@@ -2,9 +2,9 @@ use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Stylize, Color, Style, Modifier},
-    symbols::border,
+    symbols::{self,border, Marker},
     text::{Line, Text, Span},
-    widgets::{block::{Position, Title}, Block, List, ListItem, Paragraph, Widget, Tabs, Clear, Gauge, Padding, BorderType, Scrollbar, ScrollbarOrientation, Borders},
+    widgets::{block::{Position, Title}, Block, List, ListItem, Paragraph, Widget, Tabs, Clear, Gauge, Padding, BorderType, Scrollbar, ScrollbarOrientation, Borders, Dataset, Chart, Axis},
 };
 use crate::app::App;
 use crate::app::AppState;
@@ -293,6 +293,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                             ),
                             Constraint::Length(3),  // Spacing between logos and description
                             Constraint::Fill(1),    // Description area
+                            Constraint::Percentage(20), // Space for animated chart
                         ])
                         .split(chunks[1]);  // Use the right panel area
 
@@ -308,6 +309,41 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                         // .style(Style::default().fg(Color::Cyan))
                         .alignment(Alignment::Center);
                     frame.render_widget(logo_letter, layout[2]);
+
+                    let x_labels = vec![
+                        Span::styled(
+                            format!("{}", app.window[0]),
+                            Style::default().add_modifier(Modifier::BOLD),
+                        ),
+                        Span::raw(format!("{}", (app.window[0] + app.window[1]) / 2.0)),
+                        Span::styled(
+                            format!("{}", app.window[1]),
+                            Style::default().add_modifier(Modifier::BOLD),
+                        ),
+                    ];
+                    let datasets = vec![
+                        Dataset::default()
+                            .marker(symbols::Marker::Dot)
+                            .style(Style::default().fg(Color::Cyan))
+                            .data(&app.data1),
+                        Dataset::default()
+                            .marker(symbols::Marker::Braille)
+                            .style(Style::default().fg(Color::Yellow))
+                            .data(&app.data2),
+                    ];
+
+                    let chart = Chart::new(datasets)
+                        .x_axis(
+                            Axis::default()
+                                .title("time line")
+                                .style(Style::default().fg(Color::Gray))
+                                .bounds(app.window),
+                        )
+                        .y_axis(
+                            Axis::default()
+                                .style(Style::default().fg(Color::Gray))
+                                .bounds([-20.0, 20.0]),
+                        );
 
                     // Add descriptive text below both logos
                     let gray = Color::Rgb(80, 80, 100);
@@ -334,7 +370,10 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
 
                     let splash = Paragraph::new(description)
                         .alignment(Alignment::Center);
-                    frame.render_widget(splash, layout[4]);  // Changed to layout[4]
+                    frame.render_widget(splash, layout[4]);
+
+                    // Render animated chart at the bottom
+                    frame.render_widget(chart, layout[5]);
 
                     // Return empty vec since we're handling the rendering directly
                     Vec::new()
@@ -381,7 +420,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                             let gauge_chunks = Layout::default()
                                 .direction(Direction::Vertical)
                                 .constraints([
-                                    Constraint::Length(1),
+                                    Constraint::Length(2),
                                     Constraint::Length(1),
                                     Constraint::Length(2),  
                                     Constraint::Length(9),

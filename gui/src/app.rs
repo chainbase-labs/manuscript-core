@@ -12,6 +12,7 @@ use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::buffer::Buffer;
 use ratatui::widgets::{Gauge, Widget,block::Title,Block,Borders, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState};
 use ratatui::symbols::scrollbar;
+use std::time::{Instant};
 
 use crate::ui;
 use crate::setup::DockerManager;
@@ -24,36 +25,80 @@ pub struct App {
     pub show_tables: bool,
     pub scroll_offset: usize,
     pub exit: bool,
-    pub current_tab: usize,  // Add this line
-    pub example_data: Option<ExampleData>,  // Add this line
+    pub current_tab: usize,
+    pub example_data: Option<ExampleData>,
     pub sql_input: String,
     pub show_sql_window: bool,
     pub sql_cursor_position: usize,
-    pub sql_result: Option<String>,  // To store the mock response
-    pub saved_sql: Option<String>,  // Add this field to store saved SQL
+    pub sql_result: Option<String>,
+    pub saved_sql: Option<String>,
     pub sql_executing: bool,
     pub sql_error: Option<String>,
     pub sql_columns: Vec<Column>,
     pub sql_data: Vec<Vec<serde_json::Value>>,
     sql_sender: Option<mpsc::Sender<Result<serde_json::Value, String>>>,
     sql_receiver: Option<mpsc::Receiver<Result<serde_json::Value, String>>>,
-    pub sql_timer: u64,  // Add this field for the timer
+    pub sql_timer: u64, 
     pub docker_manager: DockerManager,
     pub docker_msg: Option<String>,
     pub docker_setup_in_progress: bool,
-    pub docker_setup_timer: u64,  // Add this new field
-    pub setup_progress: f64,  // Add this field
-    pub setup_state: SetupState,  // Add this field
+    pub docker_setup_timer: u64,
+    pub setup_progress: f64, 
+    pub setup_state: SetupState,
     pub state: AppState,
     progress_columns: u16,
     pub progress1: f64,
     pub progress_lines: RefCell<Vec<String>>,
-    pub should_cancel_setup: bool,  // Add this new field
+    pub should_cancel_setup: bool,
     pub update_sender: Option<mpsc::Sender<AppUpdate>>,
     pub update_receiver: Option<mpsc::Receiver<AppUpdate>>,
     pub current_setup_step: Option<SetupStep>,
     pub vertical_scroll: usize,
     pub vertical_scroll_state: ratatui::widgets::ScrollbarState,
+    pub signal1: SinSignal,
+    pub data1: Vec<(f64, f64)>,
+    pub signal2: SinSignal,
+    pub data2: Vec<(f64, f64)>,
+    pub window: [f64; 2],
+}
+
+#[derive(Debug, Clone,)]
+struct SinSignal {
+    x: f64,
+    interval: f64,
+    period: f64,
+    scale: f64,
+}
+
+impl SinSignal {
+    const fn new(interval: f64, period: f64, scale: f64) -> Self {
+        Self {
+            x: 0.0,
+            interval,
+            period,
+            scale,
+        }
+    }
+}
+
+impl Default for SinSignal {
+    fn default() -> Self {
+        Self {
+            x: 0.0,
+            interval: 0.2,
+            period: 20.0,
+            scale: 10.0,
+        }
+    }
+}
+
+impl Iterator for SinSignal {
+    type Item = (f64, f64);
+    fn next(&mut self) -> Option<Self::Item> {
+        let point = (self.x, (self.x * 1.0 / self.period).sin() * self.scale);
+        self.x += self.interval;
+        Some(point)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -111,6 +156,11 @@ impl Clone for App {
             current_setup_step: self.current_setup_step.clone(),
             vertical_scroll: self.vertical_scroll,
             vertical_scroll_state: self.vertical_scroll_state.clone(),
+            signal1: self.signal1.clone(),
+            data1: self.data1.clone(),
+            signal2: self.signal2.clone(),
+            data2: self.data2.clone(),
+            window: self.window.clone(),
         }
     }
 }
@@ -184,6 +234,11 @@ impl App {
     pub async fn new() -> Self {
         let (sql_sender, sql_receiver) = mpsc::channel(32);
         let (update_sender, update_receiver) = mpsc::channel(32);
+
+        let mut signal1 = SinSignal::new(0.2, 3.0, 18.0);
+        let mut signal2 = SinSignal::new(0.1, 2.0, 10.0);
+        let data1 = signal1.by_ref().take(200).collect::<Vec<(f64, f64)>>();
+        let data2 = signal2.by_ref().take(200).collect::<Vec<(f64, f64)>>();
         
         let chains = match App::fetch_chains().await {
             Ok(data) => data,
@@ -227,6 +282,11 @@ impl App {
             current_setup_step: None,
             vertical_scroll: 0,
             vertical_scroll_state: ratatui::widgets::ScrollbarState::default(),
+            signal1: signal1,
+            data1: data1,   
+            signal2: signal2,
+            data2: data2,
+            window: [0.0, 20.0],
         }
     }
 
@@ -423,6 +483,8 @@ impl App {
     }
 
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
+        let tick_rate = Duration::from_millis(150);
+        let mut last_tick = Instant::now();
         while !self.exit {
             let visible_height = terminal.size()?.height as usize - 2;
             
@@ -481,8 +543,24 @@ impl App {
                     }
                 }
             }
+
+            if last_tick.elapsed() >= tick_rate {
+                self.on_tick();
+                last_tick = Instant::now();
+            }
         }
         Ok(())
+    }
+
+    fn on_tick(&mut self) {
+        self.data1.drain(0..5);
+        self.data1.extend(self.signal1.by_ref().take(5));
+
+        self.data2.drain(0..10);
+        self.data2.extend(self.signal2.by_ref().take(10));
+
+        self.window[0] += 1.0;
+        self.window[1] += 1.0;
     }
 
     fn update(&mut self, terminal_width: u16) {
