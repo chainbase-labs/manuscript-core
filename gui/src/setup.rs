@@ -76,7 +76,7 @@ impl DockerManager {
         }
         let results = self.wait_for_results(&session_handle, &operation_handle).await?;
 
-        Ok(format!("Setup completed successfully. Results: {}", results))
+        Ok(format!("Setup completed successfully. Results:\n{}", results))
     }
 
     fn check_docker_installed(&self) -> bool {
@@ -340,9 +340,42 @@ impl DockerManager {
                     }
                 },
                 Some("PAYLOAD") => {
-                    if let Some(data) = json.get("results").and_then(|r| r.get("data")) {
-                        if !data.as_array().map_or(true, |arr| arr.is_empty()) {
-                            return Ok(json);
+                    if let Some(data) = json.get("results") {
+                        // Check if data field is not empty
+                        if data.get("data").and_then(|d| d.as_array()).map_or(false, |arr| !arr.is_empty()) {
+                            // Extract column names
+                            let columns = data.get("columns")
+                                .and_then(|cols| cols.as_array())
+                                .map(|cols| cols.iter()
+                                    .filter_map(|col| col.get("name").and_then(|n| n.as_str()))
+                                    .collect::<Vec<_>>()
+                                );
+
+                            // Extract data rows
+                            let rows = data.get("data")
+                                .and_then(|d| d.as_array())
+                                .map(|rows| rows.iter()
+                                    .filter_map(|row| row.get("fields").and_then(|f| f.as_array()))
+                                    .collect::<Vec<_>>()
+                                );
+
+                            if let (Some(cols), Some(rows)) = (columns, rows) {
+                                // Build formatted result string
+                                let mut result = cols.join("\n").to_string();
+                                result.push_str("\n\n=============data===============\n\n");
+                                
+                                for row in rows {
+                                    let row_str = row.iter()
+                                        .take(cols.len())
+                                        .map(|v| v.to_string().trim_matches('"').to_string())
+                                        .collect::<Vec<_>>()
+                                        .join("\n");
+                                    result.push_str(&row_str);
+                                    result.push_str("\n\n");
+                                }
+
+                                return Ok(serde_json::json!(result));
+                            }
                         }
                     }
                     if let Some(next) = json.get("nextResultUri").and_then(|uri| uri.as_str()) {

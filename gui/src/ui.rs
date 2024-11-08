@@ -4,7 +4,7 @@ use ratatui::{
     style::{Stylize, Color, Style, Modifier},
     symbols::border,
     text::{Line, Text, Span},
-    widgets::{block::{Position, Title}, Block, List, ListItem, Paragraph, Widget, Tabs, Clear, Gauge, Padding, BorderType, Scrollbar, ScrollbarOrientation},
+    widgets::{block::{Position, Title}, Block, List, ListItem, Paragraph, Widget, Tabs, Clear, Gauge, Padding, BorderType, Scrollbar, ScrollbarOrientation, Borders},
 };
 use crate::app::App;
 use crate::app::AppState;
@@ -270,7 +270,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
  ########   #######   ########";
 
  const LOGO_LETTER: &str = "
- █████╗██╗  ██╗ █████╗ ██╗███╗   ██╗██████╗  █████╗ ███████╗███████╗
+  █████╗██╗  ██╗ █████╗ ██╗███╗   ██╗██████╗  █████╗ ███████╗███████╗
 ██╔════╝██║  ██║██╔══██╗██║████╗  ██║██╔══██╗██╔══██╗██╔════╝██╔════╝
 ██║     ███████║███████║██║██╔██╗ ██║██████╔╝███████║███████╗█████╗  
 ██║     ██╔══██║██╔══██║██║██║╚██╗██║██╔══██╗██╔══██║╚════██║██╔══╝  
@@ -384,7 +384,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                                     Constraint::Length(1),
                                     Constraint::Length(1),
                                     Constraint::Length(2),  
-                                    Constraint::Length(8),
+                                    Constraint::Length(9),
                                     Constraint::Min(0),
                                 ])
                                 .split(right_chunks[1]);
@@ -429,7 +429,9 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                             // 4. Setup progress msg
                             let paragraph = Paragraph::new(app.get_setup_progress_msg())
                                 .gray()
-                                .block(Block::default().padding(Padding::horizontal(4)))
+                                .block(Block::default()
+                                    .borders(Borders::BOTTOM)
+                                    .padding(Padding::horizontal(4)))
                                 .scroll((app.vertical_scroll as u16, 0));
                             frame.render_widget(paragraph, gauge_chunks[4]);
                             frame.render_stateful_widget(

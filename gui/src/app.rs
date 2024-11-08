@@ -864,20 +864,24 @@ impl App {
     }
 
     pub fn get_setup_progress_msg(&self) -> Text {
-        let mut lines = vec![
-            Line::from(""),
-        ];
+        let mut lines = Vec::new();
 
         if let Some(status) = &self.docker_msg {
-            lines.push(Line::from(""));
-            if let SetupState::Failed(_) = self.setup_state {
-                lines.push(Line::from(
-                    Span::styled(status.clone(), Style::default().fg(Color::Red))
-                ));
-            } else {
-                lines.push(Line::from(status.clone()));
+            // Split status by both \n and literal "\\n"
+            let split_lines = status.split(|c| c == '\n')
+                .flat_map(|line| line.split(r"\n"));
+
+            for line in split_lines {
+                if let SetupState::Failed(_) = self.setup_state {
+                    lines.push(Line::from(
+                        Span::styled(line, Style::default().fg(Color::Red))
+                    ));
+                } else {
+                    lines.push(Line::from(line));
+                }
             }
         }
+
         Text::from(lines)
     }
 
