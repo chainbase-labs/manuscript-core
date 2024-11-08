@@ -420,8 +420,8 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                             let gauge_chunks = Layout::default()
                                 .direction(Direction::Vertical)
                                 .constraints([
-                                    Constraint::Length(2),
                                     Constraint::Length(1),
+                                    Constraint::Length(2),
                                     Constraint::Length(2),  
                                     Constraint::Length(9),
                                     Constraint::Min(0),
