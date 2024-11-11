@@ -75,7 +75,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                 .border_set(border::THICK)
                 .title(Title::from(" Omnichain ").alignment(Alignment::Center));
 
-            let chain_names: Vec<ListItem> = app.chains
+            let chain_names: Vec<ListItem> = app.filtered_chains
                 .iter()
                 .skip(app.scroll_offset)
                 .take(visible_height)
@@ -166,6 +166,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
             let mut hints = vec![
                 "Enter: Select",
                 "PageUp/Down: Navigate",
+                "\\: Search",
                 "q: Quit",
             ];
             
@@ -730,6 +731,42 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
             frame.render_widget(Clear, result_window);
             frame.render_widget(result_text, result_window);
         }
+    }
+
+    // Add search window rendering at the end of the function
+    if app.show_search {
+        let area = frame.size();
+        let search_window_width = 40;
+        let search_window_height = 3;
+        let search_window = Rect::new(
+            (area.width - search_window_width) / 2,
+            (area.height - search_window_height) / 2,
+            search_window_width,
+            search_window_height,
+        );
+
+        // Clear the area under the search window
+        frame.render_widget(Clear, search_window);
+
+        // Create search input block
+        let input_block = Block::bordered()
+            .title(" Search Chain ")
+            .title_alignment(Alignment::Center)
+            .border_set(border::THICK);
+
+        // Create the search text with cursor
+        let mut search_text = app.search_input.clone();
+        if app.search_cursor_position == search_text.len() {
+            search_text.push('█');
+        } else {
+            search_text.insert(app.search_cursor_position, '█');
+        }
+
+        let search_paragraph = Paragraph::new(search_text)
+            .block(input_block)
+            .alignment(Alignment::Left);
+
+        frame.render_widget(search_paragraph, search_window);
     }
 }
 

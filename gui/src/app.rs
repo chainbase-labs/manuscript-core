@@ -63,6 +63,10 @@ pub struct App {
     pub window: [f64; 2],
     pub x: f64,
     pub y: f64,
+    pub show_search: bool,
+    pub search_input: String,
+    pub search_cursor_position: usize,
+    pub filtered_chains: Vec<Chain>,
 }
 
 #[derive(Debug, Clone,)]
@@ -167,6 +171,10 @@ impl Clone for App {
             window: self.window.clone(),
             x: self.x,
             y: self.y,
+            show_search: self.show_search,
+            search_input: self.search_input.clone(),
+            search_cursor_position: self.search_cursor_position,
+            filtered_chains: self.filtered_chains.clone(),
         }
     }
 }
@@ -252,7 +260,7 @@ impl App {
         };
 
         App {
-            chains,
+            chains: chains.clone(),
             selected_chain_index: 0,
             selected_table_index: None,
             show_tables: false,
@@ -296,6 +304,10 @@ impl App {
             window: [0.0, 20.0],
             x: 0.0,
             y: 0.0,
+            show_search: false,
+            search_input: String::new(),
+            search_cursor_position: 0,
+            filtered_chains: chains,
         }
     }
 
@@ -614,7 +626,40 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent, visible_height: usize) {
-        if self.show_sql_window {
+        if self.show_search {
+            match key_event.code {
+                KeyCode::Esc => {
+                    self.show_search = false;
+                    self.search_input.clear();
+                    self.filtered_chains = self.chains.clone();
+                }
+                KeyCode::Enter => {
+                    self.show_search = false;
+                    self.filter_chains();
+                }
+                KeyCode::Char(c) => {
+                    self.search_input.insert(self.search_cursor_position, c);
+                    self.search_cursor_position += 1;
+                }
+                KeyCode::Backspace => {
+                    if self.search_cursor_position > 0 {
+                        self.search_input.remove(self.search_cursor_position - 1);
+                        self.search_cursor_position -= 1;
+                    }
+                }
+                KeyCode::Left => {
+                    if self.search_cursor_position > 0 {
+                        self.search_cursor_position -= 1;
+                    }
+                }
+                KeyCode::Right => {
+                    if self.search_cursor_position < self.search_input.len() {
+                        self.search_cursor_position += 1;
+                    }
+                }
+                _ => {}
+            }
+        } else if self.show_sql_window {
             match key_event.code {
                 KeyCode::Esc => {
                     // Save the SQL when closing the window
@@ -718,6 +763,13 @@ impl App {
             }
         } else {
             match key_event.code {
+                KeyCode::Char('\\') => {
+                    if self.current_tab == 0 && !self.show_sql_window {
+                        self.show_search = true;
+                        self.search_input.clear();
+                        self.search_cursor_position = 0;
+                    }
+                }
                 KeyCode::Char('q') => self.exit = true,
                 KeyCode::Up => {
                     match self.current_tab {
@@ -804,14 +856,12 @@ impl App {
                         self.progress1 = 0.0;
                         self.docker_setup_in_progress = false;
                     }
-                    if self.show_tables && self.saved_sql.is_some() {
-                        // Clear saved SQL and return to table view
-                        // self.saved_sql = None;
+                    if self.saved_sql.is_some() || self.show_tables {
+                        if !self.sql_input.trim().is_empty() {
+                            self.saved_sql = Some(self.sql_input.clone());
+                        }
                         self.show_tables = false;
-                    } else if self.show_tables {
-                        // No saved SQL, exit table view completely
-                        self.show_tables = false;
-                        self.selected_table_index = None;
+                        self.show_sql_window = false;
                     }
                 }
                 KeyCode::PageUp => {
@@ -999,6 +1049,22 @@ impl App {
 
     pub fn progress1(&self) -> f64 {
         self.progress1
+    }
+
+    // Add new method to filter chains
+    fn filter_chains(&mut self) {
+        let search_term = self.search_input.to_lowercase();
+        self.filtered_chains = self.chains
+            .iter()
+            .filter(|chain| chain.name.to_lowercase().contains(&search_term))
+            .cloned()
+            .collect();
+        
+        // Reset selection and scroll if necessary
+        if !self.filtered_chains.is_empty() {
+            self.selected_chain_index = 0;
+            self.scroll_offset = 0;
+        }
     }
 }
 
