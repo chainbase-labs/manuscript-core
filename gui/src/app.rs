@@ -197,6 +197,7 @@ pub struct Chain {
     pub status: String,
     pub lastUpdate: String,
     pub time_ago: String,
+    pub databaseName: String,
     pub dataDictionary: HashMap<String, Vec<DataDictionaryItem>>,
 }
 
@@ -329,6 +330,7 @@ impl App {
                             name: graph_data.chain.name,
                             status: graph_data.chain.status,
                             lastUpdate: graph_data.chain.lastUpdate,
+                            databaseName: graph_data.chain.databaseName,
                             time_ago,
                             dataDictionary: tables,
                         }
@@ -626,6 +628,7 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent, visible_height: usize) {
+        
         if self.show_search {
             match key_event.code {
                 KeyCode::Esc => {
@@ -863,6 +866,11 @@ impl App {
                         self.show_tables = false;
                         self.show_sql_window = false;
                     }
+                    if !self.search_input.is_empty() && !self.show_tables {
+                        self.show_search = false;
+                        self.search_input.clear();
+                        self.filtered_chains = self.chains.clone();
+                    }
                 }
                 KeyCode::PageUp => {
                     if !self.show_tables {
@@ -1088,6 +1096,7 @@ struct ChainData {
     name: String,
     status: String,
     lastUpdate: String,
+    databaseName: String,
     dataDictionary: DataDictionary,
 }
 

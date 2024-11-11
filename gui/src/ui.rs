@@ -139,13 +139,13 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                         .map(|(i, table_name)| {
                             let content = if Some(i) == app.selected_table_index {
                                 Line::from(vec![
-                                    format!("{:<1}. ", i + 1).bold().green(),
-                                    table_name.clone().bold().green()
+                                    format!("{:<1}-> ", i + 1).bold().green(),
+                                    format!("{}.{}", selected_chain.databaseName, table_name).bold().green()
                                 ])
                             } else {
                                 Line::from(vec![
-                                    format!("{:<1}.", i + 1).white(),
-                                    table_name.clone().into()
+                                    format!("{:<1}-", i + 1).white(),
+                                    format!("{}.{}", selected_chain.databaseName, table_name).into()
                                 ])
                             };
                             ListItem::new(content)
