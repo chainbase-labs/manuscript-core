@@ -90,7 +90,18 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                         display_time.white()
                     };
 
-                    let content = if i + app.scroll_offset == app.selected_chain_index {
+                    // Get the current filtered index
+                    let is_selected = if let Some(current_filtered_index) = app
+                        .filtered_chains
+                        .iter()
+                        .position(|c| c.name == app.chains[app.selected_chain_index].name)
+                    {
+                        i + app.scroll_offset == current_filtered_index
+                    } else {
+                        false
+                    };
+
+                    let content = if is_selected {
                         Line::from(vec![
                             format!("{:<3} {:<25}", index, chain.name).bold().white().into(),
                             format!("{:<20}", chain.status).bold().into(),

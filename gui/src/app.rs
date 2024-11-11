@@ -779,10 +779,25 @@ impl App {
                         0 => {
                             // Network tab logic
                             if !self.show_tables {
-                                if self.selected_chain_index > 0 {
-                                    self.selected_chain_index -= 1;
-                                    if self.selected_chain_index < self.scroll_offset {
-                                        self.scroll_offset = self.selected_chain_index;
+                                // Get current index in filtered_chains
+                                if let Some(current_filtered_index) = self
+                                    .filtered_chains
+                                    .iter()
+                                    .position(|c| c.name == self.chains[self.selected_chain_index].name)
+                                {
+                                    if current_filtered_index > 0 {
+                                        // Move up in filtered list
+                                        let prev_filtered_chain = &self.filtered_chains[current_filtered_index - 1];
+                                        // Find corresponding index in original chains
+                                        if let Some(original_index) = self.chains
+                                            .iter()
+                                            .position(|c| c.name == prev_filtered_chain.name)
+                                        {
+                                            self.selected_chain_index = original_index;
+                                            if current_filtered_index < self.scroll_offset {
+                                                self.scroll_offset = current_filtered_index;
+                                            }
+                                        }
                                     }
                                 }
                             } else {
@@ -809,10 +824,25 @@ impl App {
                         0 => {
                             // Network tab logic
                             if !self.show_tables {
-                                if self.selected_chain_index < self.chains.len() - 1 {
-                                    self.selected_chain_index += 1;
-                                    if self.selected_chain_index >= self.scroll_offset + visible_height {
-                                        self.scroll_offset = self.selected_chain_index - visible_height + 1;
+                                // Get current index in filtered_chains
+                                if let Some(current_filtered_index) = self
+                                    .filtered_chains
+                                    .iter()
+                                    .position(|c| c.name == self.chains[self.selected_chain_index].name)
+                                {
+                                    if current_filtered_index < self.filtered_chains.len() - 1 {
+                                        // Move down in filtered list
+                                        let next_filtered_chain = &self.filtered_chains[current_filtered_index + 1];
+                                        // Find corresponding index in original chains
+                                        if let Some(original_index) = self.chains
+                                            .iter()
+                                            .position(|c| c.name == next_filtered_chain.name)
+                                        {
+                                            self.selected_chain_index = original_index;
+                                            if current_filtered_index >= self.scroll_offset + visible_height {
+                                                self.scroll_offset = current_filtered_index - visible_height + 1;
+                                            }
+                                        }
                                     }
                                 }
                             } else {
@@ -837,6 +867,11 @@ impl App {
                 },
                 KeyCode::Enter => {
                     if !self.show_tables {
+                        if let Some(filtered_chain) = self.filtered_chains.get(self.selected_chain_index) {
+                            if let Some(original_index) = self.chains.iter().position(|c| c.name == filtered_chain.name) {
+                                self.selected_chain_index = original_index;
+                            }
+                        }
                         self.show_tables = true;
                         self.selected_table_index = Some(0);
                         self.update_example_data();
@@ -1068,10 +1103,17 @@ impl App {
             .cloned()
             .collect();
         
-        // Reset selection and scroll if necessary
+        // Reset selection and scroll
         if !self.filtered_chains.is_empty() {
             self.selected_chain_index = 0;
             self.scroll_offset = 0;
+            
+            // Update selected_chain_index to point to the first filtered chain in original array
+            if let Some(first_filtered_chain) = self.filtered_chains.first() {
+                if let Some(original_index) = self.chains.iter().position(|c| c.name == first_filtered_chain.name) {
+                    self.selected_chain_index = original_index;
+                }
+            }
         }
     }
 }
