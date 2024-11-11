@@ -163,12 +163,24 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
             }
 
             // Add key hints at the bottom
-            let hints = vec![
+            let mut hints = vec![
                 "Enter: Select",
                 "PageUp/Down: Navigate",
                 "q: Quit",
             ];
-            let hints_text = Text::from(hints.join(" | "));
+            
+            let hints_text = if app.show_tables {
+                Text::from(vec![
+                    Line::from(hints.join(" | ")),
+                    Line::from(vec![
+                        " ".into(),
+                        "c: Create Manuscript".magenta().bold().into()
+                    ])
+                ])
+            } else {
+                Text::from(hints.join(" | "))
+            };
+
             let hints_block = Block::bordered()
                 .title(" Controls ")
                 .title_alignment(Alignment::Center)
@@ -380,123 +392,19 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
 
                 // Modify the right side rendering when there's saved SQL
                 if let Some(selected_chain) = app.chains.get(app.selected_chain_index) {
-                    if app.show_tables && app.selected_table_index.is_some() && app.saved_sql.is_some() {
+                    let right_block = Block::bordered()
+                    .title(" Data Dictionary ")
+                    .title_alignment(Alignment::Center)
+                    .border_set(border::THICK);
 
-                        let right_chunks = Layout::default()
-                            .direction(Direction::Vertical)
-                            .constraints([
-                                Constraint::Percentage(45),
-                                Constraint::Percentage(55),
-                            ])
-                            .split(chunks[1]);
-
-                        let sql_block = Block::bordered()
-                            .border_type(BorderType::Double)
-                            .title(" SQL Editor ")
-                            .title_alignment(Alignment::Center)
-                            .style(Style::default().bg(Color::Rgb(10, 100, 100)))
-                            .title_bottom(Line::from(vec![
-                                "   Press ".white(),
-                                "R".green().bold(), 
-                                " to run, ".white(),
-                                "E".red().bold(),
-                                " to edit, ".white(), 
-                                "D".blue().bold(),
-                                " to deploy  ".white()
-                            ]).right_aligned()).padding(Padding::horizontal(1));
-
-                        let sql_paragraph = Paragraph::new(app.saved_sql.as_ref().unwrap().as_str())
-                            .block(sql_block)
-                            .wrap(ratatui::widgets::Wrap { trim: true });
-                        frame.render_widget(sql_paragraph, right_chunks[0]);
-
-                            let console_block = Block::bordered()
-                                .title(" Console ")
-                                .title_alignment(Alignment::Center)
-                                .border_set(border::THICK);
-                            frame.render_widget(console_block, right_chunks[1]);
-
-                            let gauge_chunks = Layout::default()
-                                .direction(Direction::Vertical)
-                                .constraints([
-                                    Constraint::Length(1),
-                                    Constraint::Length(2),
-                                    Constraint::Length(2),  
-                                    Constraint::Length(9),
-                                    Constraint::Min(0),
-                                ])
-                                .split(right_chunks[1]);
-
-                            // 1. Progress gauge
-                            if app.state == AppState::Started {
-                                let label = Span::styled(
-                                    format!("{:.1}%", app.progress1()),
-                                    Style::new().italic().bold().fg(CUSTOM_LABEL_COLOR),
-                                );
-                                let gauge = Gauge::default()
-                                    .block(Block::default().padding(Padding::horizontal(1)))
-                                    .gauge_style(GAUGE2_COLOR)
-                                    .ratio(app.progress1 / 100.0)
-                                    .label(label);
-                                frame.render_widget(gauge, gauge_chunks[1]);
-                            }
-
-                            // 2. Docker status
-                            let docker_status = if app.docker_setup_in_progress {
-                                format!("Docker setup in progress... ({} seconds)", app.docker_setup_timer / 10)
-                            } else {
-                                "🏄🏻 Manuscript console: Debug your SQL before deploying it locally or to the network.".to_string()
-                            };
-
-                            let docker_status_widget = Paragraph::new(Text::from(
-                                Span::styled(docker_status, Style::default().fg(Color::Yellow))
-                            ))
-                            .alignment(Alignment::Center)
-                            .block(Block::default()
-                                .padding(Padding::horizontal(1)));
-                            frame.render_widget(docker_status_widget, gauge_chunks[2]);
-
-                            // 3. Setup progress
-                            let steup_msg_lines = app.get_setup_progress_lines();
-                            let progress_widget = Paragraph::new(steup_msg_lines)
-                                .alignment(Alignment::Left)
-                                .wrap(ratatui::widgets::Wrap { trim: true })
-                                .block(Block::default().padding(Padding::horizontal(4)));
-                            frame.render_widget(progress_widget, gauge_chunks[3]);
-
-                            // 4. Setup progress msg
-                            let paragraph = Paragraph::new(app.get_setup_progress_msg())
-                                .gray()
-                                .block(Block::default()
-                                    .borders(Borders::BOTTOM)
-                                    .padding(Padding::horizontal(4)))
-                                .scroll((app.vertical_scroll as u16, 0));
-                            frame.render_widget(paragraph, gauge_chunks[4]);
-                            frame.render_stateful_widget(
-                                Scrollbar::new(ScrollbarOrientation::VerticalRight)
-                                    .begin_symbol(Some("↑"))
-                                    .end_symbol(Some("↓")),
-                                chunks[1],
-                                &mut app.vertical_scroll_state,
-                        );
-
-                        
-                    } else {
-                        let right_block = Block::bordered()
-                            .title(" Data Dictionary ")
-                            .title_alignment(Alignment::Center)
-                            .border_set(border::THICK);
-
-                        let data_paragraph = Paragraph::new(data_lines)
-                            .block(right_block)
-                            .wrap(ratatui::widgets::Wrap { trim: true });
-                        frame.render_widget(data_paragraph, chunks[1]);
-                    }
+                    let data_paragraph = Paragraph::new(data_lines)
+                        .block(right_block)
+                        .wrap(ratatui::widgets::Wrap { trim: true });
+                    frame.render_widget(data_paragraph, chunks[1]);
                 }
             }
         }
         1 => {
-            // New Manuscripts tab content (similar layout to tab 1)
             let chunks = Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints([Constraint::Percentage(30), Constraint::Percentage(70)])
@@ -510,23 +418,151 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                 ])
                 .split(chunks[0]);
 
-            // Left panel placeholder
-            let left_block = Block::bordered()
-                .title(" Manuscripts ")
-                .title_alignment(Alignment::Center)
-                .border_set(border::THICK);
-            frame.render_widget(left_block, left_chunks[0]);
+            // Left panel - Show selected chain and table
+            let left_content = if let Some(chain) = app.chains.get(app.selected_chain_index) {
+                if let Some(table_index) = app.selected_table_index {
+                    if let Some(table_name) = chain.dataDictionary.keys().nth(table_index) {
+                        format!("Chain: {}\nTable: {}", chain.name, table_name)
+                    } else {
+                        "No table selected".to_string()
+                    }
+                } else {
+                    "No table selected".to_string()
+                }
+            } else {
+                "No chain selected".to_string()
+            };
 
-            // Right panel placeholder
-            let right_block = Block::bordered()
-                .title(" Details ")
+            let left_block = Block::bordered()
+                .title(" Selected Table ")
                 .title_alignment(Alignment::Center)
                 .border_set(border::THICK);
-            frame.render_widget(right_block, chunks[1]);
+            
+            let left_paragraph = Paragraph::new(left_content)
+                .block(left_block)
+                .alignment(Alignment::Left);
+            frame.render_widget(left_paragraph, left_chunks[0]);
+
+            let right_block = Block::bordered()
+                .title(" SQL Editor ")
+                .title_alignment(Alignment::Center)
+                .border_set(border::THICK);
+            let right_paragraph = Paragraph::new("")
+                .block(right_block)
+                .alignment(Alignment::Left);
+            frame.render_widget(right_paragraph, chunks[1]);
+
+            if app.saved_sql.is_some() {
+
+                let right_chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([
+                        Constraint::Percentage(45),
+                        Constraint::Percentage(55),
+                    ])
+                    .split(chunks[1]);
+
+                let mut sql_block = Block::bordered()
+                    .border_type(BorderType::Double)
+                    .title(" SQL Editorrrr ")
+                    .title_alignment(Alignment::Center)
+                    .title_bottom(Line::from(vec![
+                        "   Press ".white(),
+                        "R".green().bold(), 
+                        " to run, ".white(),
+                        "E".red().bold(),
+                        " to edit, ".white(), 
+                        "D".blue().bold(),
+                        " to deploy  ".white()
+                    ]).right_aligned()).padding(Padding::horizontal(1));
+
+                if !app.show_sql_window {
+                    sql_block = sql_block.style(Style::default().bg(Color::Rgb(10, 100, 100)));
+                }
+
+                let sql_paragraph = Paragraph::new(app.saved_sql.as_ref().unwrap().as_str())
+                    .block(sql_block)
+                    .wrap(ratatui::widgets::Wrap { trim: true });
+                frame.render_widget(sql_paragraph, right_chunks[0]);
+
+                    let console_block = Block::bordered()
+                        .title(" Console ")
+                        .title_alignment(Alignment::Center)
+                        .border_set(border::THICK);
+                    frame.render_widget(console_block, right_chunks[1]);
+
+                    let gauge_chunks = Layout::default()
+                        .direction(Direction::Vertical)
+                        .constraints([
+                            Constraint::Length(1),
+                            Constraint::Length(2),
+                            Constraint::Length(2),  
+                            Constraint::Length(9),
+                            Constraint::Min(0),
+                        ])
+                        .split(right_chunks[1]);
+
+                    // 1. Progress gauge
+                    if app.state == AppState::Started {
+                        let label = Span::styled(
+                            format!("{:.1}%", app.progress1()),
+                            Style::new().italic().bold().fg(CUSTOM_LABEL_COLOR),
+                        );
+                        let gauge = Gauge::default()
+                            .block(Block::default().padding(Padding::horizontal(1)))
+                            .gauge_style(GAUGE2_COLOR)
+                            .ratio(app.progress1 / 100.0)
+                            .label(label);
+                        frame.render_widget(gauge, gauge_chunks[1]);
+                    }
+
+                    // 2. Docker status
+                    let docker_status = if app.docker_setup_in_progress {
+                        format!("Docker setup in progress... ({} seconds)", app.docker_setup_timer / 10)
+                    } else {
+                        "🏄🏻 Manuscript console: Debug your SQL before deploying it locally or to the network.".to_string()
+                    };
+
+                    let docker_status_widget = Paragraph::new(Text::from(
+                        Span::styled(docker_status, Style::default().fg(Color::Yellow))
+                    ))
+                    .alignment(Alignment::Center)
+                    .block(Block::default()
+                        .padding(Padding::horizontal(1)));
+                    frame.render_widget(docker_status_widget, gauge_chunks[2]);
+
+                    // 3. Setup progress
+                    let steup_msg_lines = app.get_setup_progress_lines();
+                    let progress_widget = Paragraph::new(steup_msg_lines)
+                        .alignment(Alignment::Left)
+                        .wrap(ratatui::widgets::Wrap { trim: true })
+                        .block(Block::default().padding(Padding::horizontal(4)));
+                    frame.render_widget(progress_widget, gauge_chunks[3]);
+
+                    // 4. Setup progress msg
+                    let paragraph = Paragraph::new(app.get_setup_progress_msg())
+                        .gray()
+                        .block(Block::default()
+                            .borders(Borders::BOTTOM)
+                            .padding(Padding::horizontal(4)))
+                        .scroll((app.vertical_scroll as u16, 0));
+                    frame.render_widget(paragraph, gauge_chunks[4]);
+                    frame.render_stateful_widget(
+                        Scrollbar::new(ScrollbarOrientation::VerticalRight)
+                            .begin_symbol(Some("↑"))
+                            .end_symbol(Some("↓")),
+                        chunks[1],
+                        &mut app.vertical_scroll_state,
+                );
+
+                
+            }
 
             // Add key hints at the bottom
             let hints = vec![
-                "Enter: Select",
+                "R: Run SQL",
+                "E: Edit SQL",
+                "D: Deploy",
                 "q: Quit",
             ];
             let hints_text = Text::from(hints.join(" | "));

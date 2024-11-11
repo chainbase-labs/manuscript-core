@@ -706,72 +706,93 @@ impl App {
                         }
                     }
                 }
+                KeyCode::Tab => {
+                    if !self.sql_input.trim().is_empty() {
+                        self.saved_sql = Some(self.sql_input.clone());
+                    }
+                    self.show_sql_window = false;
+                    self.sql_result = None;
+                    self.current_tab = (self.current_tab + 1) % 3;
+                }
                 _ => {}
             }
         } else {
             match key_event.code {
                 KeyCode::Char('q') => self.exit = true,
                 KeyCode::Up => {
-                    if !self.show_tables {
-                        if self.selected_chain_index > 0 {
-                            self.selected_chain_index -= 1;
-                            if self.selected_chain_index < self.scroll_offset {
-                                self.scroll_offset = self.selected_chain_index;
+                    match self.current_tab {
+                        0 => {
+                            // Network tab logic
+                            if !self.show_tables {
+                                if self.selected_chain_index > 0 {
+                                    self.selected_chain_index -= 1;
+                                    if self.selected_chain_index < self.scroll_offset {
+                                        self.scroll_offset = self.selected_chain_index;
+                                    }
+                                }
+                            } else {
+                                if let Some(index) = self.selected_table_index {
+                                    if index > 0 {
+                                        self.selected_table_index = Some(index - 1);
+                                        self.update_example_data();
+                                    }
+                                }
                             }
-                        }
-                    }
-                    
-                    if self.show_tables  && self.saved_sql.is_none() {
-                        if let Some(index) = self.selected_table_index {
-                            if index > 0 {
-                                self.selected_table_index = Some(index - 1);
-                                self.update_example_data();
+                        },
+                        1 => {
+                            // Manuscripts tab logic
+                            if self.saved_sql.is_some() {
+                                self.vertical_scroll = self.vertical_scroll.saturating_sub(1);
+                                self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
                             }
-                        }
+                        },
+                        _ => {}
                     }
-
-                    if self.saved_sql.is_some() {
-                    self.vertical_scroll = self.vertical_scroll.saturating_sub(1);
-                    self.vertical_scroll_state =
-                    self.vertical_scroll_state.position(self.vertical_scroll);
-                    }
-                }
+                },
                 KeyCode::Down => {
-                    if !self.show_tables {
-                        if self.selected_chain_index < self.chains.len() - 1 {
-                            self.selected_chain_index += 1;
-                            if self.selected_chain_index >= self.scroll_offset + visible_height {
-                                self.scroll_offset = self.selected_chain_index - visible_height + 1;
+                    match self.current_tab {
+                        0 => {
+                            // Network tab logic
+                            if !self.show_tables {
+                                if self.selected_chain_index < self.chains.len() - 1 {
+                                    self.selected_chain_index += 1;
+                                    if self.selected_chain_index >= self.scroll_offset + visible_height {
+                                        self.scroll_offset = self.selected_chain_index - visible_height + 1;
+                                    }
+                                }
+                            } else {
+                                if let Some(index) = self.selected_table_index {
+                                    let tables_len = self.chains[self.selected_chain_index].dataDictionary.len();
+                                    if index < tables_len - 1 {
+                                        self.selected_table_index = Some(index + 1);
+                                        self.update_example_data();
+                                    }
+                                }
                             }
-                        }
-                    }
-
-                    if self.show_tables && self.saved_sql.is_none() {
-                        if let Some(index) = self.selected_table_index {
-                            let tables_len = self.chains[self.selected_chain_index].dataDictionary.len();
-                            if index < tables_len - 1 {
-                                self.selected_table_index = Some(index + 1);
-                                self.update_example_data();
+                        },
+                        1 => {
+                            // Manuscripts tab logic
+                            if self.saved_sql.is_some() {
+                                self.vertical_scroll = self.vertical_scroll.saturating_add(1);
+                                self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
                             }
-                        }
+                        },
+                        _ => {}
                     }
-
-                    if self.saved_sql.is_some() {
-                        self.vertical_scroll = self.vertical_scroll.saturating_add(1);
-                        self.vertical_scroll_state =
-                        self.vertical_scroll_state.position(self.vertical_scroll);
-                    }
-                }
+                },
                 KeyCode::Enter => {
                     if !self.show_tables {
                         self.show_tables = true;
                         self.selected_table_index = Some(0);
                         self.update_example_data();
-                    } else {
-                        // When table is selected, show SQL window
+                    }
+                }
+                KeyCode::Char('c') => {
+                    if self.show_tables {
                         self.show_sql_window = true;
                         self.sql_input = self.generate_initial_sql();
                         self.sql_cursor_position = self.sql_input.len();
+                        self.current_tab = 1;  // Switch to tab 2 (index 1)
                     }
                 }
                 KeyCode::Esc => {
@@ -785,7 +806,8 @@ impl App {
                     }
                     if self.show_tables && self.saved_sql.is_some() {
                         // Clear saved SQL and return to table view
-                        self.saved_sql = None;
+                        // self.saved_sql = None;
+                        self.show_tables = false;
                     } else if self.show_tables {
                         // No saved SQL, exit table view completely
                         self.show_tables = false;
@@ -830,7 +852,7 @@ impl App {
                     self.current_tab = 2;
                 }
                 KeyCode::Char('e') => {
-                    if self.show_tables && self.saved_sql.is_some() {
+                    if self.saved_sql.is_some() {
                         self.show_sql_window = true;
                         self.sql_input = self.saved_sql.clone().unwrap_or_default();
                         self.sql_cursor_position = self.sql_input.len();
