@@ -818,13 +818,16 @@ impl App {
                     }
                 }
                 KeyCode::Tab => {
-                    self.current_tab = (self.current_tab + 1) % 2;
+                    self.current_tab = (self.current_tab + 1) % 3;
                 }
                 KeyCode::Char('1') => {
                     self.current_tab = 0;
                 }
                 KeyCode::Char('2') => {
                     self.current_tab = 1;
+                }
+                KeyCode::Char('3') => {
+                    self.current_tab = 2;
                 }
                 KeyCode::Char('e') => {
                     if self.show_tables && self.saved_sql.is_some() {

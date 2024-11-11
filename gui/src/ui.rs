@@ -16,7 +16,6 @@ fn title_block(title: &str) -> Block<'_> {
         .title(title)
 }
 
-// Also need to define CUSTOM_LABEL_COLOR and GAUGE2_COLOR constants
 const CUSTOM_LABEL_COLOR: Color = Color::White;
 const GAUGE2_COLOR: Style = Style::new().fg(Color::Rgb(10, 100, 100));
 
@@ -24,7 +23,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
 
 
     // Create tabs
-    let titles = vec!["NETWORK [1]", "MANUSCRIPTS [2]"];
+    let titles = vec!["NETWORK [1]", "MANUSCRIPTS [2]", "AVS [3]"];
     let executing_text = String::from("Executing...");
     let tabs = Tabs::new(titles)
         .block(Block::bordered().title("Tabs"))
@@ -497,14 +496,57 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
             }
         }
         1 => {
-            // Tab 2 content
-            let tab2_text = Paragraph::new("Manuscript Jobs")
+            // New Manuscripts tab content (similar layout to tab 1)
+            let chunks = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Percentage(30), Constraint::Percentage(70)])
+                .split(main_chunks[1]);
+
+            let left_chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Percentage(90),
+                    Constraint::Percentage(10),
+                ])
+                .split(chunks[0]);
+
+            // Left panel placeholder
+            let left_block = Block::bordered()
+                .title(" Manuscripts ")
+                .title_alignment(Alignment::Center)
+                .border_set(border::THICK);
+            frame.render_widget(left_block, left_chunks[0]);
+
+            // Right panel placeholder
+            let right_block = Block::bordered()
+                .title(" Details ")
+                .title_alignment(Alignment::Center)
+                .border_set(border::THICK);
+            frame.render_widget(right_block, chunks[1]);
+
+            // Add key hints at the bottom
+            let hints = vec![
+                "Enter: Select",
+                "q: Quit",
+            ];
+            let hints_text = Text::from(hints.join(" | "));
+            let hints_block = Block::bordered()
+                .title(" Controls ")
+                .title_alignment(Alignment::Center)
+                .border_set(border::THICK);
+            let hints_paragraph = Paragraph::new(hints_text)
+                .block(hints_block)
+                .alignment(Alignment::Center);
+            frame.render_widget(hints_paragraph, left_chunks[1]);
+        }
+        2 => {
+            // AVS tab content (moved from old tab 2)
+            let tab3_text = Paragraph::new("Manuscript Jobs")
                 .block(Block::bordered())
                 .alignment(Alignment::Center);
-            frame.render_widget(tab2_text, main_chunks[1]);
+            frame.render_widget(tab3_text, main_chunks[1]);
 
-            let horizontal =
-            Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)]);
+            let horizontal = Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)]);
             let vertical = Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]);
             let [left, right] = horizontal.areas(frame.area());
             let [draw, map] = vertical.areas(right);
