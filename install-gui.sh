@@ -22,4 +22,4 @@ curl -L -o manuscript "$BINARY_URL"
 chmod +x manuscript
 
 # Run the binary
-./manuscript
+echo "Binary downloaded and made executable. Run it with ./manuscript"

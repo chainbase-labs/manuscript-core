@@ -40,7 +40,7 @@ The vision of Manuscript is to realize “data trade” within the Chainbase net
 > ⚠️ **Note**: The manuscript data is only being trialed on the testnet and locally. Please do not use it in a production environment.
 ```shell
 # GUI
-curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install-gui.sh
+curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install-gui.sh | bash
 
 # CLI
 curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install.sh | bash
