@@ -17,7 +17,7 @@ impl DockerManager {
     pub fn new() -> Self {
         Self {
             image: "repository.chainbase.com/manuscript-node/manuscript-debug:latest".to_string(),
-            api_endpoint: "http://127.0.0.1:18083".to_string(),
+            api_endpoint: "https://testnet-debug.chainbasehq.com".to_string(),
             catalog_statement: r#"CREATE CATALOG paimon WITH ( 
                 'type' = 'paimon',
                 'warehouse' = 'oss://network-testnet/warehouse',
@@ -41,28 +41,28 @@ impl DockerManager {
 
     pub async fn setup(&self, sender: Option<mpsc::Sender<AppUpdate>>, sql: Option<String>) -> Result<String, String> {
         // Step 1: Check Docker installation
-        if let Some(sender) = &sender {
-            let _ = sender.send(AppUpdate::SetupProgress(SetupStep::CheckingDocker, SetupStepStatus::InProgress)).await;
-        }
-        if !self.check_docker_installed() {
-            return Err("Docker is not installed or not accessible".to_string());
-        }
+        // if let Some(sender) = &sender {
+        //     let _ = sender.send(AppUpdate::SetupProgress(SetupStep::CheckingDocker, SetupStepStatus::InProgress)).await;
+        // }
+        // if !self.check_docker_installed() {
+        //     return Err("Docker is not installed or not accessible".to_string());
+        // }
 
         // Step 2: Pull the image
-        if let Some(sender) = &sender {
-            let _ = sender.send(AppUpdate::SetupProgress(SetupStep::PullingImage, SetupStepStatus::InProgress)).await;
-        }
-        if let Err(e) = self.pull_image().await {
-            return Err(format!("Failed to pull image: {}", e));
-        }
+        // if let Some(sender) = &sender {
+        //     let _ = sender.send(AppUpdate::SetupProgress(SetupStep::PullingImage, SetupStepStatus::InProgress)).await;
+        // }
+        // if let Err(e) = self.pull_image().await {
+        //     return Err(format!("Failed to pull image: {}", e));
+        // }
 
         // Step 3: Run the container
-        if let Some(sender) = &sender {
-            let _ = sender.send(AppUpdate::SetupProgress(SetupStep::StartingContainer, SetupStepStatus::InProgress)).await;
-        }
-        if let Err(e) = self.run_container().await {
-            return Err(format!("Failed to start container: {}", e));
-        }
+        // if let Some(sender) = &sender {
+        //     let _ = sender.send(AppUpdate::SetupProgress(SetupStep::StartingContainer, SetupStepStatus::InProgress)).await;
+        // }
+        // if let Err(e) = self.run_container().await {
+        //     return Err(format!("Failed to start container: {}", e));
+        // }
 
         // Step 4: Submit SQL task
         if let Some(sender) = &sender {

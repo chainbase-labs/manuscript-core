@@ -71,6 +71,7 @@ pub struct App {
     pub show_deploy_options: bool,
     pub selected_deploy_option: usize,
     pub deploy_options: Vec<(String, bool)>, // (option name, is_enabled)
+    pub transformed_sql: Option<String>,
 }
 
 #[derive(Debug, Clone,)]
@@ -183,6 +184,7 @@ impl Clone for App {
             show_deploy_options: self.show_deploy_options,
             selected_deploy_option: self.selected_deploy_option,
             deploy_options: self.deploy_options.clone(),
+            transformed_sql: self.transformed_sql.clone(),
         }
     }
 }
@@ -324,6 +326,7 @@ impl App {
                 ("Local".to_string(), true),
                 ("Network (Coming Soon)".to_string(), false),
             ],
+            transformed_sql: None,
         }
     }
 
@@ -986,15 +989,25 @@ impl App {
                     }
                 }
                 KeyCode::Char('r') => {
-                    self.state = AppState::Started;
-                    self.should_cancel_setup = false;  // Reset cancel flag
-                    if !self.docker_setup_in_progress {
-                        tokio::spawn({
-                            let mut app = self.clone();
-                            async move {
-                                app.setup_docker().await;
+                    if let Some(saved_sql) = &self.saved_sql {
+                        match self.transform_yaml_to_sql(saved_sql) {
+                            Ok(sql) => {
+                                self.transformed_sql = Some(sql);
+                                self.state = AppState::Started;
+                                self.should_cancel_setup = false;
+                                if !self.docker_setup_in_progress {
+                                    tokio::spawn({
+                                        let mut app = self.clone();
+                                        async move {
+                                            app.setup_docker().await;
+                                        }
+                                    });
+                                }
                             }
-                        });
+                            Err(e) => {
+                                self.docker_msg = Some(format!("Error transforming SQL: {}", e));
+                            }
+                        }
                     }
                 },
                 KeyCode::Char('d') => {
@@ -1051,7 +1064,8 @@ sinks:
     host: postgres
     port: 5432
     username: postgres
-    password: postgres",
+    password: postgres
+    graphqlPort: 8082",
                         dataset_name, table_name,
                         dataset_name, table_name,
                         dataset_name, dataset_name, table_name,
@@ -1073,12 +1087,12 @@ sinks:
         
         if let Some(sender) = &self.update_sender {
             let _ = sender.send(AppUpdate::SteupResult(
-                "Setting up Docker environment...".to_string()
+                "Setting up debug environment...".to_string()
             )).await;
         }
         
         let sender = self.update_sender.clone();
-        let sql = self.saved_sql.clone();
+        let sql = self.transformed_sql.clone();
         
         match self.docker_manager.setup(sender, sql).await {
             Ok(msg) => {
@@ -1109,7 +1123,7 @@ sinks:
         let mut lines = vec![
             Line::from(""),
             Line::from(Span::styled(
-                format!("Setting up Docker environment... ({:.1}s)", 
+                format!("Setting up Debug environment... ({:.1}s)", 
                     self.docker_setup_timer as f64 / 10.0),
                 Style::default().fg(Color::Yellow)
             )),
@@ -1236,6 +1250,35 @@ sinks:
 
         std::fs::write(config_path, config_content)?;
         Ok(())
+    }
+
+    fn transform_yaml_to_sql(&self, yaml_content: &str) -> Result<String, String> {
+        let yaml: serde_yaml::Value = serde_yaml::from_str(yaml_content)
+            .map_err(|e| format!("Failed to parse YAML: {}", e))?;
+
+        let dataset = yaml["sources"]
+            .as_sequence()
+            .and_then(|sources| sources.first())
+            .and_then(|source| source["dataset"].as_str())
+            .ok_or_else(|| "Failed to extract dataset".to_string())?;
+
+        let sql = yaml["transforms"]
+            .as_sequence()
+            .and_then(|transforms| transforms.first())
+            .and_then(|transform| transform["sql"].as_str())
+            .ok_or_else(|| "Failed to extract SQL query".to_string())?;
+
+        let sql = sql.trim();
+
+        // Check if SQL already contains the full dataset name (including schema)
+        let sql = if sql.contains(dataset) {
+            format!("{} limit 10", sql)
+        } else {
+            // Use the full dataset name which includes schema
+            format!("Select * From {} limit 10", dataset)
+        };
+
+        Ok(sql)
     }
 }
 
