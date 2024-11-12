@@ -914,7 +914,7 @@ impl App {
                 KeyCode::Char('c') => {
                     if self.show_tables {
                         self.show_sql_window = true;
-                        self.sql_input = self.generate_initial_sql();
+                        self.sql_input = self.generate_initial_manuscript();
                         self.sql_cursor_position = self.sql_input.len();
                         self.current_tab = 1;  // Switch to tab 2 (index 1)
                     }
@@ -1015,7 +1015,7 @@ impl App {
     }
 
     // Add new method to generate initial SQL
-    fn generate_initial_sql(&self) -> String {
+    fn generate_initial_manuscript(&self) -> String {
         if let Some(chain) = self.chains.get(self.selected_chain_index) {
             if let Some(table_index) = self.selected_table_index {
                 if let Some(table_name) = chain.dataDictionary.keys().nth(table_index) {
@@ -1024,7 +1024,43 @@ impl App {
                     } else {
                         table_name
                     };
-                    return format!("SELECT *\nFROM {}.{}\nLIMIT 10", chain.name.to_lowercase(), table_name);
+                    let dataset_name = &chain.databaseName;
+                    return format!("name: demo
+specVersion: v1.0.0
+parallelism: 1
+
+sources:
+  - name: {}_{} 
+    type: dataset
+    dataset: {}.{}
+
+transforms:
+  - name: {}_{}_{}_transform
+    sql: >
+      Select * From {}_{}
+
+sinks:
+  - name: {}_{}_{}_sink
+    type: postgres
+    from: {}_{}_{}_transform
+    database: {}
+    schema: public
+    table: {}
+    primary_key: block_number
+    config:
+    host: postgres
+    port: 5432
+    username: postgres
+    password: postgres",
+                        dataset_name, table_name,
+                        dataset_name, table_name,
+                        dataset_name, dataset_name, table_name,
+                        dataset_name, table_name,
+                        dataset_name, dataset_name, table_name,
+                        dataset_name, dataset_name, table_name,
+                        dataset_name,
+                        table_name
+                    );
                 }
             }
         }
