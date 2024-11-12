@@ -192,7 +192,7 @@ impl DockerManager {
                 return Err(format!("Failed to create valid session after {} attempts", max_attempts));
             }
 
-            sleep(Duration::from_secs(2)).await;
+            sleep(Duration::from_secs(1)).await;
         }
     }
 
@@ -215,7 +215,7 @@ impl DockerManager {
             return Err(format!("Catalog creation failed: {}", errors));
         }
 
-        sleep(Duration::from_secs(5)).await;
+        sleep(Duration::from_secs(1)).await;
         Ok(())
     }
 
@@ -237,7 +237,7 @@ impl DockerManager {
             return Err(format!("Use catalog failed: {}", errors));
         }
 
-        sleep(Duration::from_secs(2)).await;
+        // sleep(Duration::from_secs(1)).await;
         Ok(())
     }
 
@@ -254,7 +254,7 @@ impl DockerManager {
         let body = serde_json::json!({ "statement": statement });
 
         let mut retries = 0;
-        let max_retries = 10;
+        let max_retries = 30;
         
         loop {
             match client.post(&url)
@@ -290,7 +290,7 @@ impl DockerManager {
             }
 
             retries += 1;
-            sleep(Duration::from_secs(5)).await;
+            sleep(Duration::from_secs(1)).await;
         }
     }
 
@@ -340,15 +340,24 @@ impl DockerManager {
                         next_uri = next.to_string();
                     }
                 },
+                Some("EOS") => {
+                    return Ok(serde_json::json!("No results found"));
+                },
                 Some("PAYLOAD") => {
                     if let Some(data) = json.get("results") {
                         // Check if data field is not empty
                         if data.get("data").and_then(|d| d.as_array()).map_or(false, |arr| !arr.is_empty()) {
-                            // Extract column names
+                            // Extract column names and types
                             let columns = data.get("columns")
                                 .and_then(|cols| cols.as_array())
                                 .map(|cols| cols.iter()
-                                    .filter_map(|col| col.get("name").and_then(|n| n.as_str()))
+                                    .filter_map(|col| {
+                                        let name = col.get("name").and_then(|n| n.as_str())?;
+                                        let type_ = col.get("logicalType")
+                                            .and_then(|t| t.get("type"))
+                                            .and_then(|t| t.as_str())?;
+                                        Some((name, type_))
+                                    })
                                     .collect::<Vec<_>>()
                                 );
 
@@ -361,18 +370,21 @@ impl DockerManager {
                                 );
 
                             if let (Some(cols), Some(rows)) = (columns, rows) {
-                                // Build formatted result string
-                                let mut result = cols.join("\n").to_string();
-                                result.push_str("\n\n=============data===============\n\n");
+                                let mut result = String::new();
                                 
-                                for row in rows {
-                                    let row_str = row.iter()
-                                        .take(cols.len())
-                                        .map(|v| v.to_string().trim_matches('"').to_string())
-                                        .collect::<Vec<_>>()
-                                        .join("\n");
-                                    result.push_str(&row_str);
-                                    result.push_str("\n\n");
+                                // Format each row
+                                for (row_num, row) in rows.iter().enumerate() {
+                                    result.push_str(&format!("Row {}:\n", row_num + 1));
+                                    result.push_str("------\n");
+                                    
+                                    for ((col_name, col_type), value) in cols.iter().zip(row.iter()) {
+                                        result.push_str(&format!("{:<20} | {:<15} | {}\n",
+                                            col_name,
+                                            col_type,
+                                            value.to_string().trim_matches('"')
+                                        ));
+                                    }
+                                    result.push('\n');
                                 }
 
                                 return Ok(serde_json::json!(result));
@@ -388,7 +400,7 @@ impl DockerManager {
                 }
             }
             retries += 1;
-            sleep(Duration::from_secs(5)).await;
+            sleep(Duration::from_secs(2)).await;
         }
     }
 
@@ -410,7 +422,7 @@ impl DockerManager {
             return Err(format!("Set runtime mode failed: {}", errors));
         }
 
-        sleep(Duration::from_secs(2)).await;
+        // sleep(Duration::from_secs(1)).await;
         Ok(())
     }
 }

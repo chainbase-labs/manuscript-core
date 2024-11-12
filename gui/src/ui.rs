@@ -8,6 +8,7 @@ use ratatui::{
 };
 use crate::app::App;
 use crate::app::AppState;
+use crate::app::SetupState;
 
 // Add this helper function before the draw function
 fn title_block(title: &str) -> Block<'_> {
@@ -176,7 +177,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
             // Add key hints at the bottom
             let mut hints = vec![
                 "Enter: Select",
-                "PageUp/Down: Navigate",
+                "Esc: Back",
                 "\\: Search",
                 "q: Quit",
             ];
@@ -431,22 +432,10 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                 .split(chunks[0]);
 
             // Left panel - Show selected chain and table
-            let left_content = if let Some(chain) = app.chains.get(app.selected_chain_index) {
-                if let Some(table_index) = app.selected_table_index {
-                    if let Some(table_name) = chain.dataDictionary.keys().nth(table_index) {
-                        format!("Chain: {}\nTable: {}", chain.name, table_name)
-                    } else {
-                        "No table selected".to_string()
-                    }
-                } else {
-                    "No table selected".to_string()
-                }
-            } else {
-                "No chain selected".to_string()
-            };
+            let left_content = "No Jobs Running".to_string();
 
             let left_block = Block::bordered()
-                .title(" Selected Table ")
+                .title(" Manuscript Jobs ")
                 .title_alignment(Alignment::Center)
                 .border_set(border::THICK);
             
@@ -505,77 +494,89 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                         .border_set(border::THICK);
                     frame.render_widget(console_block, right_chunks[1]);
 
-                    let gauge_chunks = Layout::default()
-                        .direction(Direction::Vertical)
-                        .constraints([
-                            Constraint::Length(1),
-                            Constraint::Length(1),
-                            Constraint::Length(2),  
-                            Constraint::Length(6),
-                            Constraint::Min(0),
-                        ])
-                        .split(right_chunks[1]);
-
-                    // 1. Progress gauge
-                    if app.state == AppState::Started {
-                        let label = Span::styled(
-                            format!("{:.1}%", app.progress1()),
-                            Style::new().italic().bold().fg(CUSTOM_LABEL_COLOR),
-                        );
-                        let gauge = Gauge::default()
-                            .block(Block::default().padding(Padding::horizontal(1)))
-                            .gauge_style(GAUGE2_COLOR)
-                            .ratio(app.progress1 / 100.0)
-                            .label(label);
-                        frame.render_widget(gauge, gauge_chunks[1]);
-                    }
-
-                    // 2. Docker status
-                    let docker_status = if app.docker_setup_in_progress {
-                        format!("Docker setup in progress... ({} seconds)", app.docker_setup_timer / 10)
+                    // Modify the console content rendering based on setup_state
+                    if app.setup_state == SetupState::Complete {
+                        // When complete, use the full console area for the message
+                        let paragraph_msg = Paragraph::new(app.get_setup_progress_msg())
+                            .gray()
+                            .block(Block::default()
+                                .borders(Borders::BOTTOM)
+                                .padding(Padding::horizontal(4)))
+                            .scroll((app.vertical_scroll as u16, 0));
+                        frame.render_widget(paragraph_msg, right_chunks[1]);
                     } else {
-                        "🏄🏻 Manuscript console: Debug your manuscript before deploying it locally or to the network.".to_string()
-                    };
+                        // During setup, use the original divided layout
+                        let gauge_chunks = Layout::default()
+                            .direction(Direction::Vertical)
+                            .constraints([
+                                Constraint::Length(1),
+                                Constraint::Length(1),
+                                Constraint::Length(2),  
+                                Constraint::Length(6),
+                                Constraint::Min(0),
+                            ])
+                            .split(right_chunks[1]);
 
-                    let docker_status_widget = Paragraph::new(Text::from(
-                        Span::styled(docker_status, Style::default().fg(Color::Yellow))
-                    ))
-                    .alignment(Alignment::Center)
-                    .block(Block::default()
-                        .padding(Padding::horizontal(1)));
-                    frame.render_widget(docker_status_widget, gauge_chunks[2]);
+                        // 1. Progress gauge
+                        if app.state == AppState::Started {
+                            let label = Span::styled(
+                                format!("{:.1}%", app.progress1()),
+                                Style::new().italic().bold().fg(CUSTOM_LABEL_COLOR),
+                            );
+                            let gauge = Gauge::default()
+                                .block(Block::default().padding(Padding::horizontal(1)))
+                                .gauge_style(GAUGE2_COLOR)
+                                .ratio(app.progress1 / 100.0)
+                                .label(label);
+                            frame.render_widget(gauge, gauge_chunks[1]);
+                        }
 
-                    // 3. Setup progress
-                    let steup_msg_lines = app.get_setup_progress_lines();
-                    let progress_widget = Paragraph::new(steup_msg_lines)
-                        .alignment(Alignment::Left)
-                        .wrap(ratatui::widgets::Wrap { trim: true })
-                        .block(Block::default().padding(Padding::horizontal(4)));
-                    frame.render_widget(progress_widget, gauge_chunks[3]);
+                        // 2. Docker status
+                        let docker_status = if app.docker_setup_in_progress {
+                            format!("Docker setup in progress... ({} seconds)", app.docker_setup_timer / 10)
+                        } else {
+                            "🏄🏻 Manuscript console: Debug your manuscript before deploying it locally or to the network.".to_string()
+                        };
 
-                    // 4. Setup progress msg
-                    let paragraph = Paragraph::new(app.get_setup_progress_msg())
-                        .gray()
+                        let docker_status_widget = Paragraph::new(Text::from(
+                            Span::styled(docker_status, Style::default().fg(Color::Yellow))
+                        ))
+                        .alignment(Alignment::Center)
                         .block(Block::default()
-                            .borders(Borders::BOTTOM)
-                            .padding(Padding::horizontal(4)))
-                        .scroll((app.vertical_scroll as u16, 0));
-                    frame.render_widget(paragraph, gauge_chunks[4]);
-                    frame.render_stateful_widget(
-                        Scrollbar::new(ScrollbarOrientation::VerticalRight)
-                            .begin_symbol(Some("↑"))
-                            .end_symbol(Some("↓")),
-                        chunks[1],
-                        &mut app.vertical_scroll_state,
-                );
+                            .padding(Padding::horizontal(1)));
+                        frame.render_widget(docker_status_widget, gauge_chunks[2]);
 
-                
+                        // 3. Setup progress
+                        let steup_msg_lines = app.get_setup_progress_lines();
+                        let progress_widget = Paragraph::new(steup_msg_lines)
+                            .alignment(Alignment::Left)
+                            .wrap(ratatui::widgets::Wrap { trim: true })
+                            .block(Block::default().padding(Padding::horizontal(4)));
+                        frame.render_widget(progress_widget, gauge_chunks[3]);
+
+                        // 4. Setup progress msg
+                        let paragraph_msg = Paragraph::new(app.get_setup_progress_msg())
+                            .gray()
+                            .block(Block::default()
+                                .borders(Borders::BOTTOM)
+                                .padding(Padding::new(4, 1, 1, 1)))
+                            .scroll((app.vertical_scroll as u16, 0));
+                        frame.render_widget(paragraph_msg, gauge_chunks[4]);
+                        frame.render_stateful_widget(
+                            Scrollbar::new(ScrollbarOrientation::VerticalRight)
+                                .begin_symbol(Some("↑"))
+                                .end_symbol(Some("↓")),
+                            chunks[1],
+                            &mut app.vertical_scroll_state,
+                        );
+
+                }
             }
 
             // Add key hints at the bottom
             let hints = vec![
-                "R: Run SQL",
-                "E: Edit SQL",
+                "R: Run",
+                "E: Edit",
                 "D: Deploy",
                 "q: Quit",
             ];
@@ -656,7 +657,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
         frame.render_widget(Clear, sql_window);
 
         let input_block = Block::bordered()
-            .title(" SQL Editor (Esc → Save & Esc) ")
+            .title(" Manuscript Editor (Esc → Save & Esc) ")
             .title_alignment(Alignment::Center)
             .border_set(border::THICK)
             .style(Style::default().bg(Color::Rgb(10, 100, 100)))

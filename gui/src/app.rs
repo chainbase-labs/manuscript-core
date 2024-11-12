@@ -41,7 +41,7 @@ pub struct App {
     sql_receiver: Option<mpsc::Receiver<Result<serde_json::Value, String>>>,
     pub sql_timer: u64, 
     pub docker_manager: DockerManager,
-    pub docker_msg: Option<String>,
+    pub debug_result: Option<String>,
     pub docker_setup_in_progress: bool,
     pub docker_setup_timer: u64,
     pub setup_progress: f64, 
@@ -154,7 +154,7 @@ impl Clone for App {
             sql_receiver: None,  // Don't clone the receiver
             sql_timer: self.sql_timer,
             docker_manager: self.docker_manager.clone(),
-            docker_msg: self.docker_msg.clone(),
+            debug_result: self.debug_result.clone(),
             docker_setup_in_progress: self.docker_setup_in_progress,
             docker_setup_timer: self.docker_setup_timer,  // Initialize the timer
             setup_progress: self.setup_progress,
@@ -163,7 +163,7 @@ impl Clone for App {
             progress_columns: self.progress_columns,
             progress1: self.progress1,
             progress_lines: RefCell::new(Vec::new()),
-            should_cancel_setup: self.should_cancel_setup,  // Clone the new field
+            should_cancel_setup: self.should_cancel_setup,
             update_sender: self.update_sender.clone(),
             update_receiver: None,
             current_setup_step: self.current_setup_step.clone(),
@@ -295,7 +295,7 @@ impl App {
             sql_receiver: Some(sql_receiver),
             sql_timer: 0,  // Initialize timer
             docker_manager: DockerManager::new(),
-            docker_msg: None,
+            debug_result: None,
             docker_setup_in_progress: false,
             docker_setup_timer: 0,  // Initialize the timer
             setup_progress: 0.0,
@@ -551,7 +551,7 @@ impl App {
                 match receiver.try_recv() {
                     Ok(update) => match update {
                         AppUpdate::SteupResult(msg) => {
-                            self.docker_msg = Some(msg);
+                            self.debug_result = Some(msg);
                         },
                         AppUpdate::SetupProgress(step, status) => {
                             self.current_setup_step = Some(step.clone());
@@ -571,7 +571,7 @@ impl App {
                             self.current_setup_step = None;
                         },
                         AppUpdate::SetupFailed(error, step) => {
-                            self.docker_msg = Some(format!("Error: {}", error));
+                            self.debug_result = Some(format!("Error: {}", error));
                             self.state = AppState::Running;
                             self.setup_state = SetupState::Failed(error);
                             self.docker_setup_timer = 0;
@@ -582,7 +582,7 @@ impl App {
                     },
                     Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {},
                     Err(_) => {
-                        self.docker_msg = Some("Channel closed".to_string());
+                        self.debug_result = Some("Channel closed".to_string());
                     }
                 }
             }
@@ -614,7 +614,7 @@ impl App {
             return;
         }
 
-        let total_duration = 1200;
+        let total_duration = 600;
         self.progress1 = (self.docker_setup_timer as f64 * 100.0 / total_duration as f64).min(100.0);
         
         if self.progress1 >= 100.0 {
@@ -933,7 +933,7 @@ impl App {
                         self.progress1 = 0.0;
                         self.docker_setup_in_progress = false;
                     }
-                    if self.saved_sql.is_some() || self.show_tables {
+                    if self.saved_sql.is_some() || self.show_tables || self.sql_result.is_some() {
                         if !self.sql_input.trim().is_empty() {
                             self.saved_sql = Some(self.sql_input.clone());
                         }
@@ -1007,7 +1007,7 @@ impl App {
                                 }
                             }
                             Err(e) => {
-                                self.docker_msg = Some(format!("Error transforming SQL: {}", e));
+                                self.debug_result = Some(format!("Error transforming SQL: {}", e));
                             }
                         }
                     }
@@ -1089,7 +1089,7 @@ sinks:
         
         if let Some(sender) = &self.update_sender {
             let _ = sender.send(AppUpdate::SteupResult(
-                "Setting up debug environment...".to_string()
+                "Executing in the debug environment...".to_string()
             )).await;
         }
         
@@ -1125,7 +1125,7 @@ sinks:
         let mut lines = vec![
             Line::from(""),
             Line::from(Span::styled(
-                format!("Setting up Debug environment... ({:.1}s)", 
+                format!("Setting up debug environment... ({:.1}s)", 
                     self.docker_setup_timer as f64 / 10.0),
                 Style::default().fg(Color::Yellow)
             )),
@@ -1169,7 +1169,7 @@ sinks:
     pub fn get_setup_progress_msg(&self) -> Text {
         let mut lines = Vec::new();
 
-        if let Some(status) = &self.docker_msg {
+        if let Some(status) = &self.debug_result {
             // Split status by both \n and literal "\\n"
             let split_lines = status.split(|c| c == '\n')
                 .flat_map(|line| line.split(r"\n"));
@@ -1274,10 +1274,10 @@ sinks:
 
         // Check if SQL already contains the full dataset name (including schema)
         let sql = if sql.contains(dataset) {
-            format!("{} limit 10", sql)
+            format!("select * from ({}) limit 10", sql)
         } else {
             // Use the full dataset name which includes schema
-            format!("Select * From {} limit 10", dataset)
+            format!("select * from {} limit 10", dataset)
         };
 
         Ok(sql)
