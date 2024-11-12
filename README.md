@@ -39,9 +39,15 @@ The vision of Manuscript is to realize “data trade” within the Chainbase net
 ### Install Manuscript Client
 > ⚠️ **Note**: The manuscript data is only being trialed on the testnet and locally. Please do not use it in a production environment.
 ```shell
-# For Linux and MacOS
+# GUI
+curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install-gui.sh
+
+# CLI
 curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install.sh | bash
 ```
+### GUI
+![manuscript-gui](./images/manuscript-gui.png)
+
 ### Requirements
 [Docker Desktop 25.1+](https://www.docker.com/products/docker-desktop/)
 
