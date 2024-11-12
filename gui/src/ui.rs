@@ -511,7 +511,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                             Constraint::Length(1),
                             Constraint::Length(1),
                             Constraint::Length(2),  
-                            Constraint::Length(9),
+                            Constraint::Length(6),
                             Constraint::Min(0),
                         ])
                         .split(right_chunks[1]);

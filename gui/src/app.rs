@@ -236,9 +236,10 @@ pub enum SetupStepStatus {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SetupStep {
-    CheckingDocker,
-    PullingImage,
-    StartingContainer,
+    // CheckingDocker,
+    // PullingImage,
+    // StartingContainer,
+    ParseManuscript,
     SubmitSQLTask,
     WaitingForExecutionResults,
 }
@@ -246,9 +247,10 @@ pub enum SetupStep {
 impl SetupStep {
     fn as_str(&self) -> &'static str {
         match self {
-            SetupStep::CheckingDocker => "Checking Docker installation",
-            SetupStep::PullingImage => "Pulling required images",
-            SetupStep::StartingContainer => "Starting container",
+            // SetupStep::CheckingDocker => "Checking Docker installation",
+            // SetupStep::PullingImage => "Pulling required images",
+            // SetupStep::StartingContainer => "Starting container",
+            SetupStep::ParseManuscript => "Parse manuscript yaml",
             SetupStep::SubmitSQLTask => "Submit sql task",
             SetupStep::WaitingForExecutionResults => "Waiting for execution results",
         }
@@ -1108,7 +1110,7 @@ sinks:
                     if let Some(sender) = &self.update_sender {
                         let _ = sender.send(AppUpdate::SetupFailed(
                             e.to_string(),
-                            self.current_setup_step.clone().unwrap_or(SetupStep::CheckingDocker)
+                            self.current_setup_step.clone().unwrap_or(SetupStep::SubmitSQLTask)
                         )).await;
                     }
                 }
@@ -1131,9 +1133,9 @@ sinks:
         ];
 
         let all_steps = vec![
-            SetupStep::CheckingDocker,
-            SetupStep::PullingImage,
-            SetupStep::StartingContainer,
+            // SetupStep::CheckingDocker,
+            // SetupStep::PullingImage,
+            // SetupStep::StartingContainer,
             SetupStep::SubmitSQLTask,
             SetupStep::WaitingForExecutionResults,
         ];
