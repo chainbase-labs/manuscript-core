@@ -476,7 +476,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
 
                 let mut sql_block = Block::bordered()
                     .border_type(BorderType::Double)
-                    .title(" SQL Editorrrr ")
+                    .title(" Manuscript Editor ")
                     .title_alignment(Alignment::Center)
                     .title_bottom(Line::from(vec![
                         "   Press ".white(),
@@ -507,7 +507,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                         .direction(Direction::Vertical)
                         .constraints([
                             Constraint::Length(1),
-                            Constraint::Length(2),
+                            Constraint::Length(1),
                             Constraint::Length(2),  
                             Constraint::Length(9),
                             Constraint::Min(0),
@@ -532,7 +532,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                     let docker_status = if app.docker_setup_in_progress {
                         format!("Docker setup in progress... ({} seconds)", app.docker_setup_timer / 10)
                     } else {
-                        "🏄🏻 Manuscript console: Debug your SQL before deploying it locally or to the network.".to_string()
+                        "🏄🏻 Manuscript console: Debug your manuscript before deploying it locally or to the network.".to_string()
                     };
 
                     let docker_status_widget = Paragraph::new(Text::from(
@@ -778,6 +778,36 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
             .alignment(Alignment::Left);
 
         frame.render_widget(search_paragraph, search_window);
+    }
+
+    // Add warning window rendering at the end
+    if app.show_warning {
+        let area = frame.size();
+        let warning_window_width = 40;
+        let warning_window_height = 3;
+        let warning_window = Rect::new(
+            (area.width - warning_window_width) / 2,
+            (area.height - warning_window_height) / 2,
+            warning_window_width,
+            warning_window_height,
+        );
+
+        // Clear the area under the warning window
+        frame.render_widget(Clear, warning_window);
+
+        // Create warning block
+        let warning_block = Block::bordered()
+            .title(" Warning ")
+            .title_alignment(Alignment::Center)
+            .border_set(border::THICK)
+            .border_style(Style::default().fg(Color::Yellow));
+
+        let warning_text = Paragraph::new("Please run the manuscript first")
+            .block(warning_block)
+            .alignment(Alignment::Center)
+            .style(Style::default().fg(Color::Yellow));
+
+        frame.render_widget(warning_text, warning_window);
     }
 }
 

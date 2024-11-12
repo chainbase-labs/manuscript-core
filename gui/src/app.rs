@@ -67,6 +67,7 @@ pub struct App {
     pub search_input: String,
     pub search_cursor_position: usize,
     pub filtered_chains: Vec<Chain>,
+    pub show_warning: bool,
 }
 
 #[derive(Debug, Clone,)]
@@ -175,6 +176,7 @@ impl Clone for App {
             search_input: self.search_input.clone(),
             search_cursor_position: self.search_cursor_position,
             filtered_chains: self.filtered_chains.clone(),
+            show_warning: self.show_warning,
         }
     }
 }
@@ -309,6 +311,7 @@ impl App {
             search_input: String::new(),
             search_cursor_position: 0,
             filtered_chains: chains,
+            show_warning: false,
         }
     }
 
@@ -628,6 +631,9 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent, visible_height: usize) {
+        if self.show_warning {
+            self.show_warning = false;
+        }
         
         if self.show_search {
             match key_event.code {
@@ -963,6 +969,11 @@ impl App {
                         });
                     }
                 },
+                KeyCode::Char('d') => {
+                    if self.current_tab == 1 && self.sql_result.is_none() {
+                        self.show_warning = true;
+                    }
+                }
                 _ => {}
             }
         }

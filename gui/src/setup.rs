@@ -164,7 +164,8 @@ impl DockerManager {
                 .send()
                 .await {
                     Ok(response) => {
-                        match response.json::<serde_json::Value>().await {
+                        let text = response.text().await.unwrap_or_else(|e| format!("Failed to get response text: {}", e));
+                        match serde_json::from_str::<serde_json::Value>(&text) {
                             Ok(json) => {
                                 if let Some(handle) = json.get("sessionHandle").and_then(|h| h.as_str()) {
                                     return Ok(handle.to_string());
@@ -185,7 +186,7 @@ impl DockerManager {
                             return Err(format!("Failed to create session after {} attempts: {}", max_attempts, e));
                         }
                     }
-            }
+                }
 
             if attempts >= max_attempts {
                 return Err(format!("Failed to create valid session after {} attempts", max_attempts));
