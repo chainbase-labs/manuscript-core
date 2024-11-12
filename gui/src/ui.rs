@@ -304,7 +304,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                     let layout = Layout::default()
                         .direction(Direction::Vertical)
                         .constraints([
-                            Constraint::Percentage(15),  // Top spacing
+                            Constraint::Percentage(13),  // Top spacing
                             Constraint::Length(
                                 TryInto::<u16>::try_into(LOGO.lines().count())
                                     .unwrap_or_default()
@@ -323,14 +323,19 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
 
                     // Render the symbol logo in magenta
                     let logo = Paragraph::new(LOGO)
+                        .block(Block::default()
+                            .padding(Padding::new(20, 20, 0, 0))
+                            .style(Style::default().fg(Color::Rgb(200, 200, 200))))
                         .style(Style::default().fg(Color::Cyan))
                         .alignment(Alignment::Center);
                     frame.render_widget(logo, layout[1]);
 
                     // Render the text logo below in cyan
                     let logo_letter = Paragraph::new(LOGO_LETTER)
+                        .block(Block::default()
+                            .padding(Padding::new(20, 20, 0, 0))
+                            .style(Style::default().fg(Color::Rgb(200, 200, 200))))
                         .style(Style::default().fg(Color::Magenta))
-                        // .style(Style::default().fg(Color::Cyan))
                         .alignment(Alignment::Center);
                     frame.render_widget(logo_letter, layout[2]);
 
