@@ -340,6 +340,9 @@ impl DockerManager {
                         next_uri = next.to_string();
                     }
                 },
+                Some("EOS") => {
+                    return Ok(serde_json::json!("No results found"));
+                },
                 Some("PAYLOAD") => {
                     if let Some(data) = json.get("results") {
                         // Check if data field is not empty

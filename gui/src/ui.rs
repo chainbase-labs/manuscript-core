@@ -431,22 +431,10 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                 .split(chunks[0]);
 
             // Left panel - Show selected chain and table
-            let left_content = if let Some(chain) = app.chains.get(app.selected_chain_index) {
-                if let Some(table_index) = app.selected_table_index {
-                    if let Some(table_name) = chain.dataDictionary.keys().nth(table_index) {
-                        format!("Chain: {}\nTable: {}", chain.name, table_name)
-                    } else {
-                        "No table selected".to_string()
-                    }
-                } else {
-                    "No table selected".to_string()
-                }
-            } else {
-                "No chain selected".to_string()
-            };
+            let left_content = "No Jobs Running".to_string();
 
             let left_block = Block::bordered()
-                .title(" Selected Table ")
+                .title(" Manuscript Jobs ")
                 .title_alignment(Alignment::Center)
                 .border_set(border::THICK);
             
@@ -574,8 +562,8 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
 
             // Add key hints at the bottom
             let hints = vec![
-                "R: Run SQL",
-                "E: Edit SQL",
+                "R: Run",
+                "E: Edit",
                 "D: Deploy",
                 "q: Quit",
             ];

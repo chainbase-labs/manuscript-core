@@ -933,7 +933,7 @@ impl App {
                         self.progress1 = 0.0;
                         self.docker_setup_in_progress = false;
                     }
-                    if self.saved_sql.is_some() || self.show_tables {
+                    if self.saved_sql.is_some() || self.show_tables || self.sql_result.is_some() {
                         if !self.sql_input.trim().is_empty() {
                             self.saved_sql = Some(self.sql_input.clone());
                         }
@@ -1089,7 +1089,7 @@ sinks:
         
         if let Some(sender) = &self.update_sender {
             let _ = sender.send(AppUpdate::SteupResult(
-                "Setting up debug environment...".to_string()
+                "Executing in the debug environment...".to_string()
             )).await;
         }
         
@@ -1125,7 +1125,7 @@ sinks:
         let mut lines = vec![
             Line::from(""),
             Line::from(Span::styled(
-                format!("Setting up Debug environment... ({:.1}s)", 
+                format!("Setting up debug environment... ({:.1}s)", 
                     self.docker_setup_timer as f64 / 10.0),
                 Style::default().fg(Color::Yellow)
             )),
