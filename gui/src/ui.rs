@@ -498,7 +498,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                 frame.render_widget(sql_paragraph, right_chunks[0]);
 
                     let console_block = Block::bordered()
-                        .title(" Console ")
+                        .title(" Debug Console ")
                         .title_alignment(Alignment::Center)
                         .border_set(border::THICK);
                     frame.render_widget(console_block, right_chunks[1]);
@@ -783,7 +783,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
     // Add warning window rendering at the end
     if app.show_warning {
         let area = frame.size();
-        let warning_window_width = 40;
+        let warning_window_width = 90;
         let warning_window_height = 3;
         let warning_window = Rect::new(
             (area.width - warning_window_width) / 2,
@@ -802,12 +802,54 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
             .border_set(border::THICK)
             .border_style(Style::default().fg(Color::Yellow));
 
-        let warning_text = Paragraph::new("Please run the manuscript first")
+        let warning_text = Paragraph::new("Run and verify the results in debug mode before proceeding with deployment..")
             .block(warning_block)
             .alignment(Alignment::Center)
             .style(Style::default().fg(Color::Yellow));
 
         frame.render_widget(warning_text, warning_window);
+    }
+
+    // Add deployment options window rendering at the end
+    if app.show_deploy_options {
+        let area = frame.size();
+        let window_width = 40;
+        let window_height = 4;
+        let window = Rect::new(
+            (area.width - window_width) / 2,
+            (area.height - window_height) / 2,
+            window_width,
+            window_height,
+        );
+
+        // Clear the area under the window
+        frame.render_widget(Clear, window);
+
+        // Create the options list
+        let items: Vec<ListItem> = app.deploy_options
+            .iter()
+            .enumerate()
+            .map(|(i, (option, enabled))| {
+                let style = if i == app.selected_deploy_option {
+                    Style::default().bg(Color::Blue).fg(Color::White)
+                } else if !enabled {
+                    Style::default().fg(Color::DarkGray)
+                } else {
+                    Style::default()
+                };
+                
+                ListItem::new(option.as_str()).style(style)
+            })
+            .collect();
+
+        let options_list = List::new(items)
+            .block(Block::bordered()
+                .title(" Deploy Options ")
+                .title_alignment(Alignment::Center)
+                .border_set(border::THICK))
+            .highlight_style(Style::default().bg(Color::Blue).fg(Color::White));
+
+        frame.render_widget(options_list, window);
     }
 }
 

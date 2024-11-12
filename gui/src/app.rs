@@ -68,6 +68,9 @@ pub struct App {
     pub search_cursor_position: usize,
     pub filtered_chains: Vec<Chain>,
     pub show_warning: bool,
+    pub show_deploy_options: bool,
+    pub selected_deploy_option: usize,
+    pub deploy_options: Vec<(String, bool)>, // (option name, is_enabled)
 }
 
 #[derive(Debug, Clone,)]
@@ -177,6 +180,9 @@ impl Clone for App {
             search_cursor_position: self.search_cursor_position,
             filtered_chains: self.filtered_chains.clone(),
             show_warning: self.show_warning,
+            show_deploy_options: self.show_deploy_options,
+            selected_deploy_option: self.selected_deploy_option,
+            deploy_options: self.deploy_options.clone(),
         }
     }
 }
@@ -312,6 +318,12 @@ impl App {
             search_cursor_position: 0,
             filtered_chains: chains,
             show_warning: false,
+            show_deploy_options: false,
+            selected_deploy_option: 0,
+            deploy_options: vec![
+                ("Local".to_string(), true),
+                ("Network (Coming Soon)".to_string(), false),
+            ],
         }
     }
 
@@ -634,6 +646,22 @@ impl App {
         if self.show_warning {
             self.show_warning = false;
         }
+
+        if self.show_deploy_options {
+            match key_event.code {
+                KeyCode::Esc => {
+                    self.show_deploy_options = false;
+                }
+                KeyCode::Enter => {
+                    if self.selected_deploy_option == 0 {
+                        self.create_config_file();
+                    }
+                    self.show_deploy_options = false;
+                }
+                _ => {}
+            }
+        }
+
         
         if self.show_search {
             match key_event.code {
@@ -970,8 +998,15 @@ impl App {
                     }
                 },
                 KeyCode::Char('d') => {
-                    if self.current_tab == 1 && self.sql_result.is_none() {
-                        self.show_warning = true;
+                    if self.current_tab == 1 {
+                        self.show_deploy_options = true;
+                        self.selected_deploy_option = 0;
+                        // if self.sql_result.is_none() {
+                        //     self.show_warning = true;
+                        // } else {
+                        //     self.show_deploy_options = true;
+                        //     self.selected_deploy_option = 0;
+                        // }
                     }
                 }
                 _ => {}
@@ -1126,6 +1161,45 @@ impl App {
                 }
             }
         }
+    }
+
+    fn create_config_file(&self) -> Result<(), std::io::Error> {
+        let home_dir = dirs::home_dir()
+            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "Home directory not found"))?;
+        let config_path = home_dir.join(".manuscript_config.ini");
+        
+        let os_type = if cfg!(target_os = "darwin") {
+            "darwin"
+        } else if cfg!(target_os = "linux") {
+            "linux"
+        } else {
+            "windows"
+        };
+
+        let config_content = format!(
+            "baseDir    = {}\nsystemInfo = {}\n\n\
+            [demo]\n\
+            baseDir     = {}/manuscript\n\
+            name        = demo\n\
+            specVersion =\n\
+            parallelism = 0\n\
+            chain       = zkevm\n\
+            table       = blocks\n\
+            database    = zkevm\n\
+            query       = Select * From zkevm_blocks\n\
+            sink        = postgres\n\
+            port        = 8081\n\
+            dbPort      = 15432\n\
+            dbUser      = postgres\n\
+            dbPassword  = postgres\n\
+            graphqlPort = 8082",
+            home_dir.display(),
+            os_type,
+            home_dir.display()
+        );
+
+        std::fs::write(config_path, config_content)?;
+        Ok(())
     }
 }
 
