@@ -205,6 +205,7 @@ pub struct Column {
 pub struct Chain {
     pub name: String,
     pub status: String,
+    pub ticker: String,
     pub lastUpdate: String,
     pub time_ago: String,
     pub databaseName: String,
@@ -348,6 +349,7 @@ impl App {
                         
                         Chain {
                             name: graph_data.chain.name,
+                            ticker: graph_data.chain.ticker,
                             status: graph_data.chain.status,
                             lastUpdate: graph_data.chain.lastUpdate,
                             databaseName: graph_data.chain.databaseName,
@@ -1302,6 +1304,7 @@ struct GraphData {
 #[derive(Debug, Deserialize)]
 struct ChainData {
     name: String,
+    ticker: String,
     status: String,
     lastUpdate: String,
     databaseName: String,
