@@ -104,9 +104,17 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
 
                     let content = if is_selected {
                         Line::from(vec![
-                            format!("{:<3} {:<25}", index, chain.name).bold().white().into(),
-                            format!("{:<20}", chain.status).bold().into(),
-                            format!("{:<10}", time_ago_style).bold().into(),
+                            format!("{:<3}⟠ {:<25}", index, chain.name).bold().white().bg(Color::Magenta).into(),
+                            format!("{:<10}", chain.ticker).bold().white().bg(Color::Magenta).into(),
+                            format!("{:<10}", if chain.status == "Online" { "⬤" } else if chain.status == "Offline" { "⬤" } else { "◑" }).bold()
+                                .style(if chain.status == "Online" && chain.time_ago.contains("min") { 
+                                    Style::default().fg(Color::Green).bg(Color::Magenta)
+                                } else if chain.status == "Offline" {
+                                    Style::default().fg(Color::Red).bg(Color::Magenta)
+                                } else { 
+                                    Style::default().fg(Color::Yellow).bg(Color::Magenta)
+                                }).into(),
+                            format!("{:<10}", time_ago_style).bold().bg(Color::Magenta).into(),
                         ])
                     } else {
                         Line::from(vec![
@@ -118,7 +126,15 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                                 } else { 
                                     Style::default().fg(Color::Yellow) 
                                 }).into(),
-                            format!("{:<20}", chain.status).bold()
+                            format!("{:<10}", chain.ticker).bold()
+                                .style(if chain.status == "Online" && chain.time_ago.contains("min") { 
+                                    Style::default().fg(Color::Green)
+                                } else if chain.status == "Offline" {
+                                    Style::default().fg(Color::Red)
+                                } else { 
+                                    Style::default().fg(Color::Yellow) 
+                                }).into(),
+                            format!("{:<10}", if chain.status == "Online" { "⬤" } else if chain.status == "Offline" { "⬤" } else { "◑" }).bold()
                                 .style(if chain.status == "Online" && chain.time_ago.contains("min") { 
                                     Style::default().fg(Color::Green)
                                 } else if chain.status == "Offline" {
@@ -151,16 +167,21 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                         .map(|(i, table_name)| {
                             let content = if Some(i) == app.selected_table_index {
                                 Line::from(vec![
-                                    format!("{:<1}-> ", i + 1).bold().green(),
-                                    format!("{}.{}", selected_chain.databaseName, table_name).bold().green()
+                                    format!("{:<1}-> ", i + 1).bold().white(),
+                                    format!("{}.{}", selected_chain.databaseName, table_name).bold().white()
                                 ])
                             } else {
                                 Line::from(vec![
-                                    format!("{:<1}-", i + 1).white(),
-                                    format!("{}.{}", selected_chain.databaseName, table_name).into()
+                                    format!("{:<1}-", i + 1).green(),
+                                    format!("{}.{}", selected_chain.databaseName, table_name).green()
                                 ])
                             };
-                            ListItem::new(content)
+                            let style = if Some(i) == app.selected_table_index {
+                                Style::default().bg(Color::Magenta)
+                            } else {
+                                Style::default()
+                            };
+                            ListItem::new(content).style(style)
                         })
                         .collect();
 
