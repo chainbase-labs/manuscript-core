@@ -104,17 +104,17 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
 
                     let content = if is_selected {
                         Line::from(vec![
-                            format!("{:<3}⟠ {:<25}", index, chain.name).bold().white().bg(Color::Magenta).into(),
-                            format!("{:<10}", chain.ticker).bold().white().bg(Color::Magenta).into(),
+                            format!("{:<3}⟠ {:<25}", index, chain.name).bold().white().bg(Color::DarkGray).into(),
+                            format!("{:<10}", chain.ticker).bold().white().bg(Color::DarkGray).into(),
                             format!("{:<10}", if chain.status == "Online" { "⬤" } else if chain.status == "Offline" { "⬤" } else { "◑" }).bold()
                                 .style(if chain.status == "Online" && chain.time_ago.contains("min") { 
-                                    Style::default().fg(Color::Green).bg(Color::Magenta)
+                                    Style::default().fg(Color::Green).bg(Color::DarkGray)
                                 } else if chain.status == "Offline" {
-                                    Style::default().fg(Color::Red).bg(Color::Magenta)
+                                    Style::default().fg(Color::Red).bg(Color::DarkGray)
                                 } else { 
-                                    Style::default().fg(Color::Yellow).bg(Color::Magenta)
+                                    Style::default().fg(Color::Yellow).bg(Color::DarkGray)
                                 }).into(),
-                            format!("{:<10}", time_ago_style).bold().bg(Color::Magenta).into(),
+                            format!("{:<10}", time_ago_style).bold().bg(Color::DarkGray).into(),
                         ])
                     } else {
                         Line::from(vec![
@@ -177,7 +177,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                                 ])
                             };
                             let style = if Some(i) == app.selected_table_index {
-                                Style::default().bg(Color::Magenta)
+                                Style::default().bg(Color::DarkGray)
                             } else {
                                 Style::default()
                             };
