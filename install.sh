@@ -169,12 +169,13 @@ else
     sign_binary "$os" "$exe" "true"
 fi
 
+# Remove Temporary Setup directory
 echo "[5/6] Cleaning '${downloaded_file}' and extracted files"
 if [ -w "${downloadFolder}" ]; then
-    rm -rf "${downloadFolder}"
+    rm -rf "${downloadFolder}" || echo "Note: Cleanup of temp files failed - don't worry, your system will automatically clean the temporary directory"
 else
-    $SUDO rm -rf "${downloadFolder}"
-fi
+    $SUDO rm -rf "${downloadFolder}" || echo "Note: Cleanup of temp files failed - don't worry, your system will automatically clean the temporary directory"
+fi || true  # Prevent script termination from set -e
 
 echo "[6/6] Adding '${exe_name}' to the environment variables"
 if command -v $exe_name --version >/dev/null; then
