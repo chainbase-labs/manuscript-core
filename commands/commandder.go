@@ -100,12 +100,13 @@ func init() {
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		// List of commands to display in the help menu
 		commands := []*cobra.Command{
-			cmd.Commands()[4],
-			cmd.Commands()[5],
-			cmd.Commands()[6],
-			cmd.Commands()[7],
-			cmd.Commands()[2],
-			cmd.Commands()[0],
+			cmd.Commands()[4], //init
+			cmd.Commands()[5], //list
+			cmd.Commands()[6], //logs
+			cmd.Commands()[7], //stop
+			cmd.Commands()[2], //deploy
+			cmd.Commands()[0], //chat
+			cmd.Commands()[8], //version
 		}
 
 		maxNameLen := 0
