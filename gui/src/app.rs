@@ -213,10 +213,18 @@ pub struct Chain {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct DataDictionaryItem {
-    pub name: String,
-    pub dataType: String,
-    pub description: String,
+pub struct DataDictionary {
+    #[serde(flatten)]
+    tables: HashMap<String, Vec<DataDictionaryItem>>,
+}
+
+impl IntoIterator for DataDictionary {
+    type Item = (String, Vec<DataDictionaryItem>);
+    type IntoIter = std::collections::hash_map::IntoIter<String, Vec<DataDictionaryItem>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.tables.into_iter()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -270,7 +278,10 @@ impl App {
         
         let chains = match App::fetch_chains().await {
             Ok(data) => data,
-            Err(_) => Vec::new()
+            Err(e) => {
+                eprintln!("Failed to fetch chains: {}", e);
+                Vec::new()
+            }
         };
 
         App {
@@ -334,16 +345,19 @@ impl App {
     }
 
     async fn fetch_chains() -> Result<Vec<Chain>, reqwest::Error> {
-        let url = "https://api.chainbase.com/api/v1/metadata/network_chains";
+        // let url = "https://api.chainbase.com/api/v1/metadata/network_chains";
+        let url = "http://127.0.0.1:8000/api/v1/metadata/network_chains";
 
         match reqwest::get(url).await?.json::<Response>().await {
             Ok(response) => {
                 Ok(response.graphData.into_iter()
                     .map(|graph_data| {
-                        let mut tables = HashMap::new();
-                        tables.insert("blocks".to_string(), graph_data.chain.dataDictionary.blocks);
-                        tables.insert("transactions".to_string(), graph_data.chain.dataDictionary.transactions);
-                        tables.insert("transactionLogs".to_string(), graph_data.chain.dataDictionary.transactionLogs);
+                        let tables: HashMap<String, Vec<DataDictionaryItem>> = graph_data.chain.dataDictionary
+                            .into_iter()
+                            .map(|(table_name, columns)| {
+                                (table_name, columns)
+                            })
+                            .collect();
                         
                         let time_ago = Self::calculate_time_diff(&graph_data.chain.lastUpdate);
                         
@@ -1311,11 +1325,10 @@ struct ChainData {
     dataDictionary: DataDictionary,
 }
 
-#[derive(Debug, Deserialize)]
-struct DataDictionary {
-    blocks: Vec<DataDictionaryItem>,
-    transactions: Vec<DataDictionaryItem>,
-    transactionLogs: Vec<DataDictionaryItem>,
+#[derive(Debug, Deserialize, Clone)]
+pub struct DataDictionaryItem {
+    pub name: String,
+    pub dataType: String,
 }
 
 pub fn title_block(title: &str) -> Block {

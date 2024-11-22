@@ -249,7 +249,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                         " | ".into(),
                         "Description".bold().white(),
                     ]));
-                    lines.push(Line::from("─".repeat(80)));  // Separator line
+                    lines.push(Line::from("─".repeat(80)));
 
                     // Add field descriptions in table format
                     if let Some(fields) = fields {
@@ -259,7 +259,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                                 " | ".into(),
                                 format!("{:<15}", item.dataType).cyan().into(),
                                 " | ".into(),
-                                item.description.clone().white().into(),
+                                item.dataType.clone().white().into(),
                             ])
                         }));
                     }
