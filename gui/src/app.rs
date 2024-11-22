@@ -210,6 +210,7 @@ pub struct Chain {
     pub time_ago: String,
     pub databaseName: String,
     pub dataDictionary: HashMap<String, Vec<DataDictionaryItem>>,
+    pub example: Option<HashMap<String, Vec<serde_json::Value>>>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -345,7 +346,6 @@ impl App {
     }
 
     async fn fetch_chains() -> Result<Vec<Chain>, reqwest::Error> {
-        // let url = "https://api.chainbase.com/api/v1/metadata/network_chains";
         let url = "http://127.0.0.1:8000/api/v1/metadata/network_chains";
 
         match reqwest::get(url).await?.json::<Response>().await {
@@ -369,6 +369,7 @@ impl App {
                             databaseName: graph_data.chain.databaseName,
                             time_ago,
                             dataDictionary: tables,
+                            example: graph_data.chain.example,
                         }
                     })
                     .collect())
@@ -394,150 +395,6 @@ impl App {
             }
         } else {
             "unknown".to_string()
-        }
-    }
-
-    // TODO: Remove this mock data once we have real data
-    fn mock_blocks_data() -> ExampleData {
-        ExampleData {
-            columns: vec![
-                Column { name: "block_number".to_string(), type_: "bigint".to_string() },
-                Column { name: "hash".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "parent_hash".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "nonce".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "sha3_uncles".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "logs_bloom".to_string(), type_: "varchar".to_string() },
-                Column { name: "transactions_root".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "state_root".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "receipts_root".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "miner".to_string(), type_: "varchar(42)".to_string() },
-                Column { name: "difficulty".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "total_difficulty".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "size".to_string(), type_: "bigint".to_string() },
-                Column { name: "extra_data".to_string(), type_: "varchar".to_string() },
-                Column { name: "gas_limit".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "gas_used".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "block_timestamp".to_string(), type_: "timestamp".to_string() },
-                Column { name: "transaction_count".to_string(), type_: "bigint".to_string() },
-                Column { name: "base_fee_per_gas".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "withdrawals_root".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "__pk".to_string(), type_: "integer".to_string() },
-            ],
-            data: vec![
-                vec![
-                    json!(0),
-                    json!("0x81005434635456a16f74ff7023fbe0bf423abbc8a8deb093ffff455c0ad3b741"),
-                    json!("0x0000000000000000000000000000000000000000000000000000000000000000"),
-                    json!("0x0000000000000000"),
-                    json!("0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"),
-                    json!("0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-                    json!("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"),
-                    json!("0x3f86b09b43e3e49a41fc20a07579b79eba044253367817d5c241d23c0e2bc5c9"),
-                    json!("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"),
-                    json!("0x0000000000000000000000000000000000000000"),
-                    json!("0"),
-                    json!("0"),
-                    json!(505),
-                    json!("0x"),
-                    json!("0"),
-                    json!("0"),
-                    json!("2023-03-24 10:19:23.000"),
-                    json!(0),
-                    json!(null),
-                    json!(null),
-                    json!(0)
-                ],
-            ],
-        }
-    }
-
-    fn mock_transaction_logs_data() -> ExampleData {
-        ExampleData {
-            columns: vec![
-                Column { name: "block_number".to_string(), type_: "bigint".to_string() },
-                Column { name: "block_timestamp".to_string(), type_: "timestamp".to_string() },
-                Column { name: "transaction_hash".to_string(), type_: "varchar".to_string() },
-                Column { name: "transaction_index".to_string(), type_: "integer".to_string() },
-                Column { name: "log_index".to_string(), type_: "integer".to_string() },
-                Column { name: "address".to_string(), type_: "varchar".to_string() },
-                Column { name: "data".to_string(), type_: "varbinary".to_string() },
-                Column { name: "topic0".to_string(), type_: "varchar".to_string() },
-                Column { name: "topic1".to_string(), type_: "varchar".to_string() },
-                Column { name: "topic2".to_string(), type_: "varchar".to_string() },
-                Column { name: "topic3".to_string(), type_: "varchar".to_string() },
-                Column { name: "pk".to_string(), type_: "integer".to_string() },
-            ],
-            data: vec![
-                vec![
-                    json!(1),
-                    json!("2023-03-24 17:30:15.000"),
-                    json!("0x1b1cc77d663d9176b791e94124eecffe49d1c69837ee6e9ed09356f2c70a065d"),
-                    json!(0),
-                    json!(0),
-                    json!("0x2a3dd3eb832af982ec71669e178424b10dca2ede"),
-                    json!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHboRMQAGZLiEobojhGQVmJIlLToAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABY0V4XYoAAA=="),
-                    json!("0x25308c93ceeed162da955b3f7ce3e3f93606579e40fb92029faa9efe27545983"),
-                    json!(""),
-                    json!(""),
-                    json!(""),
-                    json!(0)
-                ],
-            ],
-        }
-    }
-
-    fn mock_transactions_data() -> ExampleData {
-        ExampleData {
-            columns: vec![
-                Column { name: "hash".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "nonce".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "transaction_index".to_string(), type_: "integer".to_string() },
-                Column { name: "from_address".to_string(), type_: "varchar(42)".to_string() },
-                Column { name: "to_address".to_string(), type_: "varchar(42)".to_string() },
-                Column { name: "value".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "gas".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "gas_price".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "method_id".to_string(), type_: "varchar(10)".to_string() },
-                Column { name: "input".to_string(), type_: "varbinary".to_string() },
-                Column { name: "block_timestamp".to_string(), type_: "timestamp".to_string() },
-                Column { name: "block_number".to_string(), type_: "bigint".to_string() },
-                Column { name: "block_hash".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "max_fee_per_gas".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "max_priority_fee_per_gas".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "transaction_type".to_string(), type_: "integer".to_string() },
-                Column { name: "receipt_cumulative_gas_used".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "receipt_gas_used".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "receipt_contract_address".to_string(), type_: "varchar(42)".to_string() },
-                Column { name: "receipt_status".to_string(), type_: "integer".to_string() },
-                Column { name: "receipt_effective_gas_price".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "__pk".to_string(), type_: "integer".to_string() },
-            ],
-            data: vec![
-                vec![
-                    json!("0x81005434635456a16f74ff7023fbe0bf423abbc8a8deb093ffff455c0ad3b741"),
-                    json!("0x0"),
-                    json!(0),
-                    json!("0x742d35Cc6634C0532925a3b844Bc454e4438f44e"),
-                    json!("0x1234567890123456789012345678901234567890"),
-                    json!("1000000000000000000"),
-                    json!("21000"),
-                    json!("20000000000"),
-                    json!("0x"),
-                    json!("0x"),
-                    json!("2023-10-31 03:52:35.000"),
-                    json!(12345678),
-                    json!("0x0000000000000000000000000000000000000000000000000000000000000000"),
-                    json!("30000000000"),
-                    json!("2000000000"),
-                    json!(2),
-                    json!("21000"),
-                    json!("21000"),
-                    json!(null),
-                    json!(1),
-                    json!("20000000000"),
-                    json!(0),
-                ],
-            ],
         }
     }
 
@@ -641,7 +498,6 @@ impl App {
 
     pub fn update_example_data(&mut self) {
         if let Some(selected_chain) = self.chains.get(self.selected_chain_index) {
-            // Check if chain is offline
             if selected_chain.status == "Offline" {
                 self.example_data = None;
                 return;
@@ -653,12 +509,36 @@ impl App {
                     .nth(table_index)
                     .map(|s| s.as_str());
 
-                self.example_data = match table_name {
-                    Some("blocks") => Some(Self::mock_blocks_data()),
-                    Some("transactions") => Some(Self::mock_transactions_data()),
-                    Some("transactionLogs") => Some(Self::mock_transaction_logs_data()),
-                    _ => None,
-                };
+                if let Some(table_name) = table_name {
+                    if let Some(examples) = &selected_chain.example {
+                        if let Some(example_data) = examples.get(table_name) {
+                            let columns = selected_chain.dataDictionary
+                                .get(table_name)
+                                .map(|items| {
+                                    items.iter()
+                                        .map(|item| Column {
+                                            name: item.name.clone(),
+                                            type_: item.dataType.clone(),
+                                        })
+                                        .collect()
+                                })
+                                .unwrap_or_default();
+
+                            self.example_data = Some(ExampleData {
+                                columns,
+                                data: vec![example_data.clone()],
+                            });
+                            return;
+                        }
+                    }
+
+                    // self.example_data = match table_name {
+                    //     "blocks" => Some(Self::mock_blocks_data()),
+                    //     "transactions" => Some(Self::mock_transactions_data()),
+                    //     "transactionLogs" => Some(Self::mock_transaction_logs_data()),
+                    //     _ => None,
+                    // };
+                }
             }
         }
     }
@@ -1323,6 +1203,7 @@ struct ChainData {
     lastUpdate: String,
     databaseName: String,
     dataDictionary: DataDictionary,
+    example: Option<HashMap<String, Vec<serde_json::Value>>>,
 }
 
 #[derive(Debug, Deserialize, Clone)]

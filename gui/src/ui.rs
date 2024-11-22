@@ -275,7 +275,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                             " | ".into(),
                             "Value".bold().white(),
                         ]));
-                        lines.push(Line::from("─".repeat(80)));  // Separator line
+                        lines.push(Line::from("─".repeat(80)));
 
                         // Show first row of data as example
                         if let Some(first_row) = example_data.data.first() {
