@@ -64,19 +64,49 @@ func DeployManuscript(args []string) {
 			}
 			return nil
 		}},
-		{"Step 2: Checking manuscript is already deployed", func() error {
+		{"Step 2: Verifying Port Initialization", func() error {
+			// Initialize ports if not set
+			if ms.Port == 0 {
+				port, err := FindAvailablePort(8081, 8181, nil)
+				if err != nil {
+					return fmt.Errorf("failed to find available port for Flink: %w", err)
+				}
+				ms.Port = port
+			}
+
+			if ms.GraphQLPort == 0 {
+				graphQLPort, err := FindAvailablePort(8082, 8182, []int{ms.Port})
+				if err != nil {
+					return fmt.Errorf("failed to find available port for GraphQL: %w", err)
+				}
+				ms.GraphQLPort = graphQLPort
+			}
+
+			if ms.DbPort == 0 {
+				dbPort, err := FindAvailablePort(15432, 15532, []int{ms.Port, ms.GraphQLPort})
+				if err != nil {
+					return fmt.Errorf("failed to find available port for DB: %w", err)
+				}
+				ms.DbPort = dbPort
+			}
+
+			fmt.Printf("Debug: Ports initialized - Flink: %d, GraphQL: %d, DB: %d\n",
+				ms.Port, ms.GraphQLPort, ms.DbPort)
+			return nil
+		}},
+		{"Step 3: Checking manuscript is already deployed", func() error {
 			err := CheckManuscriptExist(ms)
 			if err != nil {
 				return err
 			}
 			return nil
 		}},
-		{"Step 3: Create Directory", func() error { return createDirectory(manuscriptDir) }},
-		{"Step 4: Create ManuscriptFile", func() error { return copyManuscriptFile(manuscriptDir, manuscriptPath) }},
-		{"Step 5: Create DockerComposeFile", func() error { return createDockerComposeFile(manuscriptDir, &ms) }},
-		{"Step 6: Check Docker Installed", func() error { return checkDockerInstalled() }},
-		{"Step 7: Start Docker Containers", func() error { return startDockerContainers(manuscriptDir) }},
-		{"Step 8: Check Container Status", func() error { return checkContainerStatus(&ms) }},
+		{"Step 4: Create Directory", func() error { return createDirectory(manuscriptDir) }},
+		{"Step 5: Create ManuscriptFile", func() error { return copyManuscriptFile(manuscriptDir, manuscriptPath) }},
+		{"Step 6: Create DockerComposeFile", func() error { return createDockerComposeFile(manuscriptDir, &ms) }},
+		{"Step 7: Check Docker Installed", func() error { return checkDockerInstalled() }},
+		{"Step 8: Start Docker Containers", func() error { return startDockerContainers(manuscriptDir) }},
+		{"Step 9: Check Container Status", func() error { return checkContainerStatus(&ms) }},
 	}
 
 	for _, step := range steps {
