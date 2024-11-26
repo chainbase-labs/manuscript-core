@@ -339,7 +339,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
  ########   #######   ########";
 
  const LOGO_LETTER: &str = "
-  █████╗██╗  ██╗ █████╗ ██╗███╗   █���╗██████╗  █████╗ ███████╗███████╗
+  ��████╗��█╗  ██╗ █████╗ ██╗███╗   ██╗██████╗  █████╗ ███████╗███████╗
 ██╔════╝██║  ██║██╔══██╗██║████╗  ██║██╔══██╗██╔══██╗██╔════╝██╔════╝
 ██║     ███████║███████║██║██╔██╗ ██║██████╔╝███████║███████╗█████╗  
 ██║     ██╔══██║██╔══██║██║██║╚██╗██║██╔══██╗██╔══██║╚════██║██╔══╝  
@@ -489,10 +489,37 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                 .title_alignment(Alignment::Center)
                 .border_set(border::THICK);
             
-            let left_paragraph = Paragraph::new(left_content)
-                .block(left_block)
-                .alignment(Alignment::Left);
-            frame.render_widget(left_paragraph, left_chunks[0]);
+            // Convert jobs into ListItems
+            let job_items: Vec<ListItem> = app.jobs_status
+                .iter()
+                .enumerate()
+                .map(|(i, (name, status))| {
+                    let content = if i == app.selected_job_index {
+                        Line::from(vec![
+                            format!("{} ", name).white().bg(Color::DarkGray).bold(),
+                            match status.status {
+                                JobState::Running => "Running".green(),
+                                JobState::Pending => "Pending".yellow(),
+                                JobState::Failed => "Failed".red(),
+                            }.bg(Color::DarkGray)
+                        ])
+                    } else {
+                        Line::from(vec![
+                            format!("{} ", name).white(),
+                            match status.status {
+                                JobState::Running => "Running".green(),
+                                JobState::Pending => "Pending".yellow(),
+                                JobState::Failed => "Failed".red(),
+                            }
+                        ])
+                    };
+                    ListItem::new(content)
+                })
+                .collect();
+
+            let jobs_list = List::new(job_items)
+                .block(left_block);
+            frame.render_widget(jobs_list, left_chunks[0]);
 
             let right_block = Block::bordered()
                 .title(" SQL Editor ")
@@ -639,6 +666,40 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                 .block(hints_block)
                 .alignment(Alignment::Center);
             frame.render_widget(hints_paragraph, left_chunks[1]);
+
+            // Add job options popup if show_job_options is true
+            if app.show_job_options {
+                let area = frame.size();
+                let popup_width = 20;
+                let popup_height = 4;
+                let popup_area = Rect::new(
+                    (area.width - popup_width) / 2,
+                    (area.height - popup_height) / 2,
+                    popup_width,
+                    popup_height,
+                );
+
+                frame.render_widget(Clear, popup_area);
+
+                let items: Vec<ListItem> = vec!["start", "stop"]
+                    .iter()
+                    .enumerate()
+                    .map(|(i, &action)| {
+                        if i == app.selected_job_option {
+                            ListItem::new(Line::from(
+                                Span::styled(action, Style::default().bg(Color::Blue).fg(Color::White))
+                            ))
+                        } else {
+                            ListItem::new(action)
+                        }
+                    })
+                    .collect();
+
+                let options_list = List::new(items)
+                    .block(Block::bordered().title(" Actions "));
+
+                frame.render_widget(options_list, popup_area);
+            }
         }
         2 => {
             // AVS tab content (moved from old tab 2)

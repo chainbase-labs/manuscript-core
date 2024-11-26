@@ -76,6 +76,11 @@ pub struct App {
     pub jobs_status: HashMap<String, JobStatus>,
     jobs_monitor_sender: Option<mpsc::Sender<JobsCommand>>,
     jobs_monitor_receiver: Option<mpsc::Receiver<JobsUpdate>>,
+    pub selected_job_index: usize,
+    pub show_job_options: bool,
+    pub selected_job_option: usize,
+    pub job_options: Vec<&'static str>,
+    pub job_logs: Option<String>,
 }
 
 #[derive(Debug, Clone,)]
@@ -192,6 +197,11 @@ impl Clone for App {
             jobs_status: self.jobs_status.clone(),
             jobs_monitor_sender: self.jobs_monitor_sender.clone(),
             jobs_monitor_receiver: None,
+            selected_job_index: self.selected_job_index,
+            show_job_options: self.show_job_options,
+            selected_job_option: self.selected_job_option,
+            job_options: self.job_options.clone(),
+            job_logs: self.job_logs.clone(),
         }
     }
 }
@@ -354,6 +364,11 @@ impl App {
             jobs_status: HashMap::new(),
             jobs_monitor_sender: Some(jobs_command_tx),
             jobs_monitor_receiver: Some(jobs_update_rx),
+            selected_job_index: 0,
+            show_job_options: false,
+            selected_job_option: 0,
+            job_options: vec!["logs", "start", "stop"],
+            job_logs: None,
         };
 
         // Start the jobs monitor
@@ -578,9 +593,9 @@ impl App {
                 }
                 _ => {}
             }
+            return;  // Early return for deploy options
         }
 
-        
         if self.show_search {
             match key_event.code {
                 KeyCode::Esc => {
@@ -614,7 +629,10 @@ impl App {
                 }
                 _ => {}
             }
-        } else if self.show_sql_window {
+            return;  // Early return for search
+        }
+
+        if self.show_sql_window {
             match key_event.code {
                 KeyCode::Esc => {
                     // Save the SQL when closing the window
@@ -716,128 +734,162 @@ impl App {
                 }
                 _ => {}
             }
-        } else {
-            match key_event.code {
-                KeyCode::Char('\\') => {
-                    if self.current_tab == 0 && !self.show_sql_window {
-                        self.show_search = true;
-                        self.search_input.clear();
-                        self.search_cursor_position = 0;
-                    }
+            return;  // Early return for SQL window
+        }
+
+        // Main key handling
+        match key_event.code {
+            KeyCode::Char('\\') => {
+                if self.current_tab == 0 && !self.show_sql_window {
+                    self.show_search = true;
+                    self.search_input.clear();
+                    self.search_cursor_position = 0;
                 }
-                KeyCode::Char('q') => self.exit = true,
-                KeyCode::Up => {
-                    match self.current_tab {
-                        0 => {
-                            // Network tab logic
-                            if !self.show_tables {
-                                // Get current index in filtered_chains
-                                if let Some(current_filtered_index) = self
-                                    .filtered_chains
-                                    .iter()
-                                    .position(|c| c.name == self.chains[self.selected_chain_index].name)
-                                {
-                                    if current_filtered_index > 0 {
-                                        // Move up in filtered list
-                                        let prev_filtered_chain = &self.filtered_chains[current_filtered_index - 1];
-                                        // Find corresponding index in original chains
-                                        if let Some(original_index) = self.chains
-                                            .iter()
-                                            .position(|c| c.name == prev_filtered_chain.name)
-                                        {
-                                            self.selected_chain_index = original_index;
-                                            if current_filtered_index < self.scroll_offset {
-                                                self.scroll_offset = current_filtered_index;
-                                            }
+            }
+            KeyCode::Char('q') => self.exit = true,
+            KeyCode::Up => {
+                match self.current_tab {
+                    0 => {
+                        // Network tab logic
+                        if !self.show_tables {
+                            // Get current index in filtered_chains
+                            if let Some(current_filtered_index) = self
+                                .filtered_chains
+                                .iter()
+                                .position(|c| c.name == self.chains[self.selected_chain_index].name)
+                            {
+                                if current_filtered_index > 0 {
+                                    // Move up in filtered list
+                                    let prev_filtered_chain = &self.filtered_chains[current_filtered_index - 1];
+                                    // Find corresponding index in original chains
+                                    if let Some(original_index) = self.chains
+                                        .iter()
+                                        .position(|c| c.name == prev_filtered_chain.name)
+                                    {
+                                        self.selected_chain_index = original_index;
+                                        if current_filtered_index < self.scroll_offset {
+                                            self.scroll_offset = current_filtered_index;
                                         }
                                     }
                                 }
-                            } else {
-                                if let Some(index) = self.selected_table_index {
-                                    if index > 0 {
-                                        self.selected_table_index = Some(index - 1);
-                                        self.update_example_data();
-                                    }
+                            }
+                        } else {
+                            if let Some(index) = self.selected_table_index {
+                                if index > 0 {
+                                    self.selected_table_index = Some(index - 1);
+                                    self.update_example_data();
                                 }
-                            }
-                        },
-                        1 => {
-                            // Manuscripts tab logic
-                            if self.saved_sql.is_some() {
-                                self.vertical_scroll = self.vertical_scroll.saturating_sub(1);
-                                self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
-                            }
-                        },
-                        _ => {}
-                    }
-                },
-                KeyCode::Down => {
-                    match self.current_tab {
-                        0 => {
-                            // Network tab logic
-                            if !self.show_tables {
-                                // Get current index in filtered_chains
-                                if let Some(current_filtered_index) = self
-                                    .filtered_chains
-                                    .iter()
-                                    .position(|c| c.name == self.chains[self.selected_chain_index].name)
-                                {
-                                    if current_filtered_index < self.filtered_chains.len() - 1 {
-                                        // Move down in filtered list
-                                        let next_filtered_chain = &self.filtered_chains[current_filtered_index + 1];
-                                        // Find corresponding index in original chains
-                                        if let Some(original_index) = self.chains
-                                            .iter()
-                                            .position(|c| c.name == next_filtered_chain.name)
-                                        {
-                                            self.selected_chain_index = original_index;
-                                            if current_filtered_index >= self.scroll_offset + visible_height {
-                                                self.scroll_offset = current_filtered_index - visible_height + 1;
-                                            }
-                                        }
-                                    }
-                                }
-                            } else {
-                                if let Some(index) = self.selected_table_index {
-                                    let tables_len = self.chains[self.selected_chain_index].dataDictionary.len();
-                                    if index < tables_len - 1 {
-                                        self.selected_table_index = Some(index + 1);
-                                        self.update_example_data();
-                                    }
-                                }
-                            }
-                        },
-                        1 => {
-                            // Manuscripts tab logic
-                            if self.saved_sql.is_some() {
-                                self.vertical_scroll = self.vertical_scroll.saturating_add(1);
-                                self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
-                            }
-                        },
-                        _ => {}
-                    }
-                },
-                KeyCode::Enter => {
-                    if !self.show_tables {
-                        if let Some(filtered_chain) = self.filtered_chains.get(self.selected_chain_index) {
-                            if let Some(original_index) = self.chains.iter().position(|c| c.name == filtered_chain.name) {
-                                self.selected_chain_index = original_index;
                             }
                         }
-                        self.show_tables = true;
-                        self.selected_table_index = Some(0);
-                        self.update_example_data();
+                    },
+                    1 => {
+                        // Jobs tab logic
+                        if self.show_job_options {
+                            if self.selected_job_option > 0 {
+                                self.selected_job_option -= 1;
+                            }
+                        } else {
+                            if !self.jobs_status.is_empty() {
+                                self.selected_job_index = self.selected_job_index.saturating_sub(1);
+                            }
+                        }
                     }
+                    _ => {}
                 }
-                KeyCode::Char('c') => {
-                    if self.show_tables {
-                        self.show_sql_window = true;
-                        self.sql_input = self.generate_initial_manuscript();
-                        self.sql_cursor_position = self.sql_input.len();
-                        self.current_tab = 1;  // Switch to tab 2 (index 1)
+            }
+            KeyCode::Down => {
+                match self.current_tab {
+                    0 => {
+                        // Network tab logic
+                        if !self.show_tables {
+                            // Get current index in filtered_chains
+                            if let Some(current_filtered_index) = self
+                                .filtered_chains
+                                .iter()
+                                .position(|c| c.name == self.chains[self.selected_chain_index].name)
+                            {
+                                if current_filtered_index < self.filtered_chains.len() - 1 {
+                                    // Move down in filtered list
+                                    let next_filtered_chain = &self.filtered_chains[current_filtered_index + 1];
+                                    // Find corresponding index in original chains
+                                    if let Some(original_index) = self.chains
+                                        .iter()
+                                        .position(|c| c.name == next_filtered_chain.name)
+                                    {
+                                        self.selected_chain_index = original_index;
+                                        if current_filtered_index >= self.scroll_offset + visible_height {
+                                            self.scroll_offset = current_filtered_index - visible_height + 1;
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            if let Some(index) = self.selected_table_index {
+                                let tables_len = self.chains[self.selected_chain_index].dataDictionary.len();
+                                if index < tables_len - 1 {
+                                    self.selected_table_index = Some(index + 1);
+                                    self.update_example_data();
+                                }
+                            }
+                        }
+                    },
+                    1 => {
+                        // Jobs tab logic
+                        if self.show_job_options {
+                            self.selected_job_option = (self.selected_job_option + 1).min(1);
+                        } else {
+                            if !self.jobs_status.is_empty() {
+                                self.selected_job_index = (self.selected_job_index + 1).min(self.jobs_status.len() - 1);
+                            }
+                        }
                     }
+                    _ => {}
                 }
-                KeyCode::Esc => {
+            }
+            KeyCode::Enter => {
+                match self.current_tab {
+                    0 => {
+                        // Network tab logic
+                        if !self.show_tables {
+                            if let Some(filtered_chain) = self.filtered_chains.get(self.selected_chain_index) {
+                                if let Some(original_index) = self.chains.iter().position(|c| c.name == filtered_chain.name) {
+                                    self.selected_chain_index = original_index;
+                                }
+                            }
+                            self.show_tables = true;
+                            self.selected_table_index = Some(0);
+                            self.update_example_data();
+                        }
+                    },
+                    1 => {
+                        // Jobs tab logic
+                        if self.show_job_options {
+                            let action = match self.selected_job_option {
+                                0 => "start",
+                                1 => "stop",
+                                _ => "",
+                            };
+                            if !action.is_empty() {
+                                tokio::spawn({
+                                    let mut app = self.clone();
+                                    async move {
+                                        let _ = app.handle_job_action(action).await;
+                                    }
+                                });
+                            }
+                            self.show_job_options = false;
+                        } else if !self.jobs_status.is_empty() {
+                            self.show_job_options = true;
+                            self.selected_job_option = 0;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            KeyCode::Esc => {
+                if self.show_job_options {
+                    self.show_job_options = false;
+                } else {
                     if self.state == AppState::Started {
                         // Cancel the setup process
                         self.should_cancel_setup = true;
@@ -859,86 +911,94 @@ impl App {
                         self.filtered_chains = self.chains.clone();
                     }
                 }
-                KeyCode::PageUp => {
-                    if !self.show_tables {
-                        if self.selected_chain_index > visible_height {
-                            self.selected_chain_index -= visible_height;
-                        } else {
-                            self.selected_chain_index = 0;
-                        }
-                        if self.selected_chain_index < self.scroll_offset {
-                            self.scroll_offset = self.selected_chain_index;
-                        }
-                    }
-                }
-                KeyCode::PageDown => {
-                    if !self.show_tables {
-                        let new_index = self.selected_chain_index + visible_height;
-                        if new_index < self.chains.len() {
-                            self.selected_chain_index = new_index;
-                        } else {
-                            self.selected_chain_index = self.chains.len() - 1;
-                        }
-                        if self.selected_chain_index >= self.scroll_offset + visible_height {
-                            self.scroll_offset = self.selected_chain_index - visible_height + 1;
-                        }
-                    }
-                }
-                KeyCode::Tab => {
-                    self.current_tab = (self.current_tab + 1) % 3;
-                }
-                KeyCode::Char('1') => {
-                    self.current_tab = 0;
-                }
-                KeyCode::Char('2') => {
-                    self.current_tab = 1;
-                }
-                KeyCode::Char('3') => {
-                    self.current_tab = 2;
-                }
-                KeyCode::Char('e') => {
-                    if self.saved_sql.is_some() {
-                        self.show_sql_window = true;
-                        self.sql_input = self.saved_sql.clone().unwrap_or_default();
-                        self.sql_cursor_position = self.sql_input.len();
-                    }
-                }
-                KeyCode::Char('r') => {
-                    if let Some(saved_sql) = &self.saved_sql {
-                        match self.transform_yaml_to_sql(saved_sql) {
-                            Ok(sql) => {
-                                self.transformed_sql = Some(sql);
-                                self.state = AppState::Started;
-                                self.should_cancel_setup = false;
-                                if !self.docker_setup_in_progress {
-                                    tokio::spawn({
-                                        let mut app = self.clone();
-                                        async move {
-                                            app.setup_docker().await;
-                                        }
-                                    });
-                                }
-                            }
-                            Err(e) => {
-                                self.debug_result = Some(format!("Error transforming SQL: {}", e));
-                            }
-                        }
-                    }
-                },
-                KeyCode::Char('d') => {
-                    if self.current_tab == 1 {
-                        self.show_deploy_options = true;
-                        self.selected_deploy_option = 0;
-                        // if self.sql_result.is_none() {
-                        //     self.show_warning = true;
-                        // } else {
-                        //     self.show_deploy_options = true;
-                        //     self.selected_deploy_option = 0;
-                        // }
-                    }
-                }
-                _ => {}
             }
+            KeyCode::PageUp => {
+                if !self.show_tables {
+                    if self.selected_chain_index > visible_height {
+                        self.selected_chain_index -= visible_height;
+                    } else {
+                        self.selected_chain_index = 0;
+                    }
+                    if self.selected_chain_index < self.scroll_offset {
+                        self.scroll_offset = self.selected_chain_index;
+                    }
+                }
+            }
+            KeyCode::PageDown => {
+                if !self.show_tables {
+                    let new_index = self.selected_chain_index + visible_height;
+                    if new_index < self.chains.len() {
+                        self.selected_chain_index = new_index;
+                    } else {
+                        self.selected_chain_index = self.chains.len() - 1;
+                    }
+                    if self.selected_chain_index >= self.scroll_offset + visible_height {
+                        self.scroll_offset = self.selected_chain_index - visible_height + 1;
+                    }
+                }
+            }
+            KeyCode::Tab => {
+                self.current_tab = (self.current_tab + 1) % 3;
+            }
+            KeyCode::Char('1') => {
+                self.current_tab = 0;
+            }
+            KeyCode::Char('2') => {
+                self.current_tab = 1;
+            }
+            KeyCode::Char('3') => {
+                self.current_tab = 2;
+            }
+            KeyCode::Char('e') => {
+                if self.saved_sql.is_some() {
+                    self.show_sql_window = true;
+                    self.sql_input = self.saved_sql.clone().unwrap_or_default();
+                    self.sql_cursor_position = self.sql_input.len();
+                }
+            }
+            KeyCode::Char('r') => {
+                if let Some(saved_sql) = &self.saved_sql {
+                    match self.transform_yaml_to_sql(saved_sql) {
+                        Ok(sql) => {
+                            self.transformed_sql = Some(sql);
+                            self.state = AppState::Started;
+                            self.should_cancel_setup = false;
+                            if !self.docker_setup_in_progress {
+                                tokio::spawn({
+                                    let mut app = self.clone();
+                                    async move {
+                                        app.setup_docker().await;
+                                    }
+                                });
+                            }
+                        }
+                        Err(e) => {
+                            self.debug_result = Some(format!("Error transforming SQL: {}", e));
+                        }
+                    }
+                }
+            }
+            KeyCode::Char('d') => {
+                if self.current_tab == 1 {
+                    self.show_deploy_options = true;
+                    self.selected_deploy_option = 0;
+                    // if self.sql_result.is_none() {
+                    //     self.show_warning = true;
+                    // } else {
+                    //     self.show_deploy_options = true;
+                    //     self.selected_deploy_option = 0;
+                    // }
+                }
+            }
+            KeyCode::Char('c') => {
+                if self.show_tables {
+                    self.show_sql_window = true;
+                    self.sql_input = self.generate_initial_manuscript();
+                    self.sql_cursor_position = self.sql_input.len();
+                    self.current_tab = 1;  // Switch to tab 2 (index 1)
+                }
+            }
+            _ => {}
         }
     }
 
@@ -1157,7 +1217,7 @@ sinks:
             "baseDir    = {}\n\
             systemInfo = {}\n\n\
             [demo]\n\
-            baseDir     = {}/manuscript\n\
+            baseDir     = {}/manuscripts\n\
             name        = demo\n\
             specVersion = v1.0.0\n\
             parallelism = 1\n\
@@ -1329,6 +1389,43 @@ networks:
                 }
             }
         }
+    }
+
+    // Add new method to handle job actions
+    pub async fn handle_job_action(&mut self, action: &str) -> Result<(), std::io::Error> {
+        if let Some((job_name, _)) = self.jobs_status.iter().nth(self.selected_job_index) {
+            let home_dir = dirs::home_dir()
+                .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "Home directory not found"))?;
+            
+            let job_dir = home_dir.join("manuscripts").join(job_name);
+            std::env::set_current_dir(&job_dir)?;
+
+            match action {
+                "logs" => {
+                    let output = Command::new("docker")
+                        .args(["compose", "logs"])
+                        .output()?;
+                    
+                    if output.status.success() {
+                        self.job_logs = Some(String::from_utf8_lossy(&output.stdout).to_string());
+                    } else {
+                        self.job_logs = Some(format!("Error: {}", String::from_utf8_lossy(&output.stderr)));
+                    }
+                },
+                "start" => {
+                    Command::new("docker")
+                        .args(["compose", "up", "-d"])
+                        .output()?;
+                },
+                "stop" => {
+                    Command::new("docker")
+                        .args(["compose", "down"])
+                        .output()?;
+                },
+                _ => {}
+            }
+        }
+        Ok(())
     }
 }
 
