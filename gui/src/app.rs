@@ -16,6 +16,7 @@ use std::time::{Instant};
 use ratatui::symbols::Marker;
 use crate::ui;
 use crate::setup::DockerManager;
+use std::process::Command;
 
 #[derive(Debug)]
 pub struct App {
@@ -72,6 +73,9 @@ pub struct App {
     pub selected_deploy_option: usize,
     pub deploy_options: Vec<(String, bool)>, // (option name, is_enabled)
     pub transformed_sql: Option<String>,
+    pub jobs_status: HashMap<String, JobStatus>,
+    jobs_monitor_sender: Option<mpsc::Sender<JobsCommand>>,
+    jobs_monitor_receiver: Option<mpsc::Receiver<JobsUpdate>>,
 }
 
 #[derive(Debug, Clone,)]
@@ -185,6 +189,9 @@ impl Clone for App {
             selected_deploy_option: self.selected_deploy_option,
             deploy_options: self.deploy_options.clone(),
             transformed_sql: self.transformed_sql.clone(),
+            jobs_status: self.jobs_status.clone(),
+            jobs_monitor_sender: self.jobs_monitor_sender.clone(),
+            jobs_monitor_receiver: None,
         }
     }
 }
@@ -271,7 +278,9 @@ impl App {
     pub async fn new() -> Self {
         let (sql_sender, sql_receiver) = mpsc::channel(32);
         let (update_sender, update_receiver) = mpsc::channel(32);
-
+        let (jobs_command_tx, jobs_command_rx) = mpsc::channel(32);
+        let (jobs_update_tx, jobs_update_rx) = mpsc::channel(32);
+        
         let mut signal1 = SinSignal::new(0.2, 3.0, 18.0);
         let mut signal2 = SinSignal::new(0.1, 2.0, 10.0);
         let data1 = signal1.by_ref().take(200).collect::<Vec<(f64, f64)>>();
@@ -285,7 +294,7 @@ impl App {
             }
         };
 
-        App {
+        let app = App {
             chains: chains.clone(),
             selected_chain_index: 0,
             selected_table_index: None,
@@ -342,7 +351,15 @@ impl App {
                 ("Network (Coming Soon)".to_string(), false),
             ],
             transformed_sql: None,
-        }
+            jobs_status: HashMap::new(),
+            jobs_monitor_sender: Some(jobs_command_tx),
+            jobs_monitor_receiver: Some(jobs_update_rx),
+        };
+
+        // Start the jobs monitor
+        tokio::spawn(jobs_monitor(jobs_command_rx, jobs_update_tx));
+
+        app
     }
 
     async fn fetch_chains() -> Result<Vec<Chain>, reqwest::Error> {
@@ -1177,8 +1194,6 @@ sinks:
     }
 
     fn start_docker_compose(&self, demo_dir: &std::path::Path) -> Result<(), std::io::Error> {
-        use std::process::Command;
-
         // Change to the demo directory
         std::env::set_current_dir(demo_dir)?;
 
@@ -1301,8 +1316,117 @@ networks:
 
         Ok(sql)
     }
+
+    pub fn update_jobs_status(&mut self) {
+        if let Some(receiver) = &mut self.jobs_monitor_receiver {
+            match receiver.try_recv() {
+                Ok(JobsUpdate::Status(new_status)) => {
+                    self.jobs_status = new_status;
+                }
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {}
+                Err(_) => {
+                    // Channel closed
+                }
+            }
+        }
+    }
 }
 
+async fn jobs_monitor(
+    mut command_rx: mpsc::Receiver<JobsCommand>,
+    status_tx: mpsc::Sender<JobsUpdate>
+) {
+    let mut interval = tokio::time::interval(Duration::from_secs(5));
+
+    loop {
+        tokio::select! {
+            _ = interval.tick() => {
+                if let Ok(status) = check_jobs_status().await {
+                    let _ = status_tx.send(JobsUpdate::Status(status)).await;
+                }
+            }
+            Some(JobsCommand::Stop) = command_rx.recv() => {
+                break;
+            }
+        }
+    }
+}
+
+async fn check_jobs_status() -> Result<HashMap<String, JobStatus>, std::io::Error> {
+    let home_dir = dirs::home_dir()
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "Home directory not found"))?;
+    
+    let config_path = home_dir.join(".manuscript_config.ini");
+    if !config_path.exists() {
+        return Ok(HashMap::new());
+    }
+
+    let config_content = std::fs::read_to_string(config_path)?;
+    let mut jobs = HashMap::new();
+
+    // Parse INI file
+    let mut current_section = "";
+    let mut job_base_dir = "";
+
+    for line in config_content.lines() {
+        let line = line.trim();
+        
+        if line.starts_with("[") && line.ends_with("]") {
+            current_section = &line[1..line.len()-1];
+            if current_section != "demo" { continue; }
+        } else if current_section == "demo" && line.starts_with("baseDir") {
+            if let Some(dir) = line.split('=').nth(1) {
+                job_base_dir = dir.trim();
+            }
+        }
+    }
+
+    if current_section == "demo" && !job_base_dir.is_empty() {
+        let job_dir = std::path::Path::new(job_base_dir).join("demo");
+
+        // Change into the job's directory
+        if let Err(e) = std::env::set_current_dir(&job_dir) {
+            println!("Failed to change directory to {}: {}", job_dir.display(), e);
+            return Ok(jobs);
+        }
+
+        // Check docker compose status from within the directory
+        let output = Command::new("docker")
+            .args(["compose", "ps", "-a", "--format", "json"])
+            .output()?;
+
+
+        if output.status.success() {
+            let output_str = String::from_utf8_lossy(&output.stdout);
+            let mut containers = Vec::new();
+            let mut all_running = true;
+
+            for line in output_str.lines() {
+                if let Ok(container) = serde_json::from_str::<serde_json::Value>(line) {
+                    let name = container["Name"].as_str().unwrap_or("").to_string();
+                    let state = container["State"].as_str().unwrap_or("").to_string();
+                    
+                    
+                    if state != "running" {
+                        all_running = false;
+                    }
+                    
+                    containers.push(ContainerStatus { name, state });
+                }
+            }
+
+            let status = if all_running { JobState::Running } else { JobState::Pending };
+
+            jobs.insert("demo".to_string(), JobStatus {
+                name: "demo".to_string(),
+                status,
+                containers,
+            });
+        }
+    }
+
+    Ok(jobs)
+}
 
 const GAUGE1_COLOR: Color = tailwind::RED.c800;
 const CUSTOM_LABEL_COLOR: Color = tailwind::SLATE.c200;
@@ -1342,4 +1466,34 @@ pub fn title_block(title: &str) -> Block {
         .padding(Padding::vertical(1))
         .title(title)
         .style(Style::default().fg(CUSTOM_LABEL_COLOR))
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct JobStatus {
+    pub name: String,
+    pub status: JobState,
+    pub containers: Vec<ContainerStatus>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ContainerStatus {
+    pub name: String,
+    pub state: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum JobState {
+    Running,
+    Pending,
+    Failed,
+}
+
+#[derive(Debug)]
+pub enum JobsCommand {
+    Stop,
+}
+
+#[derive(Debug)]
+pub enum JobsUpdate {
+    Status(HashMap<String, JobStatus>),
 }

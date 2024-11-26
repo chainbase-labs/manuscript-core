@@ -6,9 +6,7 @@ use ratatui::{
     text::{Line, Text, Span},
     widgets::{block::{Position, Title}, Block, List, ListItem, Paragraph, Widget, Tabs, Clear, Gauge, Padding, BorderType, Scrollbar, ScrollbarOrientation, Borders, Dataset, Chart, Axis, canvas::{Canvas, Circle, Map, MapResolution, Points, Rectangle},},
 };
-use crate::app::App;
-use crate::app::AppState;
-use crate::app::SetupState;
+use crate::app::{App, AppState, SetupState, JobState};
 
 // Add this helper function before the draw function
 fn title_block(title: &str) -> Block<'_> {
@@ -20,8 +18,34 @@ fn title_block(title: &str) -> Block<'_> {
 const CUSTOM_LABEL_COLOR: Color = Color::White;
 const GAUGE2_COLOR: Style = Style::new().fg(Color::Rgb(10, 100, 100));
 
-pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
+fn draw_jobs_status(app: &App) -> String {
+    if app.jobs_status.is_empty() {
+        return "No Jobs Running".to_string();
+    }
 
+    let mut status = String::new();
+    for (name, job) in &app.jobs_status {
+        status.push_str(&format!("Job: {} - {}\n", name, match job.status {
+            JobState::Running => "Running".green(),
+            JobState::Pending => "Pending".yellow(),
+            JobState::Failed => "Failed".red(),
+        }));
+        
+        for container in &job.containers {
+            status.push_str(&format!("  └─ {} ({})\n", 
+                container.name,
+                match container.state.as_str() {
+                    "running" => container.state.as_str().green(),
+                    _ => container.state.as_str().yellow(),
+                }
+            ));
+        }
+    }
+    status
+}
+
+pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
+    app.update_jobs_status();
 
     // Create tabs
     let titles = vec!["NETWORK [1]", "MANUSCRIPTS [2]", "AVS [3]"];
@@ -315,7 +339,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
  ########   #######   ########";
 
  const LOGO_LETTER: &str = "
-  █████╗██╗  ██╗ █████╗ ██╗███╗   ██╗██████╗  █████╗ ███████╗███████╗
+  █████╗██╗  ██╗ █████╗ ██╗███╗   █���╗██████╗  █████╗ ███████╗███████╗
 ██╔════╝██║  ██║██╔══██╗██║████╗  ██║██╔══██╗██╔══██╗██╔════╝██╔════╝
 ██║     ███████║███████║██║██╔██╗ ██║██████╔╝███████║███████╗█████╗  
 ██║     ██╔══██║██╔══██║██║██║╚██╗██║██╔══██╗██╔══██║╚════██║██╔══╝  
@@ -458,7 +482,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                 .split(chunks[0]);
 
             // Left panel - Show selected chain and table
-            let left_content = "No Jobs Running".to_string();
+            let left_content = draw_jobs_status(app);
 
             let left_block = Block::bordered()
                 .title(" Manuscript Jobs ")
