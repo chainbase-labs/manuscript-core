@@ -166,64 +166,31 @@ func createDockerComposeFile(dir string, ms *pkg.Manuscript) error {
 			ms.GraphQLImage = graphQLARMImage
 		}
 
-		var excludePorts []int
-		for _, m := range m.Manuscripts {
-			if m.Name == ms.Name {
-				// Initialize ports if not set in existing config
-				if m.Port == 0 {
-					port, err := FindAvailablePort(8081, 8181, nil)
-					if err != nil {
-						return fmt.Errorf("failed to find available port for Flink: %w", err)
-					}
-					m.Port = port
-					fmt.Printf("Debug: Assigned new Flink port: %d\n", port)
-				}
-				if m.GraphQLPort == 0 {
-					graphQLPort, err := FindAvailablePort(8082, 8182, []int{m.Port})
-					if err != nil {
-						return fmt.Errorf("failed to find available port for GraphQL: %w", err)
-					}
-					m.GraphQLPort = graphQLPort
-					fmt.Printf("Debug: Assigned new GraphQL port: %d\n", graphQLPort)
-				}
-				if m.DbPort == 0 {
-					dbPort, err := FindAvailablePort(15432, 15532, []int{m.Port, m.GraphQLPort})
-					if err != nil {
-						return fmt.Errorf("failed to find available port for DB: %w", err)
-					}
-					m.DbPort = dbPort
-					fmt.Printf("Debug: Assigned new DB port: %d\n", dbPort)
-				}
-				ms.Port = m.Port
-				ms.DbPort = m.DbPort
-				ms.DbUser = m.DbUser
-				ms.DbPassword = m.DbPassword
-				ms.GraphQLPort = m.GraphQLPort
-				dockComposeTemplate = static.DockerComposeWithPostgresqlContent
-				fmt.Printf("Debug: Using existing ports - Flink: %d, GraphQL: %d, DB: %d\n", ms.Port, ms.GraphQLPort, ms.DbPort)
-				return createTemplateFile(composeFilePath, dockComposeTemplate, ms)
+		// Check if manuscript already exists in config
+		var existingMs *pkg.Manuscript
+		for _, manuscript := range m.Manuscripts {
+			if manuscript.Name == ms.Name {
+				existingMs = &manuscript
+				break
 			}
-			excludePorts = append(excludePorts, m.Port, m.GraphQLPort)
 		}
-		port, err := FindAvailablePort(8081, 8181, excludePorts)
-		if err != nil {
-			return fmt.Errorf("failed to find available port: %w", err)
+
+		if existingMs != nil {
+			// Use existing ports if manuscript is already configured
+			ms.Port = existingMs.Port
+			ms.DbPort = existingMs.DbPort
+			ms.DbUser = existingMs.DbUser
+			ms.DbPassword = existingMs.DbPassword
+			ms.GraphQLPort = existingMs.GraphQLPort
+		} else {
+			// Initialize new ports using the common function
+			if err := pkg.InitializePorts(ms); err != nil {
+				return fmt.Errorf("failed to initialize ports: %w", err)
+			}
 		}
-		fmt.Printf("Debug: Assigned new Flink port: %d\n", port)
-		ms.Port = port
-		excludePorts = append(excludePorts, port)
-		graphQLPort, err := FindAvailablePort(8081, 8181, excludePorts)
-		if err != nil {
-			return fmt.Errorf("failed to find available port: %w", err)
-		}
-		fmt.Printf("Debug: Assigned new GraphQL port: %d\n", graphQLPort)
-		dbPort, err := FindAvailablePort(15432, 15532, excludePorts)
-		if err != nil {
-			return fmt.Errorf("failed to find available port: %w", err)
-		}
-		fmt.Printf("Debug: Assigned new DB port: %d\n", dbPort)
-		ms.DbPort = dbPort
-		ms.GraphQLPort = graphQLPort
+
+		fmt.Printf("Debug: Using ports - Flink: %d, GraphQL: %d, DB: %d\n",
+			ms.Port, ms.GraphQLPort, ms.DbPort)
 		dockComposeTemplate = static.DockerComposeWithPostgresqlContent
 	default:
 	}
