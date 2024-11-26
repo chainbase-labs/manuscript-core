@@ -339,7 +339,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
  ########   #######   ########";
 
  const LOGO_LETTER: &str = "
-  ��████╗��█╗  ██╗ █████╗ ██╗███╗   ██╗██████╗  █████╗ ███████╗███████╗
+  █████╗██╗  ██╗ █████╗ ██╗███╗   ██╗██████╗  █████╗ ███████╗███████╗
 ██╔════╝██║  ██║██╔══██╗██║████╗  ██║██╔══██╗██╔══██╗██╔════╝██╔════╝
 ██║     ███████║███████║██║██╔██╗ ██║██████╔╝███████║███████╗█████╗  
 ██║     ██╔══██║██╔══██║██║██║╚██╗██║██╔══██╗██╔══██║╚════██║██╔══╝  
@@ -490,34 +490,35 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                 .border_set(border::THICK);
             
             // Convert jobs into ListItems
-            let job_items: Vec<ListItem> = app.jobs_status
-                .iter()
-                .enumerate()
-                .map(|(i, (name, status))| {
-                    let content = if i == app.selected_job_index {
-                        Line::from(vec![
-                            format!("{} ", name).white().bg(Color::DarkGray).bold(),
-                            match status.status {
-                                JobState::Running => "Running".green(),
-                                JobState::Pending => "Pending".yellow(),
-                                JobState::Failed => "Failed".red(),
-                            }.bg(Color::DarkGray)
-                        ])
-                    } else {
-                        Line::from(vec![
-                            format!("{} ", name).white(),
-                            match status.status {
-                                JobState::Running => "Running".green(),
-                                JobState::Pending => "Pending".yellow(),
-                                JobState::Failed => "Failed".red(),
-                            }
-                        ])
-                    };
-                    ListItem::new(content)
-                })
-                .collect();
+            let job_list = app.jobs_status.iter().enumerate().map(|(index, (name, status))| {
+                // Get the status duration from the first container
+                let duration = status.containers.first()
+                    .map(|c| c.status.clone())
+                    .unwrap_or_default();
 
-            let jobs_list = List::new(job_items)
+                let style = match status.status {
+                    JobState::Running => Style::default().fg(Color::Green),
+                    JobState::Pending => Style::default().fg(Color::Yellow),
+                    JobState::Failed => Style::default().fg(Color::Red),
+                };
+
+                Line::from(vec![
+                    Span::raw(format!("{} ", name)),
+                    Span::styled(
+                        format!("{} ({})",
+                            match status.status {
+                                JobState::Running => "Running",
+                                JobState::Pending => "Pending", 
+                                JobState::Failed => "Failed",
+                            },
+                            duration
+                        ),
+                        style
+                    )
+                ])
+            }).collect::<Vec<_>>();
+
+            let jobs_list = List::new(job_list)
                 .block(left_block);
             frame.render_widget(jobs_list, left_chunks[0]);
 
@@ -671,7 +672,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
             if app.show_job_options {
                 let area = frame.size();
                 let popup_width = 20;
-                let popup_height = 4;
+                let popup_height = 5; // Increased height to accommodate new option
                 let popup_area = Rect::new(
                     (area.width - popup_width) / 2,
                     (area.height - popup_height) / 2,
@@ -681,7 +682,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
 
                 frame.render_widget(Clear, popup_area);
 
-                let items: Vec<ListItem> = vec!["start", "stop"]
+                let items: Vec<ListItem> = vec!["start", "stop", "graphql"]
                     .iter()
                     .enumerate()
                     .map(|(i, &action)| {

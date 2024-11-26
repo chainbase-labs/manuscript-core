@@ -17,6 +17,7 @@ use ratatui::symbols::Marker;
 use crate::ui;
 use crate::setup::DockerManager;
 use std::process::Command;
+use webbrowser;
 
 #[derive(Debug)]
 pub struct App {
@@ -367,7 +368,7 @@ impl App {
             selected_job_index: 0,
             show_job_options: false,
             selected_job_option: 0,
-            job_options: vec!["logs", "start", "stop"],
+            job_options: vec!["logs", "start", "stop", "graphql"],
             job_logs: None,
         };
 
@@ -836,7 +837,7 @@ impl App {
                     1 => {
                         // Jobs tab logic
                         if self.show_job_options {
-                            self.selected_job_option = (self.selected_job_option + 1).min(1);
+                            self.selected_job_option = (self.selected_job_option + 1).min(2);
                         } else {
                             if !self.jobs_status.is_empty() {
                                 self.selected_job_index = (self.selected_job_index + 1).min(self.jobs_status.len() - 1);
@@ -867,6 +868,7 @@ impl App {
                             let action = match self.selected_job_option {
                                 0 => "start",
                                 1 => "stop",
+                                2 => "graphql",
                                 _ => "",
                             };
                             if !action.is_empty() {
@@ -1230,7 +1232,7 @@ sinks:
             dbPort      = 15432\n\
             dbUser      = postgres\n\
             dbPassword  = postgres\n\
-            graphqlPort = 8082",
+            graphqlPort = 9080",
             home_dir.display(),
             os_type,
             home_dir.display(),
@@ -1422,10 +1424,48 @@ networks:
                         .args(["compose", "down"])
                         .output()?;
                 },
+                "graphql" => {
+                    // Get the graphql port from config file
+                    if let Some(port) = self.get_job_graphql_port(job_name) {
+                        let url = format!("http://127.0.0.1:{}", port);
+                        if let Err(e) = webbrowser::open(&url) {
+                            eprintln!("Failed to open URL: {}", e);
+                        }
+                    } else {
+                        eprintln!("Failed to get GraphQL port from config");
+                    }
+                    return Ok(());
+                }
                 _ => {}
             }
         }
         Ok(())
+    }
+
+    // Add this new method
+    fn get_job_graphql_port(&self, job_name: &str) -> Option<u16> {
+        if let Some(home_dir) = dirs::home_dir() {
+            if let Ok(content) = std::fs::read_to_string(home_dir.join(".manuscript_config.ini")) {
+                let mut current_section = "";
+                for line in content.lines() {
+                    let line = line.trim();
+                    
+                    if line.starts_with("[") && line.ends_with("]") {
+                        current_section = &line[1..line.len()-1];
+                        continue;
+                    }
+                    
+                    if current_section == job_name && line.starts_with("graphqlPort") {
+                        if let Some(port_str) = line.split('=').nth(1) {
+                            if let Ok(port) = port_str.trim().parse::<u16>() {
+                                return Some(port);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
     }
 }
 
@@ -1483,7 +1523,7 @@ async fn check_jobs_status() -> Result<HashMap<String, JobStatus>, std::io::Erro
 
         // Change into the job's directory
         if let Err(e) = std::env::set_current_dir(&job_dir) {
-            println!("Failed to change directory to {}: {}", job_dir.display(), e);
+            // println!("Failed to change directory to {}: {}", job_dir.display(), e);
             return Ok(jobs);
         }
 
@@ -1502,13 +1542,17 @@ async fn check_jobs_status() -> Result<HashMap<String, JobStatus>, std::io::Erro
                 if let Ok(container) = serde_json::from_str::<serde_json::Value>(line) {
                     let name = container["Name"].as_str().unwrap_or("").to_string();
                     let state = container["State"].as_str().unwrap_or("").to_string();
-                    
+                    let status = container["RunningFor"].as_str().unwrap_or("").to_string();
                     
                     if state != "running" {
                         all_running = false;
                     }
                     
-                    containers.push(ContainerStatus { name, state });
+                    containers.push(ContainerStatus { 
+                        name, 
+                        state,
+                        status 
+                    });
                 }
             }
 
@@ -1576,6 +1620,7 @@ pub struct JobStatus {
 pub struct ContainerStatus {
     pub name: String,
     pub state: String,
+    pub status: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
