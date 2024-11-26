@@ -1114,7 +1114,18 @@ sinks:
     fn create_config_file(&self) -> Result<(), std::io::Error> {
         let home_dir = dirs::home_dir()
             .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "Home directory not found"))?;
-        let config_path = home_dir.join(".manuscript_config.ini");
+        
+        // Create manuscript directory
+        let manuscript_dir = home_dir.join("manuscripts");
+        std::fs::create_dir_all(&manuscript_dir)?;
+        
+        // Create demo directory inside manuscript
+        let demo_dir = manuscript_dir.join("demo");
+        std::fs::create_dir_all(&demo_dir)?;
+
+        // Parse the saved SQL to get configuration values
+        let (chain_name, table_name, database_name) = self.parse_manuscript_yaml()
+            .unwrap_or(("solana".to_string(), "blocks".to_string(), "solana".to_string()));
         
         let os_type = if cfg!(target_os = "darwin") {
             "darwin"
@@ -1124,17 +1135,19 @@ sinks:
             "windows"
         };
 
+        // Create config file content
         let config_content = format!(
-            "baseDir    = {}\nsystemInfo = {}\n\n\
+            "baseDir    = {}\n\
+            systemInfo = {}\n\n\
             [demo]\n\
             baseDir     = {}/manuscript\n\
             name        = demo\n\
-            specVersion =\n\
-            parallelism = 0\n\
-            chain       = zkevm\n\
-            table       = blocks\n\
-            database    = zkevm\n\
-            query       = Select * From zkevm_blocks\n\
+            specVersion = v1.0.0\n\
+            parallelism = 1\n\
+            chain       = {}\n\
+            table       = {}\n\
+            database    = {}\n\
+            query       = Select * From {}_{}\n\
             sink        = postgres\n\
             port        = 8081\n\
             dbPort      = 15432\n\
@@ -1143,11 +1156,121 @@ sinks:
             graphqlPort = 8082",
             home_dir.display(),
             os_type,
-            home_dir.display()
+            home_dir.display(),
+            chain_name,
+            table_name,
+            database_name,
+            database_name,
+            table_name
         );
 
-        std::fs::write(config_path, config_content)?;
+        // Write config file
+        std::fs::write(home_dir.join(".manuscript_config.ini"), config_content)?;
+
+        // Create docker-compose.yml
+        self.create_docker_compose(&demo_dir, &database_name)?;
+
+        // Start docker compose
+        self.start_docker_compose(&demo_dir)?;
+
         Ok(())
+    }
+
+    fn start_docker_compose(&self, demo_dir: &std::path::Path) -> Result<(), std::io::Error> {
+        use std::process::Command;
+
+        // Change to the demo directory
+        std::env::set_current_dir(demo_dir)?;
+
+        // Run docker compose up -d
+        let output = Command::new("docker")
+            .args(["compose", "up", "-d"])
+            .output()?;
+
+        if !output.status.success() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!(
+                    "Failed to start docker compose: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                )
+            ));
+        }
+
+        Ok(())
+    }
+
+    fn create_docker_compose(&self, demo_dir: &std::path::Path, database_name: &str) -> Result<(), std::io::Error> {
+        let docker_compose_content = format!(
+            "version: '3.4'\n\
+name: demo
+services:
+  postgres:
+    image: postgres:16.4
+    ports:
+      - \"15432:5432\"
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=${{POSTGRES_PASSWORD:-postgres}}
+      - POSTGRES_USER=${{POSTGRES_USER:-postgres}}
+      - POSTGRES_DB=${{POSTGRES_DB:-{}}}
+    networks:
+      - ms_network
+    restart: unless-stopped
+
+  jobmanager:
+    image: repository.chainbase.com/manuscript-node/manuscript-{}:latest
+    networks:
+      - ms_network
+
+  hasura:
+    image: repository.chainbase.com/manuscript-node/graphql-engine-arm64:latest
+    ports:
+      - \"9080:8080\"
+    depends_on:
+      - postgres
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:${{POSTGRES_PASSWORD:-postgres}}@postgres:5432/{}
+      HASURA_GRAPHQL_ENABLE_CONSOLE: \"true\"
+    networks:
+      - ms_network
+    restart: unless-stopped
+
+networks:
+  ms_network:",
+            database_name,
+            database_name,
+            database_name
+        );
+
+        std::fs::write(demo_dir.join("docker-compose.yml"), docker_compose_content)?;
+        Ok(())
+    }
+
+    fn parse_manuscript_yaml(&self) -> Option<(String, String, String)> {
+        if let Some(yaml_content) = &self.saved_sql {
+            if let Ok(yaml) = serde_yaml::from_str::<serde_yaml::Value>(yaml_content) {
+                // Extract values from the YAML structure
+                let dataset = yaml["sources"]
+                    .as_sequence()?
+                    .first()?
+                    ["dataset"]
+                    .as_str()?
+                    .to_string();
+                
+                // Split dataset into database and table names
+                let parts: Vec<&str> = dataset.split('.').collect();
+                if parts.len() == 2 {
+                    return Some((
+                        parts[0].to_string(), // chain/database name
+                        parts[1].to_string(), // table name
+                        parts[0].to_string()  // database name
+                    ));
+                }
+            }
+        }
+        None
     }
 
     fn transform_yaml_to_sql(&self, yaml_content: &str) -> Result<String, String> {
