@@ -296,29 +296,6 @@ func createTemplateFile(filePath, tmplContent string, data interface{}) error {
 	return nil
 }
 
-func FindAvailablePort(startPort, endPort int, exclude []int) (int, error) {
-	listeningPorts, err := pkg.GetListeningPorts()
-	if err != nil {
-		return 0, err
-	}
-
-	portMap := make(map[int]bool)
-	for _, port := range listeningPorts {
-		portMap[port] = true
-	}
-	for _, port := range exclude {
-		portMap[port] = true
-	}
-
-	for port := startPort; port <= endPort; port++ {
-		if !portMap[port] {
-			return port, nil
-		}
-	}
-
-	return 0, fmt.Errorf("no available ports in the range %d-%d", startPort, endPort)
-}
-
 func promptInput(prompt, defaultVal string) string {
 	fmt.Printf("\r\033[33m%s\u001B[0m", prompt)
 	reader := bufio.NewReader(os.Stdin)
