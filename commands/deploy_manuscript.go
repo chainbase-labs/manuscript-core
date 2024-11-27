@@ -64,19 +64,20 @@ func DeployManuscript(args []string) {
 			}
 			return nil
 		}},
-		{"Step 2: Checking manuscript is already deployed", func() error {
+		{"Step 2: Verifying Port Initialization", func() error { return pkg.InitializePorts(&ms) }},
+		{"Step 3: Checking manuscript is already deployed", func() error {
 			err := CheckManuscriptExist(ms)
 			if err != nil {
 				return err
 			}
 			return nil
 		}},
-		{"Step 3: Create Directory", func() error { return createDirectory(manuscriptDir) }},
-		{"Step 4: Create ManuscriptFile", func() error { return copyManuscriptFile(manuscriptDir, manuscriptPath) }},
-		{"Step 5: Create DockerComposeFile", func() error { return createDockerComposeFile(manuscriptDir, &ms) }},
-		{"Step 6: Check Docker Installed", func() error { return checkDockerInstalled() }},
-		{"Step 7: Start Docker Containers", func() error { return startDockerContainers(manuscriptDir) }},
-		{"Step 8: Check Container Status", func() error { return checkContainerStatus(&ms) }},
+		{"Step 4: Create Directory", func() error { return createDirectory(manuscriptDir) }},
+		{"Step 5: Create ManuscriptFile", func() error { return copyManuscriptFile(manuscriptDir, manuscriptPath) }},
+		{"Step 6: Create DockerComposeFile", func() error { return createDockerComposeFile(manuscriptDir, &ms) }},
+		{"Step 7: Check Docker Installed", func() error { return checkDockerInstalled() }},
+		{"Step 8: Start Docker Containers", func() error { return startDockerContainers(manuscriptDir) }},
+		{"Step 9: Check Container Status", func() error { return checkContainerStatus(&ms) }},
 	}
 
 	for _, step := range steps {
