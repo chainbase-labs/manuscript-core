@@ -1,4 +1,4 @@
-use std::{io, collections::HashMap, time::Duration, cell::RefCell};
+use std::{io, collections::{HashMap, BTreeMap}, time::Duration, cell::RefCell};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::DefaultTerminal;
 use serde::{Deserialize, Serialize};
@@ -227,7 +227,7 @@ pub struct Chain {
     pub lastUpdate: String,
     pub time_ago: String,
     pub databaseName: String,
-    pub dataDictionary: HashMap<String, Vec<DataDictionaryItem>>,
+    pub dataDictionary: Vec<(String, Vec<DataDictionaryItem>)>,
     pub example: Option<HashMap<String, Vec<serde_json::Value>>>,
 }
 
@@ -385,12 +385,12 @@ impl App {
             Ok(response) => {
                 Ok(response.graphData.into_iter()
                     .map(|graph_data| {
-                        let tables: HashMap<String, Vec<DataDictionaryItem>> = graph_data.chain.dataDictionary
+                        // Convert HashMap to sorted Vec of tuples
+                        let mut tables: Vec<(String, Vec<DataDictionaryItem>)> = graph_data.chain.dataDictionary
                             .into_iter()
-                            .map(|(table_name, columns)| {
-                                (table_name, columns)
-                            })
                             .collect();
+                        // Sort by table name
+                        tables.sort_by(|a, b| a.0.cmp(&b.0));
                         
                         let time_ago = Self::calculate_time_diff(&graph_data.chain.lastUpdate);
                         
@@ -538,16 +538,16 @@ impl App {
 
             if let Some(table_index) = self.selected_table_index {
                 let table_name = selected_chain.dataDictionary
-                    .keys()
-                    .nth(table_index)
-                    .map(|s| s.as_str());
+                    .get(table_index)
+                    .map(|(name, _)| name.as_str());
 
                 if let Some(table_name) = table_name {
                     if let Some(examples) = &selected_chain.example {
                         if let Some(example_data) = examples.get(table_name) {
                             let columns = selected_chain.dataDictionary
-                                .get(table_name)
-                                .map(|items| {
+                                .iter()
+                                .find(|(name, _)| name == table_name)
+                                .map(|(_, items)| {
                                     items.iter()
                                         .map(|item| Column {
                                             name: item.name.clone(),
@@ -1008,7 +1008,10 @@ impl App {
     fn generate_initial_manuscript(&self) -> String {
         if let Some(chain) = self.chains.get(self.selected_chain_index) {
             if let Some(table_index) = self.selected_table_index {
-                if let Some(table_name) = chain.dataDictionary.keys().nth(table_index) {
+                if let Some(table_name) = chain.dataDictionary
+                    .get(table_index)
+                    .map(|(name, _)| name.as_str())
+                {
                     let table_name = if table_name == "transactionLogs" {
                         "transaction_logs"
                     } else {

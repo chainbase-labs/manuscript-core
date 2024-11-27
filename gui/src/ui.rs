@@ -186,9 +186,9 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
             if app.show_tables {
                 if let Some(selected_chain) = app.chains.get(app.selected_chain_index) {
                     let table_names: Vec<ListItem> = selected_chain.dataDictionary
-                        .keys()
+                        .iter()
                         .enumerate()
-                        .map(|(i, table_name)| {
+                        .map(|(i, (table_name, _))| {
                             let content = if Some(i) == app.selected_table_index {
                                 Line::from(vec![
                                     format!("{:<1}-> ", i + 1).bold().white(),
@@ -256,12 +256,13 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
             if let Some(selected_chain) = app.chains.get(app.selected_chain_index) {
                 let mut data_lines = if app.show_tables && app.selected_table_index.is_some() {
                     let table_name = selected_chain.dataDictionary
-                        .keys()
-                        .nth(app.selected_table_index.unwrap())
-                        .map(|s| s.as_str())
+                        .get(app.selected_table_index.unwrap())
+                        .map(|(name, _)| name.as_str())
                         .unwrap_or("");
 
-                    let fields = selected_chain.dataDictionary.get(table_name);
+                    let fields = selected_chain.dataDictionary
+                        .get(app.selected_table_index.unwrap())
+                        .map(|(_, items)| items);
                     
                     let mut lines = Vec::new();
                     
