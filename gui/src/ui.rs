@@ -1,20 +1,13 @@
 use ratatui::{
-    buffer::Buffer,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Stylize, Color, Style, Modifier},
-    symbols::{self,border, Marker},
+    symbols::{self,border},
     text::{Line, Text, Span},
-    widgets::{block::{Position, Title}, Block, List, ListItem, Paragraph, Widget, Tabs, Clear, Gauge, Padding, BorderType, Scrollbar, ScrollbarOrientation, Borders, Dataset, Chart, Axis, canvas::{Canvas, Circle, Map, MapResolution, Points, Rectangle},},
+    widgets::{block::Title, Block, List, ListItem, Paragraph, Widget, Tabs, Clear, Gauge, Padding, BorderType, Scrollbar, ScrollbarOrientation, Borders, Dataset, Chart, Axis, canvas::{Canvas, Map, MapResolution},},
 };
 use crate::app::{App, AppState, SetupState};
 use crate::tasks::JobState;
 
-// Add this helper function before the draw function
-fn title_block(title: &str) -> Block<'_> {
-    Block::default()
-        .borders(ratatui::widgets::Borders::ALL)
-        .title(title)
-}
 
 const CUSTOM_LABEL_COLOR: Color = Color::White;
 const GAUGE2_COLOR: Style = Style::new().fg(Color::Rgb(10, 100, 100));
@@ -50,7 +43,6 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
 
     // Create tabs
     let titles = vec!["NETWORK [1]", "MANUSCRIPTS [2]", "AVS [3]"];
-    let executing_text = String::from("Executing...");
     let tabs = Tabs::new(titles)
         .block(Block::bordered().title("Tabs"))
         .select(app.current_tab)
@@ -737,7 +729,6 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
         _ => unreachable!(),
     }
 
-    // Add Chainbase text to top-right corner LAST (after all other rendering)
     // Calculate how many blocks to show based on time
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -766,10 +757,10 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
     frame.render_widget(
         chainbase_text,
         Rect::new(
-            frame.size().width - 45, // Increased width to accommodate animation
-            1,                       // Top of screen
-            43,                      // Increased width for blocks
-            1,                       // Height of text
+            frame.size().width - 45,
+            1,
+            43,
+            1,
         ),
     );
 
