@@ -6,7 +6,8 @@ use ratatui::{
     text::{Line, Text, Span},
     widgets::{block::{Position, Title}, Block, List, ListItem, Paragraph, Widget, Tabs, Clear, Gauge, Padding, BorderType, Scrollbar, ScrollbarOrientation, Borders, Dataset, Chart, Axis, canvas::{Canvas, Circle, Map, MapResolution, Points, Rectangle},},
 };
-use crate::app::{App, AppState, SetupState, JobState};
+use crate::app::{App, AppState, SetupState};
+use crate::tasks::JobState;
 
 // Add this helper function before the draw function
 fn title_block(title: &str) -> Block<'_> {
