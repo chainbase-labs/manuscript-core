@@ -724,7 +724,7 @@ impl App {
 
         // Main key handling
         match key_event.code {
-            KeyCode::Char('\\') => {
+            KeyCode::Char('/') => {
                 if self.current_tab == 0 && !self.show_sql_window {
                     self.show_search = true;
                     self.search_input.clear();

@@ -1,6 +1,6 @@
 [package]
 name = "manuscript-gui"
-version = "0.1.0"
+version = "1.1.0"
 edition = "2021"
 
 [dependencies]
@@ -15,5 +15,5 @@ serde_json = "1.0"
 dirs = "5.0"
 serde_yaml = "0.9"
 webbrowser = "1.0.2"
-config = "0.13"
+config = "0.14.1"
 lazy_static = "1.4.0"
