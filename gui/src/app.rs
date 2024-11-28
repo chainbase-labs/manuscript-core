@@ -15,7 +15,7 @@ use ratatui::symbols::scrollbar;
 use std::time::{Instant};
 use ratatui::symbols::Marker;
 use crate::ui;
-use crate::setup::DockerManager;
+use crate::prerun::PreRun;
 use std::process::Command;
 use webbrowser;
 use crate::config::Settings;
@@ -43,7 +43,7 @@ pub struct App {
     sql_sender: Option<mpsc::Sender<Result<serde_json::Value, String>>>,
     sql_receiver: Option<mpsc::Receiver<Result<serde_json::Value, String>>>,
     pub sql_timer: u64, 
-    pub docker_manager: DockerManager,
+    pub pre_run: PreRun,
     pub debug_result: Option<String>,
     pub docker_setup_in_progress: bool,
     pub docker_setup_timer: u64,
@@ -164,7 +164,7 @@ impl Clone for App {
             sql_sender: self.sql_sender.clone(),
             sql_receiver: None,  // Don't clone the receiver
             sql_timer: self.sql_timer,
-            docker_manager: self.docker_manager.clone(),
+            pre_run: self.pre_run.clone(),
             debug_result: self.debug_result.clone(),
             docker_setup_in_progress: self.docker_setup_in_progress,
             docker_setup_timer: self.docker_setup_timer,  // Initialize the timer
@@ -329,7 +329,7 @@ impl App {
             sql_sender: Some(sql_sender),
             sql_receiver: Some(sql_receiver),
             sql_timer: 0,  // Initialize timer
-            docker_manager: DockerManager::new(),
+            pre_run: PreRun::new(),
             debug_result: None,
             docker_setup_in_progress: false,
             docker_setup_timer: 0,  // Initialize the timer
@@ -987,12 +987,6 @@ impl App {
                 if self.current_tab == 1 {
                     self.show_deploy_options = true;
                     self.selected_deploy_option = 0;
-                    // if self.sql_result.is_none() {
-                    //     self.show_warning = true;
-                    // } else {
-                    //     self.show_deploy_options = true;
-                    //     self.selected_deploy_option = 0;
-                    // }
                 }
             }
             KeyCode::Char('c') => {
@@ -1077,7 +1071,7 @@ sinks:
         let sender = self.update_sender.clone();
         let sql = self.transformed_sql.clone();
         
-        match self.docker_manager.setup(sender, sql).await {
+        match self.pre_run.setup(sender, sql).await {
             Ok(msg) => {
                 if !self.should_cancel_setup {
                     if let Some(sender) = &self.update_sender {
