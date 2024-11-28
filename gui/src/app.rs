@@ -1,26 +1,20 @@
-use std::{io, collections::{HashMap, BTreeMap}, time::Duration, cell::RefCell};
+use std::{io, collections::HashMap, time::Duration, cell::RefCell};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::DefaultTerminal;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use reqwest;
-use serde_json::json;
-use reqwest::header::{HeaderMap, HeaderValue};
 use tokio::sync::mpsc;
-use ratatui::style::{Style, Color,palette::tailwind, Stylize};
+use ratatui::style::{Style, Color,palette::tailwind};
 use ratatui::text::{Line, Span, Text};
-use ratatui::layout::{Alignment, Constraint, Layout, Rect};
-use ratatui::buffer::Buffer;
-use ratatui::widgets::{Gauge, Widget,block::Title,Block,Borders, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState};
-use ratatui::symbols::scrollbar;
-use std::time::{Instant};
+use ratatui::layout::Alignment;
+use ratatui::widgets::{block::Title,Block,Borders, Padding};
+use std::time::Instant;
 use ratatui::symbols::Marker;
 use crate::ui;
 use crate::prerun::PreRun;
-use std::process::Command;
-use webbrowser;
 use crate::config::Settings;
 use crate::tasks::JobManager;
-use crate::tasks::tasks::{JobsCommand, JobsUpdate, JobStatus, JobState};
+use crate::tasks::tasks::{JobsCommand, JobsUpdate, JobStatus};
 
 #[derive(Debug)]
 pub struct App {
@@ -165,12 +159,12 @@ impl Clone for App {
             sql_columns: self.sql_columns.clone(),
             sql_data: self.sql_data.clone(),
             sql_sender: self.sql_sender.clone(),
-            sql_receiver: None,  // Don't clone the receiver
+            sql_receiver: None,
             sql_timer: self.sql_timer,
             pre_run: self.pre_run.clone(),
             debug_result: self.debug_result.clone(),
             docker_setup_in_progress: self.docker_setup_in_progress,
-            docker_setup_timer: self.docker_setup_timer,  // Initialize the timer
+            docker_setup_timer: self.docker_setup_timer,
             setup_progress: self.setup_progress,
             setup_state: self.setup_state.clone(),
             state: self.state,
@@ -270,9 +264,6 @@ pub enum SetupStepStatus {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SetupStep {
-    // CheckingDocker,
-    // PullingImage,
-    // StartingContainer,
     ParseManuscript,
     SubmitSQLTask,
     WaitingForExecutionResults,
@@ -281,9 +272,6 @@ pub enum SetupStep {
 impl SetupStep {
     fn as_str(&self) -> &'static str {
         match self {
-            // SetupStep::CheckingDocker => "Checking Docker installation",
-            // SetupStep::PullingImage => "Pulling required images",
-            // SetupStep::StartingContainer => "Starting container",
             SetupStep::ParseManuscript => "Parse manuscript yaml",
             SetupStep::SubmitSQLTask => "Submit sql task",
             SetupStep::WaitingForExecutionResults => "Waiting for execution results",
@@ -342,18 +330,18 @@ impl App {
             sql_data: Vec::new(),
             sql_sender: Some(sql_sender),
             sql_receiver: Some(sql_receiver),
-            sql_timer: 0,  // Initialize timer
+            sql_timer: 0,
             pre_run: PreRun::new(),
             debug_result: None,
             docker_setup_in_progress: false,
-            docker_setup_timer: 0,  // Initialize the timer
+            docker_setup_timer: 0,
             setup_progress: 0.0,
             setup_state: SetupState::NotStarted,
             state: AppState::default(),
             progress_columns: 0,
             progress1: 0.0,
             progress_lines: RefCell::new(Vec::new()),
-            should_cancel_setup: false,  // Initialize the new field
+            should_cancel_setup: false,
             update_sender: Some(update_sender),
             update_receiver: Some(update_receiver),
             current_setup_step: None,
@@ -399,11 +387,9 @@ impl App {
             Ok(response) => {
                 Ok(response.graphData.into_iter()
                     .map(|graph_data| {
-                        // Convert HashMap to sorted Vec of tuples
                         let mut tables: Vec<(String, Vec<DataDictionaryItem>)> = graph_data.chain.dataDictionary
                             .into_iter()
                             .collect();
-                        // Sort by table name
                         tables.sort_by(|a, b| a.0.cmp(&b.0));
                         
                         let time_ago = Self::calculate_time_diff(&graph_data.chain.lastUpdate);
@@ -457,7 +443,7 @@ impl App {
             // Update timer if Docker setup is in progress
             if self.state == AppState::Started {
                 self.docker_setup_timer = self.docker_setup_timer.saturating_add(1);
-                self.update(terminal.size()?.width);
+                self.update();
             }
 
             if event::poll(Duration::from_millis(100))? {
@@ -527,7 +513,7 @@ impl App {
         self.window[1] += 1.0;
     }
 
-    fn update(&mut self, terminal_width: u16) {
+    fn update(&mut self) {
         if self.should_cancel_setup {
             // Reset everything if cancellation is requested
             self.progress1 = 0.0;
@@ -579,13 +565,6 @@ impl App {
                             return;
                         }
                     }
-
-                    // self.example_data = match table_name {
-                    //     "blocks" => Some(Self::mock_blocks_data()),
-                    //     "transactions" => Some(Self::mock_transactions_data()),
-                    //     "transactionLogs" => Some(Self::mock_transaction_logs_data()),
-                    //     _ => None,
-                    // };
                 }
             }
         }
@@ -647,33 +626,21 @@ impl App {
                 }
                 _ => {}
             }
-            return;  // Early return for search
+            return;
         }
 
         if self.show_sql_window {
             match key_event.code {
                 KeyCode::Esc => {
-                    // Save the SQL when closing the window
                     if !self.sql_input.trim().is_empty() {
                         self.saved_sql = Some(self.sql_input.clone());
                     }
-                    // Reset SQL window state
                     self.show_sql_window = false;
                     self.sql_result = None;
-                    // Don't clear the selected table index anymore
                 }
                 KeyCode::Enter => {
-                    // Execute SQL when Ctrl+Enter is pressed
                     if key_event.modifiers.contains(event::KeyModifiers::CONTROL) {
-                        // tokio::spawn({
-                        //     let mut app = self.clone();
-                        //     async move {
-                        //         app.execute_sql().await;
-                        //         app
-                        //     }
-                        // });
                     } else {
-                        // Insert newline at cursor position
                         self.sql_input.insert(self.sql_cursor_position, '\n');
                         self.sql_cursor_position += 1;
                     }
@@ -752,7 +719,7 @@ impl App {
                 }
                 _ => {}
             }
-            return;  // Early return for SQL window
+            return;
         }
 
         // Main key handling
@@ -894,8 +861,6 @@ impl App {
                                     let action = action.to_string();
                                     async move {
                                         if let Some((job_name, _)) = app.jobs_status.iter().nth(app.selected_job_index) {
-                                            let home_dir = dirs::home_dir()
-                                                .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "Home directory not found"))?;
                                             if let Some(logs) = app.job_manager.handle_action(job_name, &action).await? {
                                                 app.job_logs = Some(logs);
                                             }
@@ -1016,7 +981,7 @@ impl App {
                     self.show_sql_window = true;
                     self.sql_input = self.generate_initial_manuscript();
                     self.sql_cursor_position = self.sql_input.len();
-                    self.current_tab = 1;  // Switch to tab 2 (index 1)
+                    self.current_tab = 1;
                 }
             }
             _ => {}
