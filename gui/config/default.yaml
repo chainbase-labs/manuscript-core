@@ -1,0 +1,4 @@
+api:
+  base_url: "https://api.chainbase.com"
+  endpoints:
+    chains: "/api/v1/metadata/network_chains"
