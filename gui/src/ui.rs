@@ -265,6 +265,23 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
                         .map(|(_, items)| items);
                     
                     let mut lines = Vec::new();
+
+                    // Add chain name and overview
+                    lines.push(Line::from(selected_chain.name.clone().bold().magenta()));
+                    lines.push(Line::from(""));
+                    if let Some(overview) = &selected_chain.overview {
+                        lines.push(Line::from(vec![
+                            "֎ ⋙ ".into(),
+                            overview.clone().white().into()
+                        ]));
+                    }
+                    lines.push(Line::from(""));
+                    if let Some(overview) = &selected_chain.overview {
+                        lines.push(Line::from(vec![
+                            "Ⓣ ⋙ ".into(),
+                            table_name.yellow().bold().into()
+                        ]));
+                    }
                     
                     // Add header
                     lines.push(Line::from(vec![

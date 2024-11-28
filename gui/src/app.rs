@@ -229,6 +229,7 @@ pub struct Chain {
     pub databaseName: String,
     pub dataDictionary: Vec<(String, Vec<DataDictionaryItem>)>,
     pub example: Option<HashMap<String, Vec<serde_json::Value>>>,
+    pub overview: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -403,6 +404,7 @@ impl App {
                             time_ago,
                             dataDictionary: tables,
                             example: graph_data.chain.example,
+                            overview: graph_data.chain.overview,
                         }
                     })
                     .collect())
@@ -1595,6 +1597,7 @@ struct ChainData {
     databaseName: String,
     dataDictionary: DataDictionary,
     example: Option<HashMap<String, Vec<serde_json::Value>>>,
+    overview: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
