@@ -18,6 +18,7 @@ use crate::ui;
 use crate::setup::DockerManager;
 use std::process::Command;
 use webbrowser;
+use crate::config::Settings;
 
 #[derive(Debug)]
 pub struct App {
@@ -380,7 +381,7 @@ impl App {
     }
 
     async fn fetch_chains() -> Result<Vec<Chain>, reqwest::Error> {
-        let url = "http://127.0.0.1:8000/api/v1/metadata/network_chains";
+        let url = Settings::get_chains_url();
 
         match reqwest::get(url).await?.json::<Response>().await {
             Ok(response) => {
