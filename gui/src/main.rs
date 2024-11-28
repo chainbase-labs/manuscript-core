@@ -1,5 +1,4 @@
 use manuscript_gui::app::App;
-use manuscript_gui::config::Settings;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
