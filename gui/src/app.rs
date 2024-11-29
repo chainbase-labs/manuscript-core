@@ -31,7 +31,7 @@ pub struct App {
     pub show_sql_window: bool,
     pub sql_cursor_position: usize,
     pub sql_result: Option<String>,
-    pub saved_sql: Option<String>,
+    pub saved_manuscript: Option<String>,
     pub sql_executing: bool,
     pub sql_error: Option<String>,
     pub sql_columns: Vec<Column>,
@@ -153,7 +153,7 @@ impl Clone for App {
             show_sql_window: self.show_sql_window,
             sql_cursor_position: self.sql_cursor_position,
             sql_result: self.sql_result.clone(),
-            saved_sql: self.saved_sql.clone(),
+            saved_manuscript: self.saved_manuscript.clone(),
             sql_executing: self.sql_executing,
             sql_error: self.sql_error.clone(),
             sql_columns: self.sql_columns.clone(),
@@ -323,7 +323,7 @@ impl App {
             show_sql_window: false,
             sql_cursor_position: 0,
             sql_result: None,
-            saved_sql: None,
+            saved_manuscript: None,
             sql_executing: false,
             sql_error: None,
             sql_columns: Vec::new(),
@@ -582,7 +582,7 @@ impl App {
                 }
                 KeyCode::Enter => {
                     if self.selected_deploy_option == 0 {
-                        if let Some(yaml_content) = &self.saved_sql {
+                        if let Some(yaml_content) = &self.saved_manuscript {
                             self.job_manager.create_config_file(yaml_content);
                         }
                     }
@@ -633,7 +633,7 @@ impl App {
             match key_event.code {
                 KeyCode::Esc => {
                     if !self.sql_input.trim().is_empty() {
-                        self.saved_sql = Some(self.sql_input.clone());
+                        self.saved_manuscript = Some(self.sql_input.clone());
                     }
                     self.show_sql_window = false;
                     self.sql_result = None;
@@ -711,7 +711,7 @@ impl App {
                 }
                 KeyCode::Tab => {
                     if !self.sql_input.trim().is_empty() {
-                        self.saved_sql = Some(self.sql_input.clone());
+                        self.saved_manuscript = Some(self.sql_input.clone());
                     }
                     self.show_sql_window = false;
                     self.sql_result = None;
@@ -847,6 +847,7 @@ impl App {
                         }
                     },
                     1 => {
+                        println!("1111111");
                         // Jobs tab logic
                         if self.show_job_options {
                             let action = match self.selected_job_option {
@@ -856,6 +857,7 @@ impl App {
                                 _ => "",
                             };
                             if !action.is_empty() {
+                                println!("2222222");
                                 tokio::spawn({
                                     let mut app = self.clone();
                                     let action = action.to_string();
@@ -870,7 +872,7 @@ impl App {
                                 });
                             }
                             self.show_job_options = false;
-                        } else if !self.jobs_status.is_empty() {
+                            println!("3333333");
                             self.show_job_options = true;
                             self.selected_job_option = 0;
                         }
@@ -890,9 +892,9 @@ impl App {
                         self.progress1 = 0.0;
                         self.docker_setup_in_progress = false;
                     }
-                    if self.saved_sql.is_some() || self.show_tables || self.sql_result.is_some() {
+                    if self.saved_manuscript.is_some() || self.show_tables || self.sql_result.is_some() {
                         if !self.sql_input.trim().is_empty() {
-                            self.saved_sql = Some(self.sql_input.clone());
+                            self.saved_manuscript = Some(self.sql_input.clone());
                         }
                         self.show_tables = false;
                         self.show_sql_window = false;
@@ -942,15 +944,15 @@ impl App {
                 self.current_tab = 2;
             }
             KeyCode::Char('e') => {
-                if self.saved_sql.is_some() {
+                if self.saved_manuscript.is_some() {
                     self.show_sql_window = true;
-                    self.sql_input = self.saved_sql.clone().unwrap_or_default();
+                    self.sql_input = self.saved_manuscript.clone().unwrap_or_default();
                     self.sql_cursor_position = self.sql_input.len();
                 }
             }
             KeyCode::Char('r') => {
-                if let Some(saved_sql) = &self.saved_sql {
-                    match self.job_manager.transform_yaml_to_sql(saved_sql) {
+                if let Some(saved_manuscript) = &self.saved_manuscript {
+                    match self.job_manager.transform_yaml_to_sql(saved_manuscript) {
                         Ok(sql) => {
                             self.transformed_sql = Some(sql);
                             self.state = AppState::Started;

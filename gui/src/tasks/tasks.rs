@@ -37,6 +37,52 @@ pub enum JobsUpdate {
     Status(HashMap<String, JobStatus>),
 }
 
+#[derive(Debug, Clone)]
+pub struct ManuscriptConfig {
+    pub name: String,
+    pub spec_version: String,
+    pub parallelism: u64,
+    pub source: SourceConfig,
+    pub transform: TransformConfig,
+    pub sink: SinkConfig,
+}
+
+#[derive(Debug, Clone)]
+pub struct SourceConfig {
+    pub name: String,
+    pub dataset_type: String,
+    pub dataset: String,
+    // Parsed from dataset
+    pub chain: String,
+    pub table: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct TransformConfig {
+    pub name: String,
+    pub sql: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct SinkConfig {
+    pub name: String,
+    pub sink_type: String,
+    pub from: String,
+    pub database: String,
+    pub schema: String,
+    pub table: String,
+    pub primary_key: String,
+    pub config: DatabaseConfig,
+}
+
+#[derive(Debug, Clone)]
+pub struct DatabaseConfig {
+    pub host: String,
+    pub port: u16,
+    pub username: String,
+    pub password: String,
+}
+
 impl JobManager {
     pub fn new() -> Self {
         Self
@@ -114,18 +160,16 @@ impl JobManager {
         let home_dir = dirs::home_dir()
             .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found"))?;
         
+        let config = self.parse_manuscript_yaml(yaml_content)?;
+        
         // Create manuscript directory
         let manuscript_dir = home_dir.join("manuscripts");
         std::fs::create_dir_all(&manuscript_dir)?;
         
-        // Create demo directory inside manuscript
-        let demo_dir = manuscript_dir.join("demo");
-        std::fs::create_dir_all(&demo_dir)?;
+        // Create job directory inside manuscript
+        let job_dir = manuscript_dir.join(&config.name);
+        std::fs::create_dir_all(&job_dir)?;
 
-        // Parse the YAML to get configuration values
-        let (chain_name, table_name, database_name) = self.parse_manuscript_yaml(yaml_content)
-            .unwrap_or(("solana".to_string(), "blocks".to_string(), "solana".to_string()));
-        
         let os_type = if cfg!(target_os = "darwin") {
             "darwin"
         } else if cfg!(target_os = "linux") {
@@ -134,56 +178,63 @@ impl JobManager {
             "windows"
         };
 
-        // Create config file content
+        // Create config file content with parsed values
         let config_content = format!(
             "baseDir    = {}\n\
             systemInfo = {}\n\n\
-            [demo]\n\
+            [{}]\n\
             baseDir     = {}/manuscripts\n\
-            name        = demo\n\
-            specVersion = v1.0.0\n\
-            parallelism = 1\n\
+            name        = {}\n\
+            specVersion = {}\n\
+            parallelism = {}\n\
             chain       = {}\n\
             table       = {}\n\
             database    = {}\n\
-            query       = Select * From {}_{}\n\
-            sink        = postgres\n\
+            query       = {}\n\
+            sink        = {}\n\
             port        = 8081\n\
-            dbPort      = 15432\n\
-            dbUser      = postgres\n\
-            dbPassword  = postgres\n\
+            dbPort      = {}\n\
+            dbUser      = {}\n\
+            dbPassword  = {}\n\
             graphqlPort = 9080",
             home_dir.display(),
             os_type,
+            config.name,
             home_dir.display(),
-            chain_name,
-            table_name,
-            database_name,
-            database_name,
-            table_name
+            config.name,
+            config.spec_version,
+            config.parallelism,
+            config.source.chain,
+            config.source.table,
+            config.sink.database,
+            config.transform.sql,
+            config.sink.sink_type,
+            config.sink.config.port,
+            config.sink.config.username,
+            config.sink.config.password,
         );
 
         // Write config file
         std::fs::write(home_dir.join(".manuscript_config.ini"), config_content)?;
 
-        // Create docker-compose.yml
-        self.create_docker_compose(&demo_dir, &database_name)?;
-
-        // Start docker compose
-        self.start_docker_compose(&demo_dir)?;
+        // Create and start docker-compose with the correct name
+        self.create_docker_compose(&job_dir, &config.name, &config.sink.database)?;
+        self.start_docker_compose(&job_dir)?;
 
         Ok(())
     }
 
-    fn create_docker_compose(&self, demo_dir: &std::path::Path, database_name: &str) -> io::Result<()> {
+    fn create_docker_compose(&self, job_dir: &std::path::Path, name: &str, database_name: &str) -> io::Result<()> {
         let docker_compose_content = format!(
             "version: '3.4'\n\
-name: demo
-services:
+name: {}\nservices:",
+            name
+        ) + &format!(
+            r#"
   postgres:
     image: postgres:16.4
     ports:
-      - \"15432:5432\"
+      - "15432:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     environment:
@@ -202,24 +253,24 @@ services:
   hasura:
     image: repository.chainbase.com/manuscript-node/graphql-engine-arm64:latest
     ports:
-      - \"9080:8080\"
+      - "9080:8080"
     depends_on:
       - postgres
     environment:
       HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:${{POSTGRES_PASSWORD:-postgres}}@postgres:5432/{}
-      HASURA_GRAPHQL_ENABLE_CONSOLE: \"true\"
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
     networks:
       - ms_network
     restart: unless-stopped
 
 networks:
-  ms_network:",
+  ms_network:"#,
             database_name,
             database_name,
             database_name
         );
 
-        std::fs::write(demo_dir.join("docker-compose.yml"), docker_compose_content)?;
+        std::fs::write(job_dir.join("docker-compose.yml"), docker_compose_content)?;
         Ok(())
     }
 
@@ -245,27 +296,70 @@ networks:
         Ok(())
     }
 
-    fn parse_manuscript_yaml(&self, yaml_content: &str) -> Option<(String, String, String)> {
-        if let Ok(yaml) = serde_yaml::from_str::<serde_yaml::Value>(yaml_content) {
-            // Extract values from the YAML structure
-            let dataset = yaml["sources"]
-                .as_sequence()?
-                .first()?
-                ["dataset"]
-                .as_str()?
-                .to_string();
-            
-            // Split dataset into database and table names
-            let parts: Vec<&str> = dataset.split('.').collect();
-            if parts.len() == 2 {
-                return Some((
-                    parts[0].to_string(), // chain/database name
-                    parts[1].to_string(), // table name
-                    parts[0].to_string()  // database name
-                ));
-            }
+    fn parse_manuscript_yaml(&self, yaml_content: &str) -> Result<ManuscriptConfig, io::Error> {
+        let yaml: serde_yaml::Value = serde_yaml::from_str(yaml_content)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to parse YAML: {}", e)))?;
+
+        // Parse source configuration
+        let source = yaml["sources"]
+            .as_sequence()
+            .and_then(|sources| sources.first())
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "No source configuration found"))?;
+
+        let dataset = source["dataset"]
+            .as_str()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Dataset not found"))?;
+        
+        let parts: Vec<&str> = dataset.split('.').collect();
+        if parts.len() != 2 {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid dataset format"));
         }
-        None
+
+        // Parse transform configuration
+        let transform = yaml["transforms"]
+            .as_sequence()
+            .and_then(|transforms| transforms.first())
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "No transform configuration found"))?;
+
+        // Parse sink configuration
+        let sink = yaml["sinks"]
+            .as_sequence()
+            .and_then(|sinks| sinks.first())
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "No sink configuration found"))?;
+
+        let config = ManuscriptConfig {
+            name: yaml["name"].as_str().unwrap_or("demo").to_string(),
+            spec_version: yaml["specVersion"].as_str().unwrap_or("v1.0.0").to_string(),
+            parallelism: yaml["parallelism"].as_u64().unwrap_or(1),
+            source: SourceConfig {
+                name: source["name"].as_str().unwrap_or("").to_string(),
+                dataset_type: source["type"].as_str().unwrap_or("dataset").to_string(),
+                dataset: dataset.to_string(),
+                chain: parts[0].to_string(),
+                table: parts[1].to_string(),
+            },
+            transform: TransformConfig {
+                name: transform["name"].as_str().unwrap_or("").to_string(),
+                sql: transform["sql"].as_str().unwrap_or("").to_string(),
+            },
+            sink: SinkConfig {
+                name: sink["name"].as_str().unwrap_or("").to_string(),
+                sink_type: sink["type"].as_str().unwrap_or("postgres").to_string(),
+                from: sink["from"].as_str().unwrap_or("").to_string(),
+                database: sink["database"].as_str().unwrap_or("").to_string(),
+                schema: sink["schema"].as_str().unwrap_or("public").to_string(),
+                table: sink["table"].as_str().unwrap_or("").to_string(),
+                primary_key: sink["primary_key"].as_str().unwrap_or("").to_string(),
+                config: DatabaseConfig {
+                    host: sink["config"]["host"].as_str().unwrap_or("postgres").to_string(),
+                    port: sink["config"]["port"].as_u64().unwrap_or(5432) as u16,
+                    username: sink["config"]["username"].as_str().unwrap_or("postgres").to_string(),
+                    password: sink["config"]["password"].as_str().unwrap_or("postgres").to_string(),
+                },
+            },
+        };
+
+        Ok(config)
     }
 
     pub fn transform_yaml_to_sql(&self, yaml_content: &str) -> Result<String, String> {

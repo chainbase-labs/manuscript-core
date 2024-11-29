@@ -676,7 +676,7 @@ fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
         .title_alignment(Alignment::Center)
         .border_set(border::THICK);
     
-    if app.saved_sql.is_some() {
+    if app.saved_manuscript.is_some() {
         let right_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -704,7 +704,7 @@ fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
             sql_block = sql_block.style(Style::default().bg(Color::Rgb(10, 100, 100)));
         }
 
-        let sql_paragraph = Paragraph::new(app.saved_sql.as_ref().unwrap().as_str())
+        let sql_paragraph = Paragraph::new(app.saved_manuscript.as_ref().unwrap().as_str())
             .block(sql_block)
             .alignment(Alignment::Left)
             .style(Style::default().fg(Color::White));
