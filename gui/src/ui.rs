@@ -391,22 +391,12 @@ fn draw_jobs_status(app: &App) -> String {
     }
 
     let mut status = String::new();
-    for (name, job) in &app.jobs_status {
-        status.push_str(&format!("Job: {} - {}\n", name, match job.status {
+    for job in app.jobs_status.iter() {
+        status.push_str(&format!("Job: {} - {}\n", job.name, match job.status {
             JobState::Running => "Running".green(),
             JobState::Pending => "Pending".yellow(),
             JobState::Failed => "Failed".red(),
         }));
-        
-        for container in &job.containers {
-            status.push_str(&format!("  └─ {} ({})\n", 
-                container.name,
-                match container.state.as_str() {
-                    "running" => container.state.as_str().green(),
-                    _ => container.state.as_str().yellow(),
-                }
-            ));
-        }
     }
     status
 }
@@ -620,43 +610,62 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         .border_set(border::THICK);
     
     // Convert jobs into ListItems
-    let job_list = app.jobs_status.iter().enumerate().map(|(_index, (name, status))| {
-        // Get the status duration from the first container
-        let duration = status.containers.first()
+    let job_list = app.jobs_status.iter().enumerate().map(|(index, job)| {
+        let duration = job.containers.first()
             .map(|c| c.status.clone())
             .unwrap_or_default();
 
-        let style = match status.status {
+        let style = match job.status {
             JobState::Running => Style::default().fg(Color::Green),
             JobState::Pending => Style::default().fg(Color::Yellow),
             JobState::Failed => Style::default().fg(Color::Red),
         };
 
-        Line::from(vec![
-            Span::raw(format!("{} ", name)),
+        let is_selected = index == app.selected_job_index;
+        let content = Line::from(vec![
+            Span::raw(format!("{:<3}", index + 1)),
+            if is_selected {
+                Span::styled("⟠ ", Style::default().fg(Color::White))
+            } else {
+                Span::raw("⟠ ")
+            },
             Span::styled(
-                format!("{} ({})",
-                    match status.status {
+                format!("{:<10}", job.name),
+                if is_selected {
+                    style.add_modifier(Modifier::BOLD)
+                } else {
+                    style
+                }
+            ),
+            Span::styled(
+                format!("{:<10}", 
+                    match job.status {
                         JobState::Running => "Running",
-                        JobState::Pending => "Pending", 
+                        JobState::Pending => "Pending",
                         JobState::Failed => "Failed",
-                    },
-                    duration
+                    }
                 ),
                 style
-            )
-        ])
+            ),
+            Span::styled(format!("{}", duration), style),
+        ]);
+
+        if is_selected {
+            ListItem::new(content).style(Style::default().bg(Color::DarkGray))
+        } else {
+            ListItem::new(content)
+        }
     }).collect::<Vec<_>>();
 
     let jobs_list = List::new(job_list)
-        .block(left_block);
+        .block(left_block)
+        .highlight_style(Style::default().bg(Color::DarkGray));
     frame.render_widget(jobs_list, left_chunks[0]);
 
     // Add key hints at the bottom
     let hints = vec![
-        "R: Run",
-        "E: Edit",
-        "D: Deploy",
+        "Enter: Actions",
+        "↑/↓: Navigate",
         "q: Quit",
     ];
     let hints_text = Text::from(hints.join(" | "));
@@ -668,6 +677,32 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         .block(hints_block)
         .alignment(Alignment::Center);
     frame.render_widget(hints_paragraph, left_chunks[1]);
+
+    // If job logs are available, show them
+    if let Some(logs) = &app.job_logs {
+        let area = frame.area();
+        let popup_width = (area.width as f32 * 0.8) as u16;
+        let popup_height = (area.height as f32 * 0.8) as u16;
+        let popup_area = Rect::new(
+            (area.width - popup_width) / 2,
+            (area.height - popup_height) / 2,
+            popup_width,
+            popup_height,
+        );
+
+        frame.render_widget(Clear, popup_area);
+
+        let logs_block = Block::bordered()
+            .title(" Job Logs ")
+            .title_alignment(Alignment::Center)
+            .border_set(border::THICK);
+
+        let logs_paragraph = Paragraph::new(logs.as_str())
+            .block(logs_block)
+            .wrap(ratatui::widgets::Wrap { trim: true });
+
+        frame.render_widget(logs_paragraph, popup_area);
+    }
 }
 
 fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {

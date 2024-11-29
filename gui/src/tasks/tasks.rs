@@ -1,4 +1,4 @@
-use std::{process::Command, path::PathBuf, io, collections::HashMap};
+use std::{process::Command, path::PathBuf, io, collections::HashMap, collections::BTreeMap};
 use webbrowser;
 use tokio::sync::mpsc;
 use tokio::time::Duration;
@@ -34,7 +34,7 @@ pub enum JobsCommand {
 
 #[derive(Debug)]
 pub enum JobsUpdate {
-    Status(HashMap<String, JobStatus>),
+    Status(Vec<JobStatus>),
 }
 
 #[derive(Debug, Clone)]
@@ -161,7 +161,27 @@ impl JobManager {
             .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found"))?;
         
         let config = self.parse_manuscript_yaml(yaml_content)?;
+        let config_path = home_dir.join(".manuscript_config.ini");
         
+        // Read existing config if it exists
+        let mut existing_content = if config_path.exists() {
+            std::fs::read_to_string(&config_path)?
+        } else {
+            // Initialize with system info if file doesn't exist
+            let os_type = if cfg!(target_os = "darwin") {
+                "darwin"
+            } else if cfg!(target_os = "linux") {
+                "linux"
+            } else {
+                "windows"
+            };
+            format!(
+                "baseDir    = {}\nsystemInfo = {}\n",
+                home_dir.display(),
+                os_type
+            )
+        };
+
         // Create manuscript directory
         let manuscript_dir = home_dir.join("manuscripts");
         std::fs::create_dir_all(&manuscript_dir)?;
@@ -170,19 +190,27 @@ impl JobManager {
         let job_dir = manuscript_dir.join(&config.name);
         std::fs::create_dir_all(&job_dir)?;
 
-        let os_type = if cfg!(target_os = "darwin") {
-            "darwin"
-        } else if cfg!(target_os = "linux") {
-            "linux"
-        } else {
-            "windows"
-        };
-
-        // Create config file content with parsed values
-        let config_content = format!(
-            "baseDir    = {}\n\
-            systemInfo = {}\n\n\
-            [{}]\n\
+        // Parse existing content to find job sections
+        let mut lines: Vec<String> = existing_content.lines().map(String::from).collect();
+        let mut job_section_start = None;
+        let mut job_section_end = None;
+        let mut current_section = String::new();
+        
+        for (i, line) in lines.iter().enumerate() {
+            if line.starts_with('[') && line.ends_with(']') {
+                if !current_section.is_empty() && job_section_start.is_some() {
+                    job_section_end = Some(i);
+                }
+                current_section = line[1..line.len()-1].to_string();
+                if current_section == config.name {
+                    job_section_start = Some(i);
+                }
+            }
+        }
+        
+        // Create new job config content
+        let new_job_config = format!(
+            "\n[{}]\n\
             baseDir     = {}/manuscripts\n\
             name        = {}\n\
             specVersion = {}\n\
@@ -197,8 +225,6 @@ impl JobManager {
             dbUser      = {}\n\
             dbPassword  = {}\n\
             graphqlPort = 9080",
-            home_dir.display(),
-            os_type,
             config.name,
             home_dir.display(),
             config.name,
@@ -214,8 +240,22 @@ impl JobManager {
             config.sink.config.password,
         );
 
-        // Write config file
-        std::fs::write(home_dir.join(".manuscript_config.ini"), config_content)?;
+        // Update or append the job configuration
+        if let (Some(start), Some(end)) = (job_section_start, job_section_end) {
+            // Replace existing job section
+            lines.splice(start..end, new_job_config.lines().map(String::from));
+        } else if let Some(start) = job_section_start {
+            // Replace until the end of file
+            lines.truncate(start);
+            lines.extend(new_job_config.lines().map(String::from));
+        } else {
+            // Append new job section
+            lines.extend(new_job_config.lines().map(String::from));
+        }
+
+        // Write updated content back to file
+        let updated_content = lines.join("\n");
+        std::fs::write(&config_path, updated_content)?;
 
         // Create and start docker-compose with the correct name
         self.create_docker_compose(&job_dir, &config.name, &config.sink.database)?;
@@ -391,83 +431,109 @@ networks:
         Ok(sql)
     }
 
-    async fn check_jobs_status() -> Result<HashMap<String, JobStatus>, std::io::Error> {
+    async fn check_jobs_status() -> Result<Vec<JobStatus>, std::io::Error> {
         let home_dir = dirs::home_dir()
             .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "Home directory not found"))?;
         
         let config_path = home_dir.join(".manuscript_config.ini");
         if !config_path.exists() {
-            return Ok(HashMap::new());
+            return Ok(Vec::new());
         }
-    
+
         let config_content = std::fs::read_to_string(config_path)?;
-        let mut jobs = HashMap::new();
-    
-        // Parse INI file
-        let mut current_section = "";
-        let mut job_base_dir = "";
-    
+        let mut jobs = Vec::new();
+        let mut current_section = String::new();
+        let mut current_job_base_dir = String::new();
+        let mut current_job_name = String::new();
+
+        // Parse INI file to get all jobs in order
         for line in config_content.lines() {
             let line = line.trim();
             
-            if line.starts_with("[") && line.ends_with("]") {
-                current_section = &line[1..line.len()-1];
-                if current_section != "demo" { continue; }
-            } else if current_section == "demo" && line.starts_with("baseDir") {
-                if let Some(dir) = line.split('=').nth(1) {
-                    job_base_dir = dir.trim();
-                }
+            if line.starts_with('[') && line.ends_with(']') {
+                // New section
+                current_section = line[1..line.len()-1].to_string();
+                continue;
             }
-        }
-    
-        if current_section == "demo" && !job_base_dir.is_empty() {
-            let job_dir = std::path::Path::new(job_base_dir).join("demo");
-    
-            // Change into the job's directory
-            if let Err(e) = std::env::set_current_dir(&job_dir) {
-                // println!("Failed to change directory to {}: {}", job_dir.display(), e);
-                return Ok(jobs);
-            }
-    
-            // Check docker compose status from within the directory
-            let output = Command::new("docker")
-                .args(["compose", "ps", "-a", "--format", "json"])
-                .output()?;
-    
-    
-            if output.status.success() {
-                let output_str = String::from_utf8_lossy(&output.stdout);
-                let mut containers = Vec::new();
-                let mut all_running = true;
-    
-                for line in output_str.lines() {
-                    if let Ok(container) = serde_json::from_str::<serde_json::Value>(line) {
-                        let name = container["Name"].as_str().unwrap_or("").to_string();
-                        let state = container["State"].as_str().unwrap_or("").to_string();
-                        let status = container["RunningFor"].as_str().unwrap_or("").to_string();
-                        
-                        if state != "running" {
-                            all_running = false;
-                        }
-                        
-                        containers.push(ContainerStatus { 
-                            name, 
-                            state,
-                            status 
-                        });
+
+            if !current_section.is_empty() {
+                if line.starts_with("baseDir") {
+                    if let Some(dir) = line.split('=').nth(1) {
+                        current_job_base_dir = dir.trim().to_string();
+                    }
+                } else if line.starts_with("name") {
+                    if let Some(name) = line.split('=').nth(1) {
+                        current_job_name = name.trim().to_string();
                     }
                 }
-    
-                let status = if all_running { JobState::Running } else { JobState::Pending };
-    
-                jobs.insert("demo".to_string(), JobStatus {
-                    name: "demo".to_string(),
-                    status,
-                    containers,
-                });
+
+                // If we have both baseDir and name, we can check the job status
+                if !current_job_base_dir.is_empty() && !current_job_name.is_empty() {
+                    let job_dir = std::path::Path::new(&current_job_base_dir)
+                        .join(&current_job_name);
+
+                    // Change into the job's directory
+                    if let Ok(_) = std::env::set_current_dir(&job_dir) {
+                        // Check docker compose status
+                        if let Ok(output) = Command::new("docker")
+                            .args(["compose", "ps", "-a", "--format", "json"])
+                            .output()
+                        {
+                            if output.status.success() {
+                                let output_str = String::from_utf8_lossy(&output.stdout);
+                                let mut containers = Vec::new();
+                                let mut all_running = true;
+                                let mut has_containers = false;
+
+                                for line in output_str.lines() {
+                                    if let Ok(container) = serde_json::from_str::<serde_json::Value>(line) {
+                                        has_containers = true;
+                                        let name = container["Name"].as_str().unwrap_or("").to_string();
+                                        let state = container["State"].as_str().unwrap_or("").to_string();
+                                        let status = container["RunningFor"].as_str().unwrap_or("").to_string();
+
+                                        let status = if !status.is_empty() {
+                                            format!("({})", status)
+                                        } else {
+                                            status
+                                        };
+
+                                        if state != "running" {
+                                            all_running = false;
+                                        }
+                                        
+                                        containers.push(ContainerStatus { 
+                                            name, 
+                                            state,
+                                            status 
+                                        });
+                                    }
+                                }
+
+                                let status = if !has_containers {
+                                    JobState::Failed
+                                } else if all_running { 
+                                    JobState::Running 
+                                } else { 
+                                    JobState::Pending 
+                                };
+
+                                jobs.push(JobStatus {
+                                    name: current_job_name.clone(),
+                                    status,
+                                    containers,
+                                });
+                            }
+                        }
+                    }
+
+                    // Reset for next job
+                    current_job_base_dir.clear();
+                    current_job_name.clear();
+                }
             }
         }
-    
+
         Ok(jobs)
     }
 

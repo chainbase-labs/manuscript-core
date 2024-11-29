@@ -71,7 +71,7 @@ pub struct App {
     pub selected_deploy_option: usize,
     pub deploy_options: Vec<(String, bool)>, // (option name, is_enabled)
     pub transformed_sql: Option<String>,
-    pub jobs_status: HashMap<String, JobStatus>,
+    pub jobs_status: Vec<JobStatus>,
     jobs_monitor_sender: Option<mpsc::Sender<JobsCommand>>,
     jobs_monitor_receiver: Option<mpsc::Receiver<JobsUpdate>>,
     pub selected_job_index: usize,
@@ -366,7 +366,7 @@ impl App {
                 ("Network (Coming Soon)".to_string(), false),
             ],
             transformed_sql: None,
-            jobs_status: HashMap::new(),
+            jobs_status: Vec::new(),
             jobs_monitor_sender: Some(jobs_command_tx),
             jobs_monitor_receiver: Some(jobs_update_rx),
             selected_job_index: 0,
@@ -769,13 +769,15 @@ impl App {
                     },
                     1 => {
                         // Jobs tab logic
-                        if self.show_job_options {
-                            if self.selected_job_option > 0 {
-                                self.selected_job_option -= 1;
-                            }
-                        } else {
-                            if !self.jobs_status.is_empty() {
-                                self.selected_job_index = self.selected_job_index.saturating_sub(1);
+                        if !self.jobs_status.is_empty() {
+                            if self.show_job_options {
+                                if self.selected_job_option > 0 {
+                                    self.selected_job_option -= 1;
+                                }
+                            } else {
+                                if self.selected_job_index > 0 {
+                                    self.selected_job_index -= 1;
+                                }
                             }
                         }
                     }
@@ -820,11 +822,15 @@ impl App {
                     },
                     1 => {
                         // Jobs tab logic
-                        if self.show_job_options {
-                            self.selected_job_option = (self.selected_job_option + 1).min(2);
-                        } else {
-                            if !self.jobs_status.is_empty() {
-                                self.selected_job_index = (self.selected_job_index + 1).min(self.jobs_status.len() - 1);
+                        if !self.jobs_status.is_empty() {
+                            if self.show_job_options {
+                                if self.selected_job_option < self.job_options.len() - 1 {
+                                    self.selected_job_option += 1;
+                                }
+                            } else {
+                                if self.selected_job_index < self.jobs_status.len() - 1 {
+                                    self.selected_job_index += 1;
+                                }
                             }
                         }
                     }
@@ -847,34 +853,28 @@ impl App {
                         }
                     },
                     1 => {
-                        println!("1111111");
                         // Jobs tab logic
-                        if self.show_job_options {
-                            let action = match self.selected_job_option {
-                                0 => "start",
-                                1 => "stop",
-                                2 => "graphql",
-                                _ => "",
-                            };
-                            if !action.is_empty() {
-                                println!("2222222");
+                        if !self.jobs_status.is_empty() {
+                            if self.show_job_options {
+                                let action = self.job_options[self.selected_job_option];
                                 tokio::spawn({
                                     let mut app = self.clone();
                                     let action = action.to_string();
                                     async move {
-                                        if let Some((job_name, _)) = app.jobs_status.iter().nth(app.selected_job_index) {
-                                            if let Some(logs) = app.job_manager.handle_action(job_name, &action).await? {
+                                        if let Some(job) = app.jobs_status.get(app.selected_job_index) {
+                                            if let Some(logs) = app.job_manager.handle_action(&job.name, &action).await? {
                                                 app.job_logs = Some(logs);
                                             }
                                         }
                                         Ok::<(), std::io::Error>(())
                                     }
                                 });
+                                self.show_job_options = false;
+                            } else {
+                                // Show job options when a job is selected
+                                self.show_job_options = true;
+                                self.selected_job_option = 0;
                             }
-                            self.show_job_options = false;
-                            println!("3333333");
-                            self.show_job_options = true;
-                            self.selected_job_option = 0;
                         }
                     }
                     _ => {}
