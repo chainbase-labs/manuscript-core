@@ -309,7 +309,7 @@ impl App {
             monitor_job_manager.jobs_monitor(jobs_command_rx, jobs_update_tx).await;
         });
 
-        let job_options = vec!["logs", "start", "stop", "graphql"];
+        let job_options = vec!["logs", "start", "stop", "graphql", "delete"];
         
         let app = App {
             chains: chains.clone(),

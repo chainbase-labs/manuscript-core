@@ -928,13 +928,17 @@ fn draw_job_options_popup(frame: &mut ratatui::Frame, app: &App) {
         .iter()
         .enumerate()
         .map(|(i, &action)| {
-            if i == app.selected_job_option {
-                ListItem::new(Line::from(
-                    Span::styled(action, Style::default().bg(Color::Blue).fg(Color::White))
-                ))
+            let style = if i == app.selected_job_option {
+                Style::default().bg(Color::Blue).fg(Color::White)
+            } else if action == "delete" {
+                // Make delete option red
+                Style::default().fg(Color::Red)
             } else {
-                ListItem::new(action)
-            }
+                Style::default()
+            };
+            ListItem::new(Line::from(
+                Span::styled(action, style)
+            ))
         })
         .collect();
 

@@ -106,6 +106,36 @@ impl JobManager {
                     Ok(Some(format!("Error: {}", String::from_utf8_lossy(&output.stderr))))
                 }
             },
+            "delete" => {
+                // First, stop containers
+                Command::new("docker")
+                    .args(["compose", "down"])
+                    .output()?;
+
+                // Delete job directory
+                std::fs::remove_dir_all(&job_dir)?;
+
+                // Remove job configuration from .manuscript_config.ini
+                let config_path = home_dir.join(".manuscript_config.ini");
+                if config_path.exists() {
+                    let content = std::fs::read_to_string(&config_path)?;
+                    let mut lines: Vec<String> = Vec::new();
+                    let mut skip_section = false;
+
+                    for line in content.lines() {
+                        if line.starts_with('[') && line.ends_with(']') {
+                            skip_section = &line[1..line.len()-1] == job_name;
+                        }
+                        if !skip_section {
+                            lines.push(line.to_string());
+                        }
+                    }
+
+                    std::fs::write(config_path, lines.join("\n"))?;
+                }
+
+                Ok(None)
+            },
             "start" => {
                 Command::new("docker")
                     .args(["compose", "up", "-d"])
