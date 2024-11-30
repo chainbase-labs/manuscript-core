@@ -497,7 +497,6 @@ networks:
                                         } else {
                                             status
                                         };
-
                                         if state != "running" {
                                             all_running = false;
                                         }

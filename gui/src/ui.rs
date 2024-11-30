@@ -914,7 +914,7 @@ fn draw_deploy_options_popup(frame: &mut ratatui::Frame, app: &App) {
 fn draw_job_options_popup(frame: &mut ratatui::Frame, app: &App) {
     let area = frame.area();
     let popup_width = 20;
-    let popup_height = 5; // Increased height to accommodate options
+    let popup_height = app.job_options.len() as u16 + 2;
     let popup_area = Rect::new(
         (area.width - popup_width) / 2,
         (area.height - popup_height) / 2,
@@ -924,7 +924,7 @@ fn draw_job_options_popup(frame: &mut ratatui::Frame, app: &App) {
 
     frame.render_widget(Clear, popup_area);
 
-    let items: Vec<ListItem> = vec!["start", "stop", "graphql"]
+    let items: Vec<ListItem> = app.job_options
         .iter()
         .enumerate()
         .map(|(i, &action)| {

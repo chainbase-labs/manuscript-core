@@ -309,6 +309,8 @@ impl App {
             monitor_job_manager.jobs_monitor(jobs_command_rx, jobs_update_tx).await;
         });
 
+        let job_options = vec!["logs", "start", "stop", "graphql"];
+        
         let app = App {
             chains: chains.clone(),
             selected_chain_index: 0,
@@ -372,7 +374,7 @@ impl App {
             selected_job_index: 0,
             show_job_options: false,
             selected_job_option: 0,
-            job_options: vec!["logs", "start", "stop", "graphql"],
+            job_options: job_options,
             job_logs: None,
             job_manager: job_manager,
         };
@@ -871,7 +873,6 @@ impl App {
                                 });
                                 self.show_job_options = false;
                             } else {
-                                // Show job options when a job is selected
                                 self.show_job_options = true;
                                 self.selected_job_option = 0;
                             }
