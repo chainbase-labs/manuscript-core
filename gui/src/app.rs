@@ -80,6 +80,8 @@ pub struct App {
     pub job_options: Vec<&'static str>,
     pub job_logs: Option<String>,
     pub job_manager: JobManager,
+    action_sender: Option<mpsc::Sender<(String, String)>>,
+    action_receiver: Option<mpsc::Receiver<(String, String)>>,
 }
 
 #[derive(Debug, Clone,)]
@@ -202,6 +204,8 @@ impl Clone for App {
             job_options: self.job_options.clone(),
             job_logs: self.job_logs.clone(),
             job_manager: self.job_manager.clone(),
+            action_sender: self.action_sender.clone(),
+            action_receiver: None,
         }
     }
 }
@@ -285,6 +289,7 @@ impl App {
         let (update_sender, update_receiver) = mpsc::channel(32);
         let (jobs_command_tx, jobs_command_rx) = mpsc::channel(32);
         let (jobs_update_tx, jobs_update_rx) = mpsc::channel(32);
+        let (action_sender, action_receiver) = mpsc::channel(32);
         
         let mut signal1 = SinSignal::new(0.2, 3.0, 18.0);
         let mut signal2 = SinSignal::new(0.1, 2.0, 10.0);
@@ -309,7 +314,7 @@ impl App {
             monitor_job_manager.jobs_monitor(jobs_command_rx, jobs_update_tx).await;
         });
 
-        let job_options = vec!["logs", "start", "stop", "graphql", "delete"];
+        let job_options = vec!["edit", "logs", "start", "stop", "graphql", "delete"];
         
         let app = App {
             chains: chains.clone(),
@@ -377,6 +382,8 @@ impl App {
             job_options: job_options,
             job_logs: None,
             job_manager: job_manager,
+            action_sender: Some(action_sender),
+            action_receiver: Some(action_receiver),
         };
 
         app
@@ -493,6 +500,27 @@ impl App {
                     Err(_) => {
                         self.debug_result = Some("Channel closed".to_string());
                     }
+                }
+            }
+
+            if let Some(receiver) = &mut self.action_receiver {
+                match receiver.try_recv() {
+                    Ok((action, content)) => {
+                        match action.as_str() {
+                            "edit" => {
+                                self.saved_manuscript = Some(content.clone());
+                                self.show_sql_window = true;
+                                self.sql_input = content;
+                                self.sql_cursor_position = self.sql_input.len();
+                            }
+                            "logs" => {
+                                self.job_logs = Some(content);
+                            }
+                            _ => {}
+                        }
+                    }
+                    Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {}
+                    Err(_) => {}
                 }
             }
 
@@ -826,13 +854,26 @@ impl App {
                         // Jobs tab logic
                         if !self.jobs_status.is_empty() {
                             if self.show_job_options {
-                                if self.selected_job_option < self.job_options.len() - 1 {
-                                    self.selected_job_option += 1;
+                                let action = self.job_options[self.selected_job_option];
+                                if let Some(job) = self.jobs_status.get(self.selected_job_index) {
+                                    if let Some(action_sender) = &self.action_sender {
+                                        tokio::spawn({
+                                            let job_manager = self.job_manager.clone();
+                                            let job_name = job.name.clone();
+                                            let action = action.to_string();
+                                            let sender = action_sender.clone();
+                                            async move {
+                                                if let Ok(Some(content)) = job_manager.handle_action(&job_name, &action).await {
+                                                    let _ = sender.send((action, content)).await;
+                                                }
+                                            }
+                                        });
+                                    }
                                 }
+                                self.show_job_options = false;
                             } else {
-                                if self.selected_job_index < self.jobs_status.len() - 1 {
-                                    self.selected_job_index += 1;
-                                }
+                                self.show_job_options = true;
+                                self.selected_job_option = 0;
                             }
                         }
                     }
@@ -859,18 +900,21 @@ impl App {
                         if !self.jobs_status.is_empty() {
                             if self.show_job_options {
                                 let action = self.job_options[self.selected_job_option];
-                                tokio::spawn({
-                                    let mut app = self.clone();
-                                    let action = action.to_string();
-                                    async move {
-                                        if let Some(job) = app.jobs_status.get(app.selected_job_index) {
-                                            if let Some(logs) = app.job_manager.handle_action(&job.name, &action).await? {
-                                                app.job_logs = Some(logs);
+                                if let Some(job) = self.jobs_status.get(self.selected_job_index) {
+                                    if let Some(action_sender) = &self.action_sender {
+                                        tokio::spawn({
+                                            let job_manager = self.job_manager.clone();
+                                            let job_name = job.name.clone();
+                                            let action = action.to_string();
+                                            let sender = action_sender.clone();
+                                            async move {
+                                                if let Ok(Some(content)) = job_manager.handle_action(&job_name, &action).await {
+                                                    let _ = sender.send((action, content)).await;
+                                                }
                                             }
-                                        }
-                                        Ok::<(), std::io::Error>(())
+                                        });
                                     }
-                                });
+                                }
                                 self.show_job_options = false;
                             } else {
                                 self.show_job_options = true;
@@ -945,6 +989,7 @@ impl App {
                 self.current_tab = 2;
             }
             KeyCode::Char('e') => {
+                println!("111111");
                 if self.saved_manuscript.is_some() {
                     self.show_sql_window = true;
                     self.sql_input = self.saved_manuscript.clone().unwrap_or_default();

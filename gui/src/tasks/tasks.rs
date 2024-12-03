@@ -95,6 +95,11 @@ impl JobManager {
         std::env::set_current_dir(&job_dir)?;
 
         match action {
+            "edit" => {
+                // Read the manuscript.yaml file
+                let yaml_content = std::fs::read_to_string(job_dir.join("manuscript.yaml"))?;
+                Ok(Some(yaml_content))
+            },
             "logs" => {
                 let output = Command::new("docker")
                     .args(["compose", "logs"])
@@ -219,6 +224,9 @@ impl JobManager {
         // Create job directory inside manuscript
         let job_dir = manuscript_dir.join(&config.name);
         std::fs::create_dir_all(&job_dir)?;
+
+        // Create manuscript.yaml file in the job directory
+        std::fs::write(job_dir.join("manuscript.yaml"), yaml_content)?;
 
         // Parse existing content to find job sections
         let mut lines: Vec<String> = existing_content.lines().map(String::from).collect();
