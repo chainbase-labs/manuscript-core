@@ -324,7 +324,7 @@ name: {}\nservices:",
     restart: unless-stopped
 
   jobmanager:
-    image: repository.chainbase.com/manuscript-node/manuscript-{}:latest
+    image: repository.chainbase.com/manuscript-node/manuscript-node:latest
     networks:
       - ms_network
 
@@ -343,7 +343,6 @@ name: {}\nservices:",
 
 networks:
   ms_network:"#,
-            database_name,
             database_name,
             database_name
         );

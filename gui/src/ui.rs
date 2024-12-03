@@ -27,7 +27,11 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
     }
 
     draw_status_bar(frame);
-    draw_popups(frame, app);
+    draw_popups(frame, app);    
+
+    if app.job_logs.is_some() {
+        draw_job_logs_popup(frame, app);
+    }
 }
 
 fn draw_popups(frame: &mut ratatui::Frame, app: &App) {
@@ -677,32 +681,6 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         .block(hints_block)
         .alignment(Alignment::Center);
     frame.render_widget(hints_paragraph, left_chunks[1]);
-
-    // If job logs are available, show them
-    if let Some(logs) = &app.job_logs {
-        let area = frame.area();
-        let popup_width = (area.width as f32 * 0.8) as u16;
-        let popup_height = (area.height as f32 * 0.8) as u16;
-        let popup_area = Rect::new(
-            (area.width - popup_width) / 2,
-            (area.height - popup_height) / 2,
-            popup_width,
-            popup_height,
-        );
-
-        frame.render_widget(Clear, popup_area);
-
-        let logs_block = Block::bordered()
-            .title(" Job Logs ")
-            .title_alignment(Alignment::Center)
-            .border_set(border::THICK);
-
-        let logs_paragraph = Paragraph::new(logs.as_str())
-            .block(logs_block)
-            .wrap(ratatui::widgets::Wrap { trim: true });
-
-        frame.render_widget(logs_paragraph, popup_area);
-    }
 }
 
 fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
@@ -1013,3 +991,36 @@ const LOGO_LETTER: &str = "
 ██║     ██╔══██║██╔══██║██║██║╚██╗██║██╔══██╗██╔══██║╚════██║██╔══╝  
 ╚██████╗██║  ██║██║  ██║██║██║ ╚████║██████╔╝██║  ██║███████║███████╗
   ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝";
+
+fn draw_job_logs_popup(frame: &mut ratatui::Frame, app: &App) {
+    let area = frame.area();
+    let popup_width = (area.width as f32 * 0.8) as u16;
+    let popup_height = (area.height as f32 * 0.8) as u16;
+    let popup_area = Rect::new(
+        (area.width - popup_width) / 2,
+        (area.height - popup_height) / 2,
+        popup_width,
+        popup_height,
+    );
+
+    frame.render_widget(Clear, popup_area);
+
+    let logs_block = Block::bordered()
+        .title(" Job Logs ")
+        .title_alignment(Alignment::Center)
+        .border_set(border::THICK)
+        .style(Style::default().bg(Color::Rgb(10, 100, 100)));
+
+    let logs = app.job_logs.as_ref().unwrap();
+    let filtered_logs = logs.chars()
+        .filter(|c| c.is_ascii_graphic() || c.is_ascii_whitespace())
+        .collect::<String>();
+
+    let logs_paragraph = Paragraph::new(filtered_logs)
+        .block(logs_block)
+        .wrap(ratatui::widgets::Wrap { trim: true })
+        .style(Style::default().bg(Color::Rgb(10, 100, 100)).fg(Color::White))
+        .scroll((app.logs_scroll_position as u16, 0));
+
+    frame.render_widget(logs_paragraph, popup_area);
+}

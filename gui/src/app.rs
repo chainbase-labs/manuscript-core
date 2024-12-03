@@ -82,6 +82,7 @@ pub struct App {
     pub job_manager: JobManager,
     action_sender: Option<mpsc::Sender<(String, String)>>,
     action_receiver: Option<mpsc::Receiver<(String, String)>>,
+    pub logs_scroll_position: usize,
 }
 
 #[derive(Debug, Clone,)]
@@ -206,6 +207,7 @@ impl Clone for App {
             job_manager: self.job_manager.clone(),
             action_sender: self.action_sender.clone(),
             action_receiver: None,
+            logs_scroll_position: self.logs_scroll_position,
         }
     }
 }
@@ -384,6 +386,7 @@ impl App {
             job_manager: job_manager,
             action_sender: Some(action_sender),
             action_receiver: Some(action_receiver),
+            logs_scroll_position: 0,
         };
 
         app
@@ -854,26 +857,13 @@ impl App {
                         // Jobs tab logic
                         if !self.jobs_status.is_empty() {
                             if self.show_job_options {
-                                let action = self.job_options[self.selected_job_option];
-                                if let Some(job) = self.jobs_status.get(self.selected_job_index) {
-                                    if let Some(action_sender) = &self.action_sender {
-                                        tokio::spawn({
-                                            let job_manager = self.job_manager.clone();
-                                            let job_name = job.name.clone();
-                                            let action = action.to_string();
-                                            let sender = action_sender.clone();
-                                            async move {
-                                                if let Ok(Some(content)) = job_manager.handle_action(&job_name, &action).await {
-                                                    let _ = sender.send((action, content)).await;
-                                                }
-                                            }
-                                        });
-                                    }
+                                if self.selected_job_option < self.job_options.len() - 1 {
+                                    self.selected_job_option += 1;
                                 }
-                                self.show_job_options = false;
                             } else {
-                                self.show_job_options = true;
-                                self.selected_job_option = 0;
+                                if self.selected_job_index < self.jobs_status.len() - 1 {
+                                    self.selected_job_index += 1;
+                                }
                             }
                         }
                     }
@@ -929,7 +919,11 @@ impl App {
                 if self.show_job_options {
                     self.show_job_options = false;
                 } else {
-                    if self.state == AppState::Started {
+                    if self.job_logs.is_some() {
+                        // Clear job logs when ESC is pressed
+                        self.job_logs = None;
+                        self.logs_scroll_position = 0;
+                    } else if self.state == AppState::Started {
                         // Cancel the setup process
                         self.should_cancel_setup = true;
                         self.state = AppState::Running;
@@ -1033,6 +1027,44 @@ impl App {
                 }
             }
             _ => {}
+        }
+
+        if self.job_logs.is_some() {
+            match key_event.code {
+                KeyCode::Esc => {
+                    self.job_logs = None;
+                    self.logs_scroll_position = 0;
+                }
+                KeyCode::Up => {
+                    if self.logs_scroll_position > 0 {
+                        self.logs_scroll_position -= 1;
+                    }
+                }
+                KeyCode::Down => {
+                    if let Some(logs) = &self.job_logs {
+                        let total_lines = logs.lines().count();
+                        if self.logs_scroll_position < total_lines.saturating_sub(1) {
+                            self.logs_scroll_position += 1;
+                        }
+                    }
+                }
+                KeyCode::PageUp => {
+                    if self.logs_scroll_position > visible_height {
+                        self.logs_scroll_position -= visible_height;
+                    } else {
+                        self.logs_scroll_position = 0;
+                    }
+                }
+                KeyCode::PageDown => {
+                    if let Some(logs) = &self.job_logs {
+                        let total_lines = logs.lines().count();
+                        let new_position = self.logs_scroll_position + visible_height;
+                        self.logs_scroll_position = new_position.min(total_lines.saturating_sub(1));
+                    }
+                }
+                _ => {}
+            }
+            return;
         }
     }
 
