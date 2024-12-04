@@ -21,9 +21,18 @@ pub struct AppConfig {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct NodeConfig {
+    pub job_manager_image_arm64: String,
+    pub hasura_image_arm64: String,
+    pub job_manager_image_amd64: String,
+    pub hasura_image_amd64: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct Settings {
     pub api: ApiConfig,
     pub app: AppConfig,
+    pub node: NodeConfig,
 }
 
 lazy_static! {
@@ -87,6 +96,32 @@ impl Settings {
             Err(e) => {
                 eprintln!("Failed to load settings: {}", e);
                 String::from("Chainbase Network [Unknown] [Unknown]")
+            }
+        }
+    }
+
+    pub fn get_docker_images() -> (String, String) {
+        match &*SETTINGS {
+            Ok(settings) => {
+                let is_arm = cfg!(target_arch = "aarch64");
+                if is_arm {
+                    (
+                        settings.node.job_manager_image_arm64.clone(),
+                        settings.node.hasura_image_arm64.clone(),
+                    )
+                } else {
+                    (
+                        settings.node.job_manager_image_amd64.clone(),
+                        settings.node.hasura_image_amd64.clone(),
+                    )
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to load settings: {}", e);
+                (
+                    "repository.chainbase.com/manuscript-node/manuscript-node:latest".to_string(),
+                    "repository.chainbase.com/manuscript-node/graphql-engine-amd64:latest".to_string(),
+                )
             }
         }
     }

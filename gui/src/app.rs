@@ -1068,57 +1068,12 @@ impl App {
         }
     }
 
-    // Add new method to generate initial SQL
     fn generate_initial_manuscript(&self) -> String {
         if let Some(chain) = self.chains.get(self.selected_chain_index) {
             if let Some(table_index) = self.selected_table_index {
-                if let Some(table_name) = chain.dataDictionary
-                    .get(table_index)
-                    .map(|(name, _)| name.as_str())
-                {
-                    let table_name = if table_name == "transactionLogs" {
-                        "transaction_logs"
-                    } else {
-                        table_name
-                    };
-                    let dataset_name = &chain.databaseName;
-                    return format!("name: demo
-specVersion: v1.0.0
-parallelism: 1
-
-sources:
-  - name: {}_{} 
-    type: dataset
-    dataset: {}.{}
-
-transforms:
-  - name: {}_{}_{}_transform
-    sql: >
-      Select * From {}_{}
-
-sinks:
-  - name: {}_{}_{}_sink
-    type: postgres
-    from: {}_{}_{}_transform
-    database: {}
-    schema: public
-    table: {}
-    primary_key: block_number
-    config:
-    host: postgres
-    port: 5432
-    username: postgres
-    password: postgres
-    graphqlPort: 8082",
-                        dataset_name, table_name,
-                        dataset_name, table_name,
-                        dataset_name, dataset_name, table_name,
-                        dataset_name, table_name,
-                        dataset_name, dataset_name, table_name,
-                        dataset_name, dataset_name, table_name,
-                        dataset_name,
-                        table_name
-                    );
+                if let Some((table_name, _)) = chain.dataDictionary.get(table_index) {
+                    let manuscript = self.job_manager.generate_initial_manuscript(&chain.databaseName, table_name);
+                    return manuscript;
                 }
             }
         }

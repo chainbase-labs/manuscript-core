@@ -1,7 +1,10 @@
-use std::{process::Command, path::PathBuf, io, collections::HashMap, collections::BTreeMap};
+use std::{process::Command, io};
 use webbrowser;
 use tokio::sync::mpsc;
 use tokio::time::Duration;
+use super::docker::{DOCKER_COMPOSE_TEMPLATE, JOB_CONFIG_TEMPLATE, MANUSCRIPT_TEMPLATE};
+use crate::config::Settings;
+use std::collections::HashSet;
 
 #[derive(Debug, Clone)]
 pub struct JobManager;
@@ -45,6 +48,9 @@ pub struct ManuscriptConfig {
     pub source: SourceConfig,
     pub transform: TransformConfig,
     pub sink: SinkConfig,
+    pub db_port: u16,
+    pub graphql_port: u16,
+    pub job_port: u16,
 }
 
 #[derive(Debug, Clone)]
@@ -208,7 +214,7 @@ impl JobManager {
             } else if cfg!(target_os = "linux") {
                 "linux"
             } else {
-                "windows"
+                "darwin"
             };
             format!(
                 "baseDir    = {}\nsystemInfo = {}\n",
@@ -245,38 +251,28 @@ impl JobManager {
                 }
             }
         }
+
+
+        let job_port = self.get_available_port(18080, 18090)
+        .unwrap_or(18080);
+
         
         // Create new job config content
-        let new_job_config = format!(
-            "\n[{}]\n\
-            baseDir     = {}/manuscripts\n\
-            name        = {}\n\
-            specVersion = {}\n\
-            parallelism = {}\n\
-            chain       = {}\n\
-            table       = {}\n\
-            database    = {}\n\
-            query       = {}\n\
-            sink        = {}\n\
-            port        = 8081\n\
-            dbPort      = {}\n\
-            dbUser      = {}\n\
-            dbPassword  = {}\n\
-            graphqlPort = 9080",
-            config.name,
-            home_dir.display(),
-            config.name,
-            config.spec_version,
-            config.parallelism,
-            config.source.chain,
-            config.source.table,
-            config.sink.database,
-            config.transform.sql,
-            config.sink.sink_type,
-            config.sink.config.port,
-            config.sink.config.username,
-            config.sink.config.password,
-        );
+        let new_job_config = JOB_CONFIG_TEMPLATE
+            .replace("{name}", &config.name)
+            .replace("{home_dir}", &home_dir.display().to_string())
+            .replace("{spec_version}", &config.spec_version)
+            .replace("{parallelism}", &config.parallelism.to_string())
+            .replace("{chain}", &config.source.chain)
+            .replace("{job_port}", &job_port.to_string())
+            .replace("{graphql_port}", &config.graphql_port.to_string())
+            .replace("{table}", &config.source.table)
+            .replace("{database}", &config.sink.database)
+            .replace("{query}", &config.transform.sql)
+            .replace("{sink_type}", &config.sink.sink_type)
+            .replace("{db_port}", &config.db_port.to_string())
+            .replace("{db_user}", &config.sink.config.username)
+            .replace("{db_password}", &config.sink.config.password);
 
         // Update or append the job configuration
         if let (Some(start), Some(end)) = (job_section_start, job_section_end) {
@@ -296,56 +292,29 @@ impl JobManager {
         std::fs::write(&config_path, updated_content)?;
 
         // Create and start docker-compose with the correct name
-        self.create_docker_compose(&job_dir, &config.name, &config.sink.database)?;
+        self.create_docker_compose(&job_dir, &config)?;
         self.start_docker_compose(&job_dir)?;
 
         Ok(())
     }
 
-    fn create_docker_compose(&self, job_dir: &std::path::Path, name: &str, database_name: &str) -> io::Result<()> {
-        let docker_compose_content = format!(
-            "version: '3.4'\n\
-name: {}\nservices:",
-            name
-        ) + &format!(
-            r#"
-  postgres:
-    image: postgres:16.4
-    ports:
-      - "15432:5432"
-    volumes:
-      - ./postgres_data:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_PASSWORD=${{POSTGRES_PASSWORD:-postgres}}
-      - POSTGRES_USER=${{POSTGRES_USER:-postgres}}
-      - POSTGRES_DB=${{POSTGRES_DB:-{}}}
-    networks:
-      - ms_network
-    restart: unless-stopped
+    fn create_docker_compose(&self, job_dir: &std::path::Path, config: &ManuscriptConfig) -> io::Result<()> {
+        let (mut job_manager_image, hasura_image) = Settings::get_docker_images();
 
-  jobmanager:
-    image: repository.chainbase.com/manuscript-node/manuscript-node:latest
-    networks:
-      - ms_network
-
-  hasura:
-    image: repository.chainbase.com/manuscript-node/graphql-engine-arm64:latest
-    ports:
-      - "9080:8080"
-    depends_on:
-      - postgres
-    environment:
-      HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:${{POSTGRES_PASSWORD:-postgres}}@postgres:5432/{}
-      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
-    networks:
-      - ms_network
-    restart: unless-stopped
-
-networks:
-  ms_network:"#,
-            database_name,
-            database_name
-        );
+        // TODO: solana support needs change the job_manager image
+        // Solana compatible with future needs to migrate to the refactored protocol.
+        if config.source.chain == "solana" {
+            job_manager_image = "repository.chainbase.com/manuscript-node/manuscript-solana:latest".to_string();
+        }
+        
+        let docker_compose_content = DOCKER_COMPOSE_TEMPLATE
+            .replace("{name}", &config.name)
+            .replace("{job_manager_image}", &job_manager_image)
+            .replace("{hasura_image}", &hasura_image)
+            .replace("{database}", &config.sink.database)
+            .replace("{db_port}", &config.db_port.to_string())
+            .replace("{graphql_port}", &config.graphql_port.to_string())
+            .replace("{job_port}", &config.job_port.to_string());
 
         std::fs::write(job_dir.join("docker-compose.yml"), docker_compose_content)?;
         Ok(())
@@ -408,6 +377,9 @@ networks:
             name: yaml["name"].as_str().unwrap_or("demo").to_string(),
             spec_version: yaml["specVersion"].as_str().unwrap_or("v1.0.0").to_string(),
             parallelism: yaml["parallelism"].as_u64().unwrap_or(1),
+            db_port: yaml["port"].as_u64().unwrap_or(15432) as u16,
+            graphql_port: yaml["graphqlPort"].as_u64().unwrap_or(19080) as u16,
+            job_port: yaml["port"].as_u64().unwrap_or(18080) as u16,
             source: SourceConfig {
                 name: source["name"].as_str().unwrap_or("").to_string(),
                 dataset_type: source["type"].as_str().unwrap_or("dataset").to_string(),
@@ -592,5 +564,77 @@ networks:
                 }
             }
         }
+    }
+
+    fn get_available_port(&self, start: u16, end: u16) -> io::Result<u16> {
+        // First check ports in manuscript_config.ini
+        let home_dir = dirs::home_dir()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found"))?;
+        let config_path = home_dir.join(".manuscript_config.ini");
+        
+        let mut used_ports = HashSet::new();
+        if config_path.exists() {
+            let content = std::fs::read_to_string(&config_path)?;
+            for line in content.lines() {
+                if line.contains("dbPort") || line.contains("graphqlPort") {
+                    if let Some(port_str) = line.split('=').nth(1) {
+                        if let Ok(port) = port_str.trim().parse::<u16>() {
+                            used_ports.insert(port);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check system ports using lsof command
+        if let Ok(output) = Command::new("lsof")
+            .args(["-nP", "-iTCP", "-sTCP:LISTEN"])
+            .output() 
+        {
+            let output_str = String::from_utf8_lossy(&output.stdout);
+            for line in output_str.lines().skip(1) { // Skip header line
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 9 {
+                    if let Some(port_str) = parts[8].split(':').last() {
+                        if let Ok(port) = port_str.trim_end_matches("(LISTEN)").parse::<u16>() {
+                            used_ports.insert(port);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Find first available port in range
+        for port in start..=end {
+            if !used_ports.contains(&port) {
+                return Ok(port);
+            }
+        }
+
+        Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!("No available ports in range {}-{}", start, end)
+        ))
+    }
+
+    pub fn generate_initial_manuscript(&self, dataset_name: &str, table_name: &str) -> String {
+        let table_name = if table_name == "transactionLogs" {
+            "transaction_logs"
+        } else {
+            table_name
+        };
+
+        // Get available ports
+        let db_port = self.get_available_port(15432, 15439)
+            .unwrap_or(15432);
+        let graphql_port = self.get_available_port(19080, 19090)
+            .unwrap_or(19080);
+
+        MANUSCRIPT_TEMPLATE
+            .replace("{name}", "demo")
+            .replace("{dataset_name}", dataset_name)
+            .replace("{table_name}", table_name)
+            .replace("{db_port}", &db_port.to_string())
+            .replace("{graphql_port}", &graphql_port.to_string())
     }
 }
