@@ -983,7 +983,6 @@ impl App {
                 self.current_tab = 2;
             }
             KeyCode::Char('e') => {
-                println!("111111");
                 if self.saved_manuscript.is_some() {
                     self.show_sql_window = true;
                     self.sql_input = self.saved_manuscript.clone().unwrap_or_default();

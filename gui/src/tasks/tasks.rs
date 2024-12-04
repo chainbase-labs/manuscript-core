@@ -2,7 +2,7 @@ use std::{process::Command, io};
 use webbrowser;
 use tokio::sync::mpsc;
 use tokio::time::Duration;
-use super::docker::{DOCKER_COMPOSE_TEMPLATE, JOB_CONFIG_TEMPLATE, MANUSCRIPT_TEMPLATE};
+use super::docker::{DOCKER_COMPOSE_TEMPLATE, JOB_CONFIG_TEMPLATE, MANUSCRIPT_TEMPLATE, MANUSCRIPT_SOLANA_TEMPLATE};
 use crate::config::Settings;
 use std::collections::HashSet;
 
@@ -28,6 +28,7 @@ pub enum JobState {
     Running,
     Pending,
     Failed,
+    NotStarted,
 }
 
 #[derive(Debug)]
@@ -519,7 +520,7 @@ impl JobManager {
                                 }
 
                                 let status = if !has_containers {
-                                    JobState::Failed
+                                    JobState::NotStarted
                                 } else if all_running { 
                                     JobState::Running 
                                 } else { 
@@ -630,7 +631,14 @@ impl JobManager {
         let graphql_port = self.get_available_port(19080, 19090)
             .unwrap_or(19080);
 
-        MANUSCRIPT_TEMPLATE
+        // TODO: solana support while moving to the refactored protocol
+        let manuscript = if dataset_name == "solana" {
+            MANUSCRIPT_SOLANA_TEMPLATE
+        } else {
+            MANUSCRIPT_TEMPLATE
+        };
+
+        manuscript
             .replace("{name}", "demo")
             .replace("{dataset_name}", dataset_name)
             .replace("{table_name}", table_name)

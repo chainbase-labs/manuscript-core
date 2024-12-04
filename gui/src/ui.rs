@@ -400,6 +400,7 @@ fn draw_jobs_status(app: &App) -> String {
             JobState::Running => "Running".green(),
             JobState::Pending => "Pending".yellow(),
             JobState::Failed => "Failed".red(),
+            JobState::NotStarted => "Not Started".dark_gray(),
         }));
     }
     status
@@ -623,6 +624,7 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &App, area: Rect) {
             JobState::Running => Style::default().fg(Color::Green),
             JobState::Pending => Style::default().fg(Color::Yellow),
             JobState::Failed => Style::default().fg(Color::Red),
+            JobState::NotStarted => Style::default().fg(Color::Yellow),
         };
 
         let is_selected = index == app.selected_job_index;
@@ -647,6 +649,7 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &App, area: Rect) {
                         JobState::Running => "Running",
                         JobState::Pending => "Pending",
                         JobState::Failed => "Failed",
+                        JobState::NotStarted => "Not Started",
                     }
                 ),
                 style
