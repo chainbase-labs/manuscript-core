@@ -2,7 +2,7 @@ use std::{process::Command, io};
 use webbrowser;
 use tokio::sync::mpsc;
 use tokio::time::Duration;
-use super::docker::{DOCKER_COMPOSE_TEMPLATE, JOB_CONFIG_TEMPLATE, MANUSCRIPT_TEMPLATE, MANUSCRIPT_SOLANA_TEMPLATE};
+use super::docker::{DOCKER_COMPOSE_TEMPLATE, JOB_CONFIG_TEMPLATE, MANUSCRIPT_TEMPLATE, DOCKER_COMPOSE_TEMPLATE_SOLANA};
 use crate::config::Settings;
 use std::collections::HashSet;
 
@@ -307,8 +307,14 @@ impl JobManager {
         if config.source.chain == "solana" {
             job_manager_image = "repository.chainbase.com/manuscript-node/manuscript-solana:latest".to_string();
         }
+
+        let template = if config.source.chain == "solana" {
+            DOCKER_COMPOSE_TEMPLATE_SOLANA
+        } else {
+            DOCKER_COMPOSE_TEMPLATE
+        };
         
-        let docker_compose_content = DOCKER_COMPOSE_TEMPLATE
+        let docker_compose_content = template
             .replace("{name}", &config.name)
             .replace("{job_manager_image}", &job_manager_image)
             .replace("{hasura_image}", &hasura_image)
@@ -633,7 +639,7 @@ impl JobManager {
 
         // TODO: solana support while moving to the refactored protocol
         let manuscript = if dataset_name == "solana" {
-            MANUSCRIPT_SOLANA_TEMPLATE
+            DOCKER_COMPOSE_TEMPLATE_SOLANA
         } else {
             MANUSCRIPT_TEMPLATE
         };

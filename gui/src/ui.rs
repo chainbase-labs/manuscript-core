@@ -212,7 +212,8 @@ fn draw_chains_block(frame: &mut ratatui::Frame, app: &App, area: Rect) {
     let visible_height = area.height as usize - 2;
     let chains_block = Block::bordered()
         .border_set(border::THICK)
-        .title_top(" Omnichain ");
+        .title_top(" Omnichain ")
+        .title_alignment(Alignment::Center);
 
     let chain_names: Vec<ListItem> = app.filtered_chains
         .iter()
@@ -319,7 +320,7 @@ fn create_chain_list_item<'a>(app: &'a App, chain: &'a crate::app::Chain, index:
         Line::from(vec![
             format!("{:<3}⟠ {:<25}", index, chain.name).bold().white().bg(Color::DarkGray).into(),
             format!("{:<10}", chain.ticker).bold().white().bg(Color::DarkGray).into(),
-            format!("{:<10}", if chain.status == "Online" { "⬤" } else if chain.status == "Offline" { "⬤" } else { "◑" }).bold()
+            format!("{:<10}", if chain.status == "Online" { "↿⇂5G/H" } else if chain.status == "Offline" { "↿⇂0" } else { "◑" }).bold()
                 .style(if chain.status == "Online" && chain.time_ago.contains("min") { 
                     Style::default().fg(Color::Green).bg(Color::DarkGray)
                 } else if chain.status == "Offline" {
@@ -347,7 +348,7 @@ fn create_chain_list_item<'a>(app: &'a App, chain: &'a crate::app::Chain, index:
                 } else { 
                     Style::default().fg(Color::Yellow) 
                 }).into(),
-            format!("{:<10}", if chain.status == "Online" { "⬤" } else if chain.status == "Offline" { "⬤" } else { "◑" }).bold()
+            format!("{:<10}", if chain.status == "Online" { "↿⇂5G/H" } else if chain.status == "Offline" { "↿⇂0" } else { "◑" }).bold()
                 .style(if chain.status == "Online" && chain.time_ago.contains("min") { 
                     Style::default().fg(Color::Green)
                 } else if chain.status == "Offline" {
