@@ -36,7 +36,7 @@ pub struct Settings {
 }
 
 lazy_static! {
-    static ref SETTINGS: Result<Settings, ConfigError> = Settings::new();
+    pub static ref SETTINGS: Result<Settings, ConfigError> = Settings::new();
 }
 
 impl Settings {
@@ -122,6 +122,16 @@ impl Settings {
                     "repository.chainbase.com/manuscript-node/manuscript-node:latest".to_string(),
                     "repository.chainbase.com/manuscript-node/graphql-engine-amd64:latest".to_string(),
                 )
+            }
+        }
+    }
+
+    pub fn get_chainbase_url() -> String {
+        match &*SETTINGS {
+            Ok(settings) => settings.api.base_url.clone(),
+            Err(e) => {
+                eprintln!("Failed to load settings: {}", e);
+                String::from("https://api.chainbase.com")
             }
         }
     }

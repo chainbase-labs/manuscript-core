@@ -15,6 +15,9 @@ use crate::prerun::PreRun;
 use crate::config::Settings;
 use crate::tasks::JobManager;
 use crate::tasks::tasks::{JobsCommand, JobsUpdate, JobStatus};
+use aes_gcm::{Aes128Gcm, Key, Nonce};
+use aes_gcm::aead::{Aead, KeyInit};
+use base64;
 
 #[derive(Debug)]
 pub struct App {
@@ -69,7 +72,7 @@ pub struct App {
     pub show_warning: bool,
     pub show_deploy_options: bool,
     pub selected_deploy_option: usize,
-    pub deploy_options: Vec<(String, bool)>, // (option name, is_enabled)
+    pub deploy_options: Vec<(String, bool)>,
     pub transformed_sql: Option<String>,
     pub jobs_status: Vec<JobStatus>,
     jobs_monitor_sender: Option<mpsc::Sender<JobsCommand>>,
@@ -318,6 +321,10 @@ impl App {
 
         let job_options = vec!["edit", "logs", "start", "stop", "graphql", "delete"];
         
+        let mut pre_run = PreRun::new();
+        let (un, pw) = App::fetch_and_decrypt_credentials().await;
+        pre_run.set_auth(un, pw);
+
         let app = App {
             chains: chains.clone(),
             selected_chain_index: 0,
@@ -340,7 +347,7 @@ impl App {
             sql_sender: Some(sql_sender),
             sql_receiver: Some(sql_receiver),
             sql_timer: 0,
-            pre_run: PreRun::new(),
+            pre_run,
             debug_result: None,
             docker_setup_in_progress: false,
             docker_setup_timer: 0,
@@ -554,7 +561,7 @@ impl App {
             return;
         }
 
-        let total_duration = 600;
+        let total_duration = 200;
         self.progress1 = (self.docker_setup_timer as f64 * 100.0 / total_duration as f64).min(100.0);
         
         if self.progress1 >= 100.0 {
@@ -1223,11 +1230,35 @@ impl App {
             }
         }
     }
+
+    async fn fetch_and_decrypt_credentials() -> (String, String) {
+        let response = reqwest::get(format!("{}/api/v1/metadata/np", Settings::get_chainbase_url()))
+            .await
+            .expect("Failed to fetch metadata")
+            .json::<HashMap<String, String>>()
+            .await
+            .expect("Failed to parse JSON response");
+
+        let un = response.get("un").cloned().unwrap_or_else(|| "".to_string());
+        let encrypted_pw = response.get("pw").cloned().unwrap_or_else(|| "".to_string());
+        let pw = App::decrypt_aes(&encrypted_pw).expect("Failed to decrypt password");
+
+        (un, pw)
+    }
+
+    fn decrypt_aes(encrypted_text: &str) -> Result<String, Box<dyn std::error::Error>> {
+        let k: &str = "a1b2c3d4e5f6g7h8";
+        let key = Key::<Aes128Gcm>::from_slice(k.as_bytes());
+        let decoded = base64::decode(encrypted_text)?;
+        let (nonce, ciphertext) = decoded.split_at(12);
+    
+        let cipher = Aes128Gcm::new(key);
+        let plaintext = cipher.decrypt(Nonce::from_slice(nonce), ciphertext).map_err(|_| "Failed to decrypt password")?;
+        Ok(String::from_utf8(plaintext).map_err(|_| "Failed to convert plaintext to string")?)
+    }
 }
 
-const GAUGE1_COLOR: Color = tailwind::RED.c800;
 const CUSTOM_LABEL_COLOR: Color = tailwind::SLATE.c200;
-const GAUGE2_COLOR: Color = tailwind::GREEN.c800;
 
 #[derive(Debug, Deserialize)]
 struct Response {

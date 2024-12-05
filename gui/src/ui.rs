@@ -749,6 +749,7 @@ fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
             let gauge_chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
+                    Constraint::Length(0),
                     Constraint::Length(1),
                     Constraint::Length(1),
                     Constraint::Length(2),  
@@ -764,7 +765,7 @@ fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
                     Style::new().italic().bold().fg(CUSTOM_LABEL_COLOR),
                 );
                 let gauge = Gauge::default()
-                    .block(Block::default().padding(Padding::horizontal(1)))
+                    .block(Block::default().padding(Padding::horizontal(0)))
                     .gauge_style(GAUGE2_COLOR)
                     .ratio(app.progress1 / 100.0)
                     .label(label);
@@ -775,7 +776,7 @@ fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
             let docker_status = if app.docker_setup_in_progress {
                 format!("Docker setup in progress... ({} seconds)", app.docker_setup_timer / 10)
             } else {
-                "🏄🏻 Manuscript console: Debug your manuscript before deploying it locally or to the network.".to_string()
+                format!("🏄🏻 Manuscript console: Debug your manuscript before deploying it locally or to the network.")
             };
 
             let docker_status_widget = Paragraph::new(Text::from(
@@ -785,20 +786,29 @@ fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
             .block(Block::default().padding(Padding::horizontal(1)));
             frame.render_widget(docker_status_widget, gauge_chunks[2]);
 
+            // Add a tips message
+            let tips_message = "📣 If you are using substreams with solana, it will automatically synchronize all tables.  ";
+            let tips_widget = Paragraph::new(Text::from(
+                Span::styled(tips_message, Style::default().fg(Color::Yellow))
+            ))
+            .alignment(Alignment::Center)
+            .block(Block::default().padding(Padding::horizontal(1)));
+            frame.render_widget(tips_widget, gauge_chunks[3]);
+
             // 3. Setup progress
             let steup_msg_lines = app.get_setup_progress_lines();
             let progress_widget = Paragraph::new(steup_msg_lines)
                 .alignment(Alignment::Left)
                 .wrap(ratatui::widgets::Wrap { trim: true })
-                .block(Block::default().padding(Padding::horizontal(4)));
-            frame.render_widget(progress_widget, gauge_chunks[3]);
+                .block(Block::default().padding(Padding::horizontal(3)));
+            frame.render_widget(progress_widget, gauge_chunks[4]);
 
             // 4. Setup progress msg
             let paragraph_msg = Paragraph::new(app.get_setup_progress_msg())
                 .gray()
                 .block(Block::default().padding(Padding::horizontal(4)))
                 .scroll((app.vertical_scroll as u16, 0));
-            frame.render_widget(paragraph_msg, gauge_chunks[4]);
+            frame.render_widget(paragraph_msg, gauge_chunks[5]);
 
             frame.render_stateful_widget(
                 Scrollbar::new(ScrollbarOrientation::VerticalRight)
