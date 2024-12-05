@@ -2,7 +2,7 @@ use std::{process::Command, io};
 use webbrowser;
 use tokio::sync::mpsc;
 use tokio::time::Duration;
-use super::docker::{DOCKER_COMPOSE_TEMPLATE, JOB_CONFIG_TEMPLATE, MANUSCRIPT_TEMPLATE, DOCKER_COMPOSE_TEMPLATE_SOLANA};
+use super::docker::{DOCKER_COMPOSE_TEMPLATE, DOCKER_COMPOSE_TEMPLATE_SOLANA, JOB_CONFIG_TEMPLATE, MANUSCRIPT_TEMPLATE, MANUSCRIPT_TEMPLATE_SOLANA};
 use crate::config::Settings;
 use std::collections::HashSet;
 
@@ -639,7 +639,7 @@ impl JobManager {
 
         // TODO: solana support while moving to the refactored protocol
         let manuscript = if dataset_name == "solana" {
-            DOCKER_COMPOSE_TEMPLATE_SOLANA
+            MANUSCRIPT_TEMPLATE_SOLANA
         } else {
             MANUSCRIPT_TEMPLATE
         };

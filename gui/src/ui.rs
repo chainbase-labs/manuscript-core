@@ -8,6 +8,7 @@ use ratatui::{
 use crate::app::{App, AppState, SetupState};
 use crate::tasks::JobState;
 use crate::config::Settings;
+use sysinfo::System;
 
 
 const CUSTOM_LABEL_COLOR: Color = Color::White;
@@ -157,15 +158,28 @@ fn draw_status_bar(frame: &mut ratatui::Frame) {
     let num_blocks = ((now / 1500) % 5 + 1) as usize;
     let blocks = "▊".repeat(num_blocks) + &" ".repeat(5 - num_blocks);
     
+    // Get system memory info
+    let sys = System::new_all();
+    let used_mem = sys.used_memory() / 1024; // Convert to MB
+    let total_mem = sys.total_memory() / 1024;
+    let mem_percent = (used_mem as f64 / total_mem as f64 * 100.0) as u64;
+    
+    let cpu_percent = sys.global_cpu_usage() as u64;
+    
     let text = vec![
         Span::styled(Settings::get_status_text(), Style::default().bold()),
+        Span::raw(" | "),
+        Span::styled(format!("CPU: {}%", cpu_percent), Style::default().fg(Color::Yellow)),
+        Span::raw(" | "),
+        Span::styled(format!("MEM: {}%", mem_percent), Style::default().fg(Color::Cyan)),
+        Span::raw(" | "),
         Span::styled(blocks, Style::default().fg(Color::Green))
     ];
     
     let status_text = Paragraph::new(Line::from(text)).alignment(Alignment::Right);
     frame.render_widget(
         status_text,
-        Rect::new(frame.area().width - 45, 1, 43, 1),
+        Rect::new(frame.area().width - 72, 1, 70, 1),
     );
 }
 
