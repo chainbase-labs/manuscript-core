@@ -151,16 +151,11 @@ fn draw_sql_popup(frame: &mut ratatui::Frame, app: &App) {
 }
 
 fn draw_status_bar(frame: &mut ratatui::Frame) {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
-    let num_blocks = ((now / 1500) % 5 + 1) as usize;
-    let blocks = "▊".repeat(num_blocks) + &" ".repeat(5 - num_blocks);
+    let blocks = "▃ ▅ ▇";
     
     // Get system memory info
     let sys = System::new_all();
-    let used_mem = sys.used_memory() / 1024; // Convert to MB
+    let used_mem = sys.used_memory() / 1024;
     let total_mem = sys.total_memory() / 1024;
     let mem_percent = (used_mem as f64 / total_mem as f64 * 100.0) as u64;
     
@@ -297,12 +292,14 @@ fn draw_network_monitoring(frame: &mut ratatui::Frame, area: Rect) {
         compute_history[i] = if compute_val < 1 { '⣴' } else { '⣤' };
     }
 
-    let cpu_power = 79.0;
-    let power_threshold = (cpu_power / 100.0 * window_size as f64) as usize;
+    let cpu_power = 59.2;
+    let storage_power = 17.0;
+    let storage_total = "12PB";
 
-    let traffic_line = "━".repeat(area.width as usize - 20);
-    let compute_line = "━".repeat(area.width as usize - 21);
-    let cpu_line = "━".repeat(area.width as usize - 21);
+    let traffic_line = "╌".repeat(area.width as usize - 20);
+    let compute_line = "╌".repeat(area.width as usize - 19);
+    let cpu_line = "╌".repeat(area.width as usize - 17);
+    let storage_line = "╌".repeat(area.width as usize - 15);
 
     let hints_text = Text::from(vec![
         Line::from(vec![
@@ -314,34 +311,63 @@ fn draw_network_monitoring(frame: &mut ratatui::Frame, area: Rect) {
         Line::from("⣿".repeat(window_size)).fg(Color::Rgb(217, 98, 109)),
         Line::from("⣿".repeat(window_size)).fg(Color::Rgb(140, 60, 70)),
         Line::default(),
+
         Line::from(vec![
             Span::styled("Pro Threads:", Style::default().fg(Color::White)),
             Span::styled(compute_line, Style::default().fg(Color::DarkGray)),
-            Span::styled(" 1.1K/m", Style::default().fg(Color::Green)),
+            Span::styled(" 3K/m", Style::default().fg(Color::Green)),
         ]),
         Line::from(compute_history.iter().collect::<String>()).fg(Color::Rgb(140, 200, 140)),
         Line::from("⣿".repeat(window_size)).fg(Color::Rgb(70, 100, 70)),
+
         Line::default(),
         Line::from(vec![
-            Span::styled("Cpu Power:", Style::default().fg(Color::White)),
+            Span::styled("Tol Power:", Style::default().fg(Color::White)),
             Span::styled(cpu_line, Style::default().fg(Color::DarkGray)),
             Span::styled(format!("{:.1}%", cpu_power), Style::default().fg(Color::Green)),
         ]),
         Line::from({
             let mut spans = Vec::new();
             for i in 0..window_size {
-                let progress = i as f64 / power_threshold as f64;
-                let r = (0x5e as f64 + ((0xef - 0x5e) as f64 * progress)) as u8;
-                let g = (0x2d as f64 + ((0x53 - 0x2d) as f64 * progress)) as u8;
-                let b = (0x28 as f64 + ((0x6b - 0x28) as f64 * progress)) as u8;
-                spans.push(Span::styled("■", Style::default().fg(Color::Rgb(r, g, b))));
+                let progress = i as f64 / 9 as f64;
+                let r = (0x10 as f64 + ((0x20 - 0x10) as f64 * progress)) as u8;
+                let g = (0x40 as f64 + ((0x60 - 0x40) as f64 * progress)) as u8;
+                let b = (0x10 as f64 + ((0x20 - 0x10) as f64 * progress)) as u8;
+                if i as f64 / window_size as f64 > cpu_power / 100.0 {
+                    spans.push(Span::styled("■", Style::default().fg(Color::Rgb(32, 32, 32))));
+                } else {
+                    spans.push(Span::styled("■", Style::default().fg(Color::Rgb(r, g, b))));
+                }
             }
             Line::from(spans)
         }),
+
+        Line::default(),
+        Line::from(vec![
+            Span::styled("Storage:", Style::default().fg(Color::White)),
+            Span::styled(storage_line, Style::default().fg(Color::DarkGray)),
+            Span::styled(format!("{}", storage_total), Style::default().fg(Color::Green)),
+        ]),
+        Line::from({
+            let mut spans = Vec::new();
+            for i in 0..window_size {
+                let progress = i as f64 / 9 as f64;
+                let r = (0x10 as f64 + ((0x20 - 0x10) as f64 * progress)) as u8;
+                let g = (0x40 as f64 + ((0x60 - 0x40) as f64 * progress)) as u8;
+                let b = (0x10 as f64 + ((0x20 - 0x10) as f64 * progress)) as u8;
+                if i as f64 / window_size as f64 > storage_power / 100.0 {
+                    spans.push(Span::styled("■", Style::default().fg(Color::Rgb(32, 32, 32))));
+                } else {
+                    spans.push(Span::styled("■", Style::default().fg(Color::Rgb(r, g, b))));
+                }
+            }
+            Line::from(spans)
+        }),
+
     ]);
 
     let hints_block = Block::bordered()
-        .title(" System Resources ")
+        .title(" Network Resources ")
         .title_alignment(Alignment::Center)
         .border_set(border::THICK);
     
