@@ -1,21 +1,23 @@
 use std::{io, collections::HashMap, time::Duration, cell::RefCell};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::DefaultTerminal;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use reqwest;
-use serde_json::json;
-use reqwest::header::{HeaderMap, HeaderValue};
 use tokio::sync::mpsc;
-use ratatui::style::{Style, Color,palette::tailwind, Stylize};
+use ratatui::style::{Style, Color,palette::tailwind};
 use ratatui::text::{Line, Span, Text};
-use ratatui::layout::{Alignment, Constraint, Layout, Rect};
-use ratatui::buffer::Buffer;
-use ratatui::widgets::{Gauge, Widget,block::Title,Block,Borders, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState};
-use ratatui::symbols::scrollbar;
-use std::time::{Instant};
+use ratatui::layout::Alignment;
+use ratatui::widgets::{block::Title,Block,Borders, Padding};
+use std::time::Instant;
 use ratatui::symbols::Marker;
 use crate::ui;
-use crate::setup::DockerManager;
+use crate::prerun::PreRun;
+use crate::config::Settings;
+use crate::tasks::JobManager;
+use crate::tasks::tasks::{JobsCommand, JobsUpdate, JobStatus};
+use aes_gcm::{Aes128Gcm, Key, Nonce};
+use aes_gcm::aead::{Aead, KeyInit};
+use base64;
 
 #[derive(Debug)]
 pub struct App {
@@ -32,7 +34,7 @@ pub struct App {
     pub show_sql_window: bool,
     pub sql_cursor_position: usize,
     pub sql_result: Option<String>,
-    pub saved_sql: Option<String>,
+    pub saved_manuscript: Option<String>,
     pub sql_executing: bool,
     pub sql_error: Option<String>,
     pub sql_columns: Vec<Column>,
@@ -40,7 +42,7 @@ pub struct App {
     sql_sender: Option<mpsc::Sender<Result<serde_json::Value, String>>>,
     sql_receiver: Option<mpsc::Receiver<Result<serde_json::Value, String>>>,
     pub sql_timer: u64, 
-    pub docker_manager: DockerManager,
+    pub pre_run: PreRun,
     pub debug_result: Option<String>,
     pub docker_setup_in_progress: bool,
     pub docker_setup_timer: u64,
@@ -70,8 +72,22 @@ pub struct App {
     pub show_warning: bool,
     pub show_deploy_options: bool,
     pub selected_deploy_option: usize,
-    pub deploy_options: Vec<(String, bool)>, // (option name, is_enabled)
+    pub deploy_options: Vec<(String, bool)>,
     pub transformed_sql: Option<String>,
+    pub jobs_status: Vec<JobStatus>,
+    jobs_monitor_sender: Option<mpsc::Sender<JobsCommand>>,
+    jobs_monitor_receiver: Option<mpsc::Receiver<JobsUpdate>>,
+    pub selected_job_index: usize,
+    pub show_job_options: bool,
+    pub selected_job_option: usize,
+    pub job_options: Vec<&'static str>,
+    pub job_logs: Option<String>,
+    pub job_manager: JobManager,
+    action_sender: Option<mpsc::Sender<(String, String)>>,
+    action_receiver: Option<mpsc::Receiver<(String, String)>>,
+    pub logs_scroll_position: usize,
+    pub show_help: bool,
+    pub network_status: NetworkStatus,
 }
 
 #[derive(Debug, Clone,)]
@@ -145,18 +161,18 @@ impl Clone for App {
             show_sql_window: self.show_sql_window,
             sql_cursor_position: self.sql_cursor_position,
             sql_result: self.sql_result.clone(),
-            saved_sql: self.saved_sql.clone(),
+            saved_manuscript: self.saved_manuscript.clone(),
             sql_executing: self.sql_executing,
             sql_error: self.sql_error.clone(),
             sql_columns: self.sql_columns.clone(),
             sql_data: self.sql_data.clone(),
             sql_sender: self.sql_sender.clone(),
-            sql_receiver: None,  // Don't clone the receiver
+            sql_receiver: None,
             sql_timer: self.sql_timer,
-            docker_manager: self.docker_manager.clone(),
+            pre_run: self.pre_run.clone(),
             debug_result: self.debug_result.clone(),
             docker_setup_in_progress: self.docker_setup_in_progress,
-            docker_setup_timer: self.docker_setup_timer,  // Initialize the timer
+            docker_setup_timer: self.docker_setup_timer,
             setup_progress: self.setup_progress,
             setup_state: self.setup_state.clone(),
             state: self.state,
@@ -185,6 +201,20 @@ impl Clone for App {
             selected_deploy_option: self.selected_deploy_option,
             deploy_options: self.deploy_options.clone(),
             transformed_sql: self.transformed_sql.clone(),
+            jobs_status: self.jobs_status.clone(),
+            jobs_monitor_sender: self.jobs_monitor_sender.clone(),
+            jobs_monitor_receiver: None,
+            selected_job_index: self.selected_job_index,
+            show_job_options: self.show_job_options,
+            selected_job_option: self.selected_job_option,
+            job_options: self.job_options.clone(),
+            job_logs: self.job_logs.clone(),
+            job_manager: self.job_manager.clone(),
+            action_sender: self.action_sender.clone(),
+            action_receiver: None,
+            logs_scroll_position: self.logs_scroll_position,
+            show_help: self.show_help,
+            network_status: self.network_status.clone(),
         }
     }
 }
@@ -209,14 +239,25 @@ pub struct Chain {
     pub lastUpdate: String,
     pub time_ago: String,
     pub databaseName: String,
-    pub dataDictionary: HashMap<String, Vec<DataDictionaryItem>>,
+    pub dataDictionary: Vec<(String, Vec<DataDictionaryItem>)>,
+    pub example: Option<HashMap<String, Vec<serde_json::Value>>>,
+    pub overview: Option<String>,
+    pub net: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct DataDictionaryItem {
-    pub name: String,
-    pub dataType: String,
-    pub description: String,
+pub struct DataDictionary {
+    #[serde(flatten)]
+    tables: HashMap<String, Vec<DataDictionaryItem>>,
+}
+
+impl IntoIterator for DataDictionary {
+    type Item = (String, Vec<DataDictionaryItem>);
+    type IntoIter = std::collections::hash_map::IntoIter<String, Vec<DataDictionaryItem>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.tables.into_iter()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -237,9 +278,6 @@ pub enum SetupStepStatus {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SetupStep {
-    // CheckingDocker,
-    // PullingImage,
-    // StartingContainer,
     ParseManuscript,
     SubmitSQLTask,
     WaitingForExecutionResults,
@@ -248,9 +286,6 @@ pub enum SetupStep {
 impl SetupStep {
     fn as_str(&self) -> &'static str {
         match self {
-            // SetupStep::CheckingDocker => "Checking Docker installation",
-            // SetupStep::PullingImage => "Pulling required images",
-            // SetupStep::StartingContainer => "Starting container",
             SetupStep::ParseManuscript => "Parse manuscript yaml",
             SetupStep::SubmitSQLTask => "Submit sql task",
             SetupStep::WaitingForExecutionResults => "Waiting for execution results",
@@ -258,22 +293,52 @@ impl SetupStep {
     }
 }
 
+#[derive(Debug, Deserialize, Clone, Default)]
+pub struct NetworkStatus {
+    pub cpu: String,
+    pub storage: String,
+    pub net: String,
+    pub thread: String,
+}
+
 impl App {
     pub async fn new() -> Self {
         let (sql_sender, sql_receiver) = mpsc::channel(32);
         let (update_sender, update_receiver) = mpsc::channel(32);
-
+        let (jobs_command_tx, jobs_command_rx) = mpsc::channel(32);
+        let (jobs_update_tx, jobs_update_rx) = mpsc::channel(32);
+        let (action_sender, action_receiver) = mpsc::channel(32);
+        
         let mut signal1 = SinSignal::new(0.2, 3.0, 18.0);
         let mut signal2 = SinSignal::new(0.1, 2.0, 10.0);
         let data1 = signal1.by_ref().take(200).collect::<Vec<(f64, f64)>>();
         let data2 = signal2.by_ref().take(200).collect::<Vec<(f64, f64)>>();
         
-        let chains = match App::fetch_chains().await {
+        let (chains, network_status) = match App::fetch_chains().await {
             Ok(data) => data,
-            Err(_) => Vec::new()
+            Err(e) => {
+                eprintln!("Failed to fetch chains: {}", e);
+                (Vec::new(), NetworkStatus::default())
+            }
         };
 
-        App {
+        let job_manager = JobManager::new();
+        
+        // Create a clone of job_manager for the monitor task
+        let monitor_job_manager = job_manager.clone();
+        
+        // Start the jobs monitor in a separate task
+        tokio::spawn(async move {
+            monitor_job_manager.jobs_monitor(jobs_command_rx, jobs_update_tx).await;
+        });
+
+        let job_options = vec!["edit", "logs", "start", "stop", "graphql", "delete"];
+        
+        let mut pre_run = PreRun::new();
+        let (un, pw) = App::fetch_and_decrypt_credentials().await;
+        pre_run.set_auth(un, pw);
+
+        let app = App {
             chains: chains.clone(),
             selected_chain_index: 0,
             selected_table_index: None,
@@ -287,25 +352,25 @@ impl App {
             show_sql_window: false,
             sql_cursor_position: 0,
             sql_result: None,
-            saved_sql: None,
+            saved_manuscript: None,
             sql_executing: false,
             sql_error: None,
             sql_columns: Vec::new(),
             sql_data: Vec::new(),
             sql_sender: Some(sql_sender),
             sql_receiver: Some(sql_receiver),
-            sql_timer: 0,  // Initialize timer
-            docker_manager: DockerManager::new(),
+            sql_timer: 0,
+            pre_run,
             debug_result: None,
             docker_setup_in_progress: false,
-            docker_setup_timer: 0,  // Initialize the timer
+            docker_setup_timer: 0,
             setup_progress: 0.0,
             setup_state: SetupState::NotStarted,
             state: AppState::default(),
             progress_columns: 0,
             progress1: 0.0,
             progress_lines: RefCell::new(Vec::new()),
-            should_cancel_setup: false,  // Initialize the new field
+            should_cancel_setup: false,
             update_sender: Some(update_sender),
             update_receiver: Some(update_receiver),
             current_setup_step: None,
@@ -330,20 +395,36 @@ impl App {
                 ("Network (Coming Soon)".to_string(), false),
             ],
             transformed_sql: None,
-        }
+            jobs_status: Vec::new(),
+            jobs_monitor_sender: Some(jobs_command_tx),
+            jobs_monitor_receiver: Some(jobs_update_rx),
+            selected_job_index: 0,
+            show_job_options: false,
+            selected_job_option: 0,
+            job_options: job_options,
+            job_logs: None,
+            job_manager: job_manager,
+            action_sender: Some(action_sender),
+            action_receiver: Some(action_receiver),
+            logs_scroll_position: 0,
+            show_help: false,
+            network_status,
+        };
+
+        app
     }
 
-    async fn fetch_chains() -> Result<Vec<Chain>, reqwest::Error> {
-        let url = "https://api.chainbase.com/api/v1/metadata/network_chains";
+    async fn fetch_chains() -> Result<(Vec<Chain>, NetworkStatus), reqwest::Error> {
+        let url = Settings::get_chains_url();
 
         match reqwest::get(url).await?.json::<Response>().await {
             Ok(response) => {
-                Ok(response.graphData.into_iter()
+                let chains = response.graphData.into_iter()
                     .map(|graph_data| {
-                        let mut tables = HashMap::new();
-                        tables.insert("blocks".to_string(), graph_data.chain.dataDictionary.blocks);
-                        tables.insert("transactions".to_string(), graph_data.chain.dataDictionary.transactions);
-                        tables.insert("transactionLogs".to_string(), graph_data.chain.dataDictionary.transactionLogs);
+                        let mut tables: Vec<(String, Vec<DataDictionaryItem>)> = graph_data.chain.dataDictionary
+                            .into_iter()
+                            .collect();
+                        tables.sort_by(|a, b| a.0.cmp(&b.0));
                         
                         let time_ago = Self::calculate_time_diff(&graph_data.chain.lastUpdate);
                         
@@ -355,13 +436,17 @@ impl App {
                             databaseName: graph_data.chain.databaseName,
                             time_ago,
                             dataDictionary: tables,
+                            example: graph_data.chain.example,
+                            overview: graph_data.chain.overview,
+                            net: graph_data.chain.net,
                         }
                     })
-                    .collect())
+                    .collect();
+                Ok((chains, response.status))
             }
             Err(e) => {
-                println!("Failed to parse JSON response: {:?}", e);
-                Err(e)
+                eprintln!("Fatal error: Failed to parse JSON response: {:?}", e);
+                std::process::exit(1);
             }
         }
     }
@@ -383,150 +468,6 @@ impl App {
         }
     }
 
-    // TODO: Remove this mock data once we have real data
-    fn mock_blocks_data() -> ExampleData {
-        ExampleData {
-            columns: vec![
-                Column { name: "block_number".to_string(), type_: "bigint".to_string() },
-                Column { name: "hash".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "parent_hash".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "nonce".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "sha3_uncles".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "logs_bloom".to_string(), type_: "varchar".to_string() },
-                Column { name: "transactions_root".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "state_root".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "receipts_root".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "miner".to_string(), type_: "varchar(42)".to_string() },
-                Column { name: "difficulty".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "total_difficulty".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "size".to_string(), type_: "bigint".to_string() },
-                Column { name: "extra_data".to_string(), type_: "varchar".to_string() },
-                Column { name: "gas_limit".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "gas_used".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "block_timestamp".to_string(), type_: "timestamp".to_string() },
-                Column { name: "transaction_count".to_string(), type_: "bigint".to_string() },
-                Column { name: "base_fee_per_gas".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "withdrawals_root".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "__pk".to_string(), type_: "integer".to_string() },
-            ],
-            data: vec![
-                vec![
-                    json!(0),
-                    json!("0x81005434635456a16f74ff7023fbe0bf423abbc8a8deb093ffff455c0ad3b741"),
-                    json!("0x0000000000000000000000000000000000000000000000000000000000000000"),
-                    json!("0x0000000000000000"),
-                    json!("0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"),
-                    json!("0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-                    json!("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"),
-                    json!("0x3f86b09b43e3e49a41fc20a07579b79eba044253367817d5c241d23c0e2bc5c9"),
-                    json!("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"),
-                    json!("0x0000000000000000000000000000000000000000"),
-                    json!("0"),
-                    json!("0"),
-                    json!(505),
-                    json!("0x"),
-                    json!("0"),
-                    json!("0"),
-                    json!("2023-03-24 10:19:23.000"),
-                    json!(0),
-                    json!(null),
-                    json!(null),
-                    json!(0)
-                ],
-            ],
-        }
-    }
-
-    fn mock_transaction_logs_data() -> ExampleData {
-        ExampleData {
-            columns: vec![
-                Column { name: "block_number".to_string(), type_: "bigint".to_string() },
-                Column { name: "block_timestamp".to_string(), type_: "timestamp".to_string() },
-                Column { name: "transaction_hash".to_string(), type_: "varchar".to_string() },
-                Column { name: "transaction_index".to_string(), type_: "integer".to_string() },
-                Column { name: "log_index".to_string(), type_: "integer".to_string() },
-                Column { name: "address".to_string(), type_: "varchar".to_string() },
-                Column { name: "data".to_string(), type_: "varbinary".to_string() },
-                Column { name: "topic0".to_string(), type_: "varchar".to_string() },
-                Column { name: "topic1".to_string(), type_: "varchar".to_string() },
-                Column { name: "topic2".to_string(), type_: "varchar".to_string() },
-                Column { name: "topic3".to_string(), type_: "varchar".to_string() },
-                Column { name: "pk".to_string(), type_: "integer".to_string() },
-            ],
-            data: vec![
-                vec![
-                    json!(1),
-                    json!("2023-03-24 17:30:15.000"),
-                    json!("0x1b1cc77d663d9176b791e94124eecffe49d1c69837ee6e9ed09356f2c70a065d"),
-                    json!(0),
-                    json!(0),
-                    json!("0x2a3dd3eb832af982ec71669e178424b10dca2ede"),
-                    json!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHboRMQAGZLiEobojhGQVmJIlLToAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABY0V4XYoAAA=="),
-                    json!("0x25308c93ceeed162da955b3f7ce3e3f93606579e40fb92029faa9efe27545983"),
-                    json!(""),
-                    json!(""),
-                    json!(""),
-                    json!(0)
-                ],
-            ],
-        }
-    }
-
-    fn mock_transactions_data() -> ExampleData {
-        ExampleData {
-            columns: vec![
-                Column { name: "hash".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "nonce".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "transaction_index".to_string(), type_: "integer".to_string() },
-                Column { name: "from_address".to_string(), type_: "varchar(42)".to_string() },
-                Column { name: "to_address".to_string(), type_: "varchar(42)".to_string() },
-                Column { name: "value".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "gas".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "gas_price".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "method_id".to_string(), type_: "varchar(10)".to_string() },
-                Column { name: "input".to_string(), type_: "varbinary".to_string() },
-                Column { name: "block_timestamp".to_string(), type_: "timestamp".to_string() },
-                Column { name: "block_number".to_string(), type_: "bigint".to_string() },
-                Column { name: "block_hash".to_string(), type_: "varchar(66)".to_string() },
-                Column { name: "max_fee_per_gas".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "max_priority_fee_per_gas".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "transaction_type".to_string(), type_: "integer".to_string() },
-                Column { name: "receipt_cumulative_gas_used".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "receipt_gas_used".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "receipt_contract_address".to_string(), type_: "varchar(42)".to_string() },
-                Column { name: "receipt_status".to_string(), type_: "integer".to_string() },
-                Column { name: "receipt_effective_gas_price".to_string(), type_: "varchar(78)".to_string() },
-                Column { name: "__pk".to_string(), type_: "integer".to_string() },
-            ],
-            data: vec![
-                vec![
-                    json!("0x81005434635456a16f74ff7023fbe0bf423abbc8a8deb093ffff455c0ad3b741"),
-                    json!("0x0"),
-                    json!(0),
-                    json!("0x742d35Cc6634C0532925a3b844Bc454e4438f44e"),
-                    json!("0x1234567890123456789012345678901234567890"),
-                    json!("1000000000000000000"),
-                    json!("21000"),
-                    json!("20000000000"),
-                    json!("0x"),
-                    json!("0x"),
-                    json!("2023-10-31 03:52:35.000"),
-                    json!(12345678),
-                    json!("0x0000000000000000000000000000000000000000000000000000000000000000"),
-                    json!("30000000000"),
-                    json!("2000000000"),
-                    json!(2),
-                    json!("21000"),
-                    json!("21000"),
-                    json!(null),
-                    json!(1),
-                    json!("20000000000"),
-                    json!(0),
-                ],
-            ],
-        }
-    }
-
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
         let tick_rate = Duration::from_millis(150);
         let mut last_tick = Instant::now();
@@ -538,7 +479,7 @@ impl App {
             // Update timer if Docker setup is in progress
             if self.state == AppState::Started {
                 self.docker_setup_timer = self.docker_setup_timer.saturating_add(1);
-                self.update(terminal.size()?.width);
+                self.update();
             }
 
             if event::poll(Duration::from_millis(100))? {
@@ -589,6 +530,27 @@ impl App {
                 }
             }
 
+            if let Some(receiver) = &mut self.action_receiver {
+                match receiver.try_recv() {
+                    Ok((action, content)) => {
+                        match action.as_str() {
+                            "edit" => {
+                                self.saved_manuscript = Some(content.clone());
+                                self.show_sql_window = true;
+                                self.sql_input = content;
+                                self.sql_cursor_position = self.sql_input.len();
+                            }
+                            "logs" => {
+                                self.job_logs = Some(content);
+                            }
+                            _ => {}
+                        }
+                    }
+                    Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {}
+                    Err(_) => {}
+                }
+            }
+
             if last_tick.elapsed() >= tick_rate {
                 self.on_tick();
                 last_tick = Instant::now();
@@ -608,7 +570,7 @@ impl App {
         self.window[1] += 1.0;
     }
 
-    fn update(&mut self, terminal_width: u16) {
+    fn update(&mut self) {
         if self.should_cancel_setup {
             // Reset everything if cancellation is requested
             self.progress1 = 0.0;
@@ -616,7 +578,7 @@ impl App {
             return;
         }
 
-        let total_duration = 600;
+        let total_duration = 200;
         self.progress1 = (self.docker_setup_timer as f64 * 100.0 / total_duration as f64).min(100.0);
         
         if self.progress1 >= 100.0 {
@@ -627,7 +589,6 @@ impl App {
 
     pub fn update_example_data(&mut self) {
         if let Some(selected_chain) = self.chains.get(self.selected_chain_index) {
-            // Check if chain is offline
             if selected_chain.status == "Offline" {
                 self.example_data = None;
                 return;
@@ -635,21 +596,53 @@ impl App {
 
             if let Some(table_index) = self.selected_table_index {
                 let table_name = selected_chain.dataDictionary
-                    .keys()
-                    .nth(table_index)
-                    .map(|s| s.as_str());
+                    .get(table_index)
+                    .map(|(name, _)| name.as_str());
 
-                self.example_data = match table_name {
-                    Some("blocks") => Some(Self::mock_blocks_data()),
-                    Some("transactions") => Some(Self::mock_transactions_data()),
-                    Some("transactionLogs") => Some(Self::mock_transaction_logs_data()),
-                    _ => None,
-                };
+                if let Some(table_name) = table_name {
+                    if let Some(examples) = &selected_chain.example {
+                        if let Some(example_data) = examples.get(table_name) {
+                            let columns = selected_chain.dataDictionary
+                                .iter()
+                                .find(|(name, _)| name == table_name)
+                                .map(|(_, items)| {
+                                    items.iter()
+                                        .map(|item| Column {
+                                            name: item.name.clone(),
+                                            type_: item.dataType.clone(),
+                                        })
+                                        .collect()
+                                })
+                                .unwrap_or_default();
+
+                            self.example_data = Some(ExampleData {
+                                columns,
+                                data: vec![example_data.clone()],
+                            });
+                            return;
+                        }
+                    }
+                }
             }
         }
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent, visible_height: usize) {
+        match key_event.code {
+            KeyCode::Char('?') => {
+                self.show_help = !self.show_help;
+                return;
+            }
+            _ => {}
+        }
+
+        if self.show_help {
+            if let KeyCode::Esc = key_event.code {
+                self.show_help = false;
+            }
+            return;
+        }
+
         if self.show_warning {
             self.show_warning = false;
         }
@@ -661,15 +654,17 @@ impl App {
                 }
                 KeyCode::Enter => {
                     if self.selected_deploy_option == 0 {
-                        self.create_config_file();
+                        if let Some(yaml_content) = &self.saved_manuscript {
+                            self.job_manager.create_config_file(yaml_content);
+                        }
                     }
                     self.show_deploy_options = false;
                 }
                 _ => {}
             }
+            return;
         }
 
-        
         if self.show_search {
             match key_event.code {
                 KeyCode::Esc => {
@@ -703,30 +698,21 @@ impl App {
                 }
                 _ => {}
             }
-        } else if self.show_sql_window {
+            return;
+        }
+
+        if self.show_sql_window {
             match key_event.code {
                 KeyCode::Esc => {
-                    // Save the SQL when closing the window
                     if !self.sql_input.trim().is_empty() {
-                        self.saved_sql = Some(self.sql_input.clone());
+                        self.saved_manuscript = Some(self.sql_input.clone());
                     }
-                    // Reset SQL window state
                     self.show_sql_window = false;
                     self.sql_result = None;
-                    // Don't clear the selected table index anymore
                 }
                 KeyCode::Enter => {
-                    // Execute SQL when Ctrl+Enter is pressed
                     if key_event.modifiers.contains(event::KeyModifiers::CONTROL) {
-                        // tokio::spawn({
-                        //     let mut app = self.clone();
-                        //     async move {
-                        //         app.execute_sql().await;
-                        //         app
-                        //     }
-                        // });
                     } else {
-                        // Insert newline at cursor position
                         self.sql_input.insert(self.sql_cursor_position, '\n');
                         self.sql_cursor_position += 1;
                     }
@@ -797,7 +783,7 @@ impl App {
                 }
                 KeyCode::Tab => {
                     if !self.sql_input.trim().is_empty() {
-                        self.saved_sql = Some(self.sql_input.clone());
+                        self.saved_manuscript = Some(self.sql_input.clone());
                     }
                     self.show_sql_window = false;
                     self.sql_result = None;
@@ -805,129 +791,178 @@ impl App {
                 }
                 _ => {}
             }
-        } else {
-            match key_event.code {
-                KeyCode::Char('\\') => {
-                    if self.current_tab == 0 && !self.show_sql_window {
-                        self.show_search = true;
-                        self.search_input.clear();
-                        self.search_cursor_position = 0;
-                    }
+            return;
+        }
+
+        // Main key handling
+        match key_event.code {
+            KeyCode::Char('/') => {
+                if self.current_tab == 0 && !self.show_sql_window {
+                    self.show_search = true;
+                    self.search_input.clear();
+                    self.search_cursor_position = 0;
                 }
-                KeyCode::Char('q') => self.exit = true,
-                KeyCode::Up => {
-                    match self.current_tab {
-                        0 => {
-                            // Network tab logic
-                            if !self.show_tables {
-                                // Get current index in filtered_chains
-                                if let Some(current_filtered_index) = self
-                                    .filtered_chains
-                                    .iter()
-                                    .position(|c| c.name == self.chains[self.selected_chain_index].name)
-                                {
-                                    if current_filtered_index > 0 {
-                                        // Move up in filtered list
-                                        let prev_filtered_chain = &self.filtered_chains[current_filtered_index - 1];
-                                        // Find corresponding index in original chains
-                                        if let Some(original_index) = self.chains
-                                            .iter()
-                                            .position(|c| c.name == prev_filtered_chain.name)
-                                        {
-                                            self.selected_chain_index = original_index;
-                                            if current_filtered_index < self.scroll_offset {
-                                                self.scroll_offset = current_filtered_index;
-                                            }
+            }
+            KeyCode::Char('q') => self.exit = true,
+            KeyCode::Up => {
+                match self.current_tab {
+                    0 => {
+                        // Network tab logic
+                        if !self.show_tables {
+                            // Get current index in filtered_chains
+                            if let Some(current_filtered_index) = self
+                                .filtered_chains
+                                .iter()
+                                .position(|c| c.name == self.chains[self.selected_chain_index].name)
+                            {
+                                if current_filtered_index > 0 {
+                                    // Move up in filtered list
+                                    let prev_filtered_chain = &self.filtered_chains[current_filtered_index - 1];
+                                    // Find corresponding index in original chains
+                                    if let Some(original_index) = self.chains
+                                        .iter()
+                                        .position(|c| c.name == prev_filtered_chain.name)
+                                    {
+                                        self.selected_chain_index = original_index;
+                                        if current_filtered_index < self.scroll_offset {
+                                            self.scroll_offset = current_filtered_index;
                                         }
                                     }
                                 }
-                            } else {
-                                if let Some(index) = self.selected_table_index {
-                                    if index > 0 {
-                                        self.selected_table_index = Some(index - 1);
-                                        self.update_example_data();
-                                    }
+                            }
+                        } else {
+                            if let Some(index) = self.selected_table_index {
+                                if index > 0 {
+                                    self.selected_table_index = Some(index - 1);
+                                    self.update_example_data();
                                 }
-                            }
-                        },
-                        1 => {
-                            // Manuscripts tab logic
-                            if self.saved_sql.is_some() {
-                                self.vertical_scroll = self.vertical_scroll.saturating_sub(1);
-                                self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
-                            }
-                        },
-                        _ => {}
-                    }
-                },
-                KeyCode::Down => {
-                    match self.current_tab {
-                        0 => {
-                            // Network tab logic
-                            if !self.show_tables {
-                                // Get current index in filtered_chains
-                                if let Some(current_filtered_index) = self
-                                    .filtered_chains
-                                    .iter()
-                                    .position(|c| c.name == self.chains[self.selected_chain_index].name)
-                                {
-                                    if current_filtered_index < self.filtered_chains.len() - 1 {
-                                        // Move down in filtered list
-                                        let next_filtered_chain = &self.filtered_chains[current_filtered_index + 1];
-                                        // Find corresponding index in original chains
-                                        if let Some(original_index) = self.chains
-                                            .iter()
-                                            .position(|c| c.name == next_filtered_chain.name)
-                                        {
-                                            self.selected_chain_index = original_index;
-                                            if current_filtered_index >= self.scroll_offset + visible_height {
-                                                self.scroll_offset = current_filtered_index - visible_height + 1;
-                                            }
-                                        }
-                                    }
-                                }
-                            } else {
-                                if let Some(index) = self.selected_table_index {
-                                    let tables_len = self.chains[self.selected_chain_index].dataDictionary.len();
-                                    if index < tables_len - 1 {
-                                        self.selected_table_index = Some(index + 1);
-                                        self.update_example_data();
-                                    }
-                                }
-                            }
-                        },
-                        1 => {
-                            // Manuscripts tab logic
-                            if self.saved_sql.is_some() {
-                                self.vertical_scroll = self.vertical_scroll.saturating_add(1);
-                                self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
-                            }
-                        },
-                        _ => {}
-                    }
-                },
-                KeyCode::Enter => {
-                    if !self.show_tables {
-                        if let Some(filtered_chain) = self.filtered_chains.get(self.selected_chain_index) {
-                            if let Some(original_index) = self.chains.iter().position(|c| c.name == filtered_chain.name) {
-                                self.selected_chain_index = original_index;
                             }
                         }
-                        self.show_tables = true;
-                        self.selected_table_index = Some(0);
-                        self.update_example_data();
+                    },
+                    1 => {
+                        // Jobs tab logic
+                        if !self.jobs_status.is_empty() {
+                            if self.show_job_options {
+                                if self.selected_job_option > 0 {
+                                    self.selected_job_option -= 1;
+                                }
+                            } else {
+                                if self.selected_job_index > 0 {
+                                    self.selected_job_index -= 1;
+                                }
+                            }
+                        }
                     }
+                    _ => {}
                 }
-                KeyCode::Char('c') => {
-                    if self.show_tables {
-                        self.show_sql_window = true;
-                        self.sql_input = self.generate_initial_manuscript();
-                        self.sql_cursor_position = self.sql_input.len();
-                        self.current_tab = 1;  // Switch to tab 2 (index 1)
+            }
+            KeyCode::Down => {
+                match self.current_tab {
+                    0 => {
+                        // Network tab logic
+                        if !self.show_tables {
+                            // Get current index in filtered_chains
+                            if let Some(current_filtered_index) = self
+                                .filtered_chains
+                                .iter()
+                                .position(|c| c.name == self.chains[self.selected_chain_index].name)
+                            {
+                                if current_filtered_index < self.filtered_chains.len() - 1 {
+                                    // Move down in filtered list
+                                    let next_filtered_chain = &self.filtered_chains[current_filtered_index + 1];
+                                    // Find corresponding index in original chains
+                                    if let Some(original_index) = self.chains
+                                        .iter()
+                                        .position(|c| c.name == next_filtered_chain.name)
+                                    {
+                                        self.selected_chain_index = original_index;
+                                        if current_filtered_index >= self.scroll_offset + visible_height {
+                                            self.scroll_offset = current_filtered_index - visible_height + 1;
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            if let Some(index) = self.selected_table_index {
+                                let tables_len = self.chains[self.selected_chain_index].dataDictionary.len();
+                                if index < tables_len - 1 {
+                                    self.selected_table_index = Some(index + 1);
+                                    self.update_example_data();
+                                }
+                            }
+                        }
+                    },
+                    1 => {
+                        // Jobs tab logic
+                        if !self.jobs_status.is_empty() {
+                            if self.show_job_options {
+                                if self.selected_job_option < self.job_options.len() - 1 {
+                                    self.selected_job_option += 1;
+                                }
+                            } else {
+                                if self.selected_job_index < self.jobs_status.len() - 1 {
+                                    self.selected_job_index += 1;
+                                }
+                            }
+                        }
                     }
+                    _ => {}
                 }
-                KeyCode::Esc => {
-                    if self.state == AppState::Started {
+            }
+            KeyCode::Enter => {
+                match self.current_tab {
+                    0 => {
+                        // Network tab logic
+                        if !self.show_tables {
+                            if let Some(filtered_chain) = self.filtered_chains.get(self.selected_chain_index) {
+                                if let Some(original_index) = self.chains.iter().position(|c| c.name == filtered_chain.name) {
+                                    self.selected_chain_index = original_index;
+                                }
+                            }
+                            self.show_tables = true;
+                            self.selected_table_index = Some(0);
+                            self.update_example_data();
+                        }
+                    },
+                    1 => {
+                        // Jobs tab logic
+                        if !self.jobs_status.is_empty() {
+                            if self.show_job_options {
+                                let action = self.job_options[self.selected_job_option];
+                                if let Some(job) = self.jobs_status.get(self.selected_job_index) {
+                                    if let Some(action_sender) = &self.action_sender {
+                                        tokio::spawn({
+                                            let job_manager = self.job_manager.clone();
+                                            let job_name = job.name.clone();
+                                            let action = action.to_string();
+                                            let sender = action_sender.clone();
+                                            async move {
+                                                if let Ok(Some(content)) = job_manager.handle_action(&job_name, &action).await {
+                                                    let _ = sender.send((action, content)).await;
+                                                }
+                                            }
+                                        });
+                                    }
+                                }
+                                self.show_job_options = false;
+                            } else {
+                                self.show_job_options = true;
+                                self.selected_job_option = 0;
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            KeyCode::Esc => {
+                if self.show_job_options {
+                    self.show_job_options = false;
+                } else {
+                    if self.job_logs.is_some() {
+                        // Clear job logs when ESC is pressed
+                        self.job_logs = None;
+                        self.logs_scroll_position = 0;
+                    } else if self.state == AppState::Started {
                         // Cancel the setup process
                         self.should_cancel_setup = true;
                         self.state = AppState::Running;
@@ -935,9 +970,9 @@ impl App {
                         self.progress1 = 0.0;
                         self.docker_setup_in_progress = false;
                     }
-                    if self.saved_sql.is_some() || self.show_tables || self.sql_result.is_some() {
+                    if self.saved_manuscript.is_some() || self.show_tables || self.sql_result.is_some() {
                         if !self.sql_input.trim().is_empty() {
-                            self.saved_sql = Some(self.sql_input.clone());
+                            self.saved_manuscript = Some(self.sql_input.clone());
                         }
                         self.show_tables = false;
                         self.show_sql_window = false;
@@ -948,137 +983,135 @@ impl App {
                         self.filtered_chains = self.chains.clone();
                     }
                 }
+            }
+            KeyCode::PageUp => {
+                if !self.show_tables {
+                    if self.selected_chain_index > visible_height {
+                        self.selected_chain_index -= visible_height;
+                    } else {
+                        self.selected_chain_index = 0;
+                    }
+                    if self.selected_chain_index < self.scroll_offset {
+                        self.scroll_offset = self.selected_chain_index;
+                    }
+                }
+            }
+            KeyCode::PageDown => {
+                if !self.show_tables {
+                    let new_index = self.selected_chain_index + visible_height;
+                    if new_index < self.chains.len() {
+                        self.selected_chain_index = new_index;
+                    } else {
+                        self.selected_chain_index = self.chains.len() - 1;
+                    }
+                    if self.selected_chain_index >= self.scroll_offset + visible_height {
+                        self.scroll_offset = self.selected_chain_index - visible_height + 1;
+                    }
+                }
+            }
+            KeyCode::Tab => {
+                self.current_tab = (self.current_tab + 1) % 3;
+            }
+            KeyCode::Char('1') => {
+                self.current_tab = 0;
+            }
+            KeyCode::Char('2') => {
+                self.current_tab = 1;
+            }
+            KeyCode::Char('3') => {
+                self.current_tab = 2;
+            }
+            KeyCode::Char('e') => {
+                if self.saved_manuscript.is_some() {
+                    self.show_sql_window = true;
+                    self.sql_input = self.saved_manuscript.clone().unwrap_or_default();
+                    self.sql_cursor_position = self.sql_input.len();
+                }
+            }
+            KeyCode::Char('r') => {
+                if let Some(saved_manuscript) = &self.saved_manuscript {
+                    match self.job_manager.transform_yaml_to_sql(saved_manuscript) {
+                        Ok(sql) => {
+                            self.transformed_sql = Some(sql);
+                            self.state = AppState::Started;
+                            self.should_cancel_setup = false;
+                            if !self.docker_setup_in_progress {
+                                tokio::spawn({
+                                    let mut app = self.clone();
+                                    async move {
+                                        app.setup_docker().await;
+                                    }
+                                });
+                            }
+                        }
+                        Err(e) => {
+                            self.debug_result = Some(format!("Error transforming SQL: {}", e));
+                        }
+                    }
+                }
+            }
+            KeyCode::Char('d') => {
+                if self.current_tab == 1 {
+                    self.show_deploy_options = true;
+                    self.selected_deploy_option = 0;
+                }
+            }
+            KeyCode::Char('c') => {
+                if self.show_tables {
+                    self.show_sql_window = true;
+                    self.sql_input = self.generate_initial_manuscript();
+                    self.sql_cursor_position = self.sql_input.len();
+                    self.current_tab = 1;
+                }
+            }
+            _ => {}
+        }
+
+        if self.job_logs.is_some() {
+            match key_event.code {
+                KeyCode::Esc => {
+                    self.job_logs = None;
+                    self.logs_scroll_position = 0;
+                }
+                KeyCode::Up => {
+                    if self.logs_scroll_position > 0 {
+                        self.logs_scroll_position -= 1;
+                    }
+                }
+                KeyCode::Down => {
+                    if let Some(logs) = &self.job_logs {
+                        let total_lines = logs.lines().count();
+                        if self.logs_scroll_position < total_lines.saturating_sub(1) {
+                            self.logs_scroll_position += 1;
+                        }
+                    }
+                }
                 KeyCode::PageUp => {
-                    if !self.show_tables {
-                        if self.selected_chain_index > visible_height {
-                            self.selected_chain_index -= visible_height;
-                        } else {
-                            self.selected_chain_index = 0;
-                        }
-                        if self.selected_chain_index < self.scroll_offset {
-                            self.scroll_offset = self.selected_chain_index;
-                        }
+                    if self.logs_scroll_position > visible_height {
+                        self.logs_scroll_position -= visible_height;
+                    } else {
+                        self.logs_scroll_position = 0;
                     }
                 }
                 KeyCode::PageDown => {
-                    if !self.show_tables {
-                        let new_index = self.selected_chain_index + visible_height;
-                        if new_index < self.chains.len() {
-                            self.selected_chain_index = new_index;
-                        } else {
-                            self.selected_chain_index = self.chains.len() - 1;
-                        }
-                        if self.selected_chain_index >= self.scroll_offset + visible_height {
-                            self.scroll_offset = self.selected_chain_index - visible_height + 1;
-                        }
-                    }
-                }
-                KeyCode::Tab => {
-                    self.current_tab = (self.current_tab + 1) % 3;
-                }
-                KeyCode::Char('1') => {
-                    self.current_tab = 0;
-                }
-                KeyCode::Char('2') => {
-                    self.current_tab = 1;
-                }
-                KeyCode::Char('3') => {
-                    self.current_tab = 2;
-                }
-                KeyCode::Char('e') => {
-                    if self.saved_sql.is_some() {
-                        self.show_sql_window = true;
-                        self.sql_input = self.saved_sql.clone().unwrap_or_default();
-                        self.sql_cursor_position = self.sql_input.len();
-                    }
-                }
-                KeyCode::Char('r') => {
-                    if let Some(saved_sql) = &self.saved_sql {
-                        match self.transform_yaml_to_sql(saved_sql) {
-                            Ok(sql) => {
-                                self.transformed_sql = Some(sql);
-                                self.state = AppState::Started;
-                                self.should_cancel_setup = false;
-                                if !self.docker_setup_in_progress {
-                                    tokio::spawn({
-                                        let mut app = self.clone();
-                                        async move {
-                                            app.setup_docker().await;
-                                        }
-                                    });
-                                }
-                            }
-                            Err(e) => {
-                                self.debug_result = Some(format!("Error transforming SQL: {}", e));
-                            }
-                        }
-                    }
-                },
-                KeyCode::Char('d') => {
-                    if self.current_tab == 1 {
-                        self.show_deploy_options = true;
-                        self.selected_deploy_option = 0;
-                        // if self.sql_result.is_none() {
-                        //     self.show_warning = true;
-                        // } else {
-                        //     self.show_deploy_options = true;
-                        //     self.selected_deploy_option = 0;
-                        // }
+                    if let Some(logs) = &self.job_logs {
+                        let total_lines = logs.lines().count();
+                        let new_position = self.logs_scroll_position + visible_height;
+                        self.logs_scroll_position = new_position.min(total_lines.saturating_sub(1));
                     }
                 }
                 _ => {}
             }
+            return;
         }
     }
 
-    // Add new method to generate initial SQL
     fn generate_initial_manuscript(&self) -> String {
         if let Some(chain) = self.chains.get(self.selected_chain_index) {
             if let Some(table_index) = self.selected_table_index {
-                if let Some(table_name) = chain.dataDictionary.keys().nth(table_index) {
-                    let table_name = if table_name == "transactionLogs" {
-                        "transaction_logs"
-                    } else {
-                        table_name
-                    };
-                    let dataset_name = &chain.databaseName;
-                    return format!("name: demo
-specVersion: v1.0.0
-parallelism: 1
-
-sources:
-  - name: {}_{} 
-    type: dataset
-    dataset: {}.{}
-
-transforms:
-  - name: {}_{}_{}_transform
-    sql: >
-      Select * From {}_{}
-
-sinks:
-  - name: {}_{}_{}_sink
-    type: postgres
-    from: {}_{}_{}_transform
-    database: {}
-    schema: public
-    table: {}
-    primary_key: block_number
-    config:
-    host: postgres
-    port: 5432
-    username: postgres
-    password: postgres
-    graphqlPort: 8082",
-                        dataset_name, table_name,
-                        dataset_name, table_name,
-                        dataset_name, dataset_name, table_name,
-                        dataset_name, table_name,
-                        dataset_name, dataset_name, table_name,
-                        dataset_name, dataset_name, table_name,
-                        dataset_name,
-                        table_name
-                    );
+                if let Some((table_name, _)) = chain.dataDictionary.get(table_index) {
+                    let manuscript = self.job_manager.generate_initial_manuscript(&chain.databaseName, table_name);
+                    return manuscript;
                 }
             }
         }
@@ -1098,7 +1131,7 @@ sinks:
         let sender = self.update_sender.clone();
         let sql = self.transformed_sql.clone();
         
-        match self.docker_manager.setup(sender, sql).await {
+        match self.pre_run.setup(sender, sql).await {
             Ok(msg) => {
                 if !self.should_cancel_setup {
                     if let Some(sender) = &self.update_sender {
@@ -1217,83 +1250,52 @@ sinks:
         }
     }
 
-    fn create_config_file(&self) -> Result<(), std::io::Error> {
-        let home_dir = dirs::home_dir()
-            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "Home directory not found"))?;
-        let config_path = home_dir.join(".manuscript_config.ini");
-        
-        let os_type = if cfg!(target_os = "darwin") {
-            "darwin"
-        } else if cfg!(target_os = "linux") {
-            "linux"
-        } else {
-            "windows"
-        };
-
-        let config_content = format!(
-            "baseDir    = {}\nsystemInfo = {}\n\n\
-            [demo]\n\
-            baseDir     = {}/manuscript\n\
-            name        = demo\n\
-            specVersion =\n\
-            parallelism = 0\n\
-            chain       = zkevm\n\
-            table       = blocks\n\
-            database    = zkevm\n\
-            query       = Select * From zkevm_blocks\n\
-            sink        = postgres\n\
-            port        = 8081\n\
-            dbPort      = 15432\n\
-            dbUser      = postgres\n\
-            dbPassword  = postgres\n\
-            graphqlPort = 8082",
-            home_dir.display(),
-            os_type,
-            home_dir.display()
-        );
-
-        std::fs::write(config_path, config_content)?;
-        Ok(())
+    pub fn update_jobs_status(&mut self) {
+        if let Some(receiver) = &mut self.jobs_monitor_receiver {
+            match receiver.try_recv() {
+                Ok(JobsUpdate::Status(new_status)) => {
+                    self.jobs_status = new_status;
+                }
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {}
+                Err(_) => {
+                }
+            }
+        }
     }
 
-    fn transform_yaml_to_sql(&self, yaml_content: &str) -> Result<String, String> {
-        let yaml: serde_yaml::Value = serde_yaml::from_str(yaml_content)
-            .map_err(|e| format!("Failed to parse YAML: {}", e))?;
+    async fn fetch_and_decrypt_credentials() -> (String, String) {
+        let response = reqwest::get(format!("{}/api/v1/metadata/np", Settings::get_chainbase_url()))
+            .await
+            .expect("Failed to fetch metadata")
+            .json::<HashMap<String, String>>()
+            .await
+            .expect("Failed to parse JSON response");
 
-        let dataset = yaml["sources"]
-            .as_sequence()
-            .and_then(|sources| sources.first())
-            .and_then(|source| source["dataset"].as_str())
-            .ok_or_else(|| "Failed to extract dataset".to_string())?;
+        let un = response.get("un").cloned().unwrap_or_else(|| "".to_string());
+        let encrypted_pw = response.get("pw").cloned().unwrap_or_else(|| "".to_string());
+        let pw = App::decrypt_aes(&encrypted_pw).expect("Failed to decrypt password");
 
-        let sql = yaml["transforms"]
-            .as_sequence()
-            .and_then(|transforms| transforms.first())
-            .and_then(|transform| transform["sql"].as_str())
-            .ok_or_else(|| "Failed to extract SQL query".to_string())?;
+        (un, pw)
+    }
 
-        let sql = sql.trim();
-
-        // Check if SQL already contains the full dataset name (including schema)
-        let sql = if sql.contains(dataset) {
-            format!("select * from ({}) limit 10", sql)
-        } else {
-            // Use the full dataset name which includes schema
-            format!("select * from {} limit 10", dataset)
-        };
-
-        Ok(sql)
+    fn decrypt_aes(encrypted_text: &str) -> Result<String, Box<dyn std::error::Error>> {
+        let k: &str = "a1b2c3d4e5f6g7h8";
+        let key = Key::<Aes128Gcm>::from_slice(k.as_bytes());
+        let decoded = base64::decode(encrypted_text)?;
+        let (nonce, ciphertext) = decoded.split_at(12);
+    
+        let cipher = Aes128Gcm::new(key);
+        let plaintext = cipher.decrypt(Nonce::from_slice(nonce), ciphertext).map_err(|_| "Failed to decrypt password")?;
+        Ok(String::from_utf8(plaintext).map_err(|_| "Failed to convert plaintext to string")?)
     }
 }
 
-
-const GAUGE1_COLOR: Color = tailwind::RED.c800;
 const CUSTOM_LABEL_COLOR: Color = tailwind::SLATE.c200;
-const GAUGE2_COLOR: Color = tailwind::GREEN.c800;
 
 #[derive(Debug, Deserialize)]
 struct Response {
     graphData: Vec<GraphData>,
+    status: NetworkStatus,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1309,13 +1311,15 @@ struct ChainData {
     lastUpdate: String,
     databaseName: String,
     dataDictionary: DataDictionary,
+    example: Option<HashMap<String, Vec<serde_json::Value>>>,
+    overview: Option<String>,
+    net: String,
 }
 
-#[derive(Debug, Deserialize)]
-struct DataDictionary {
-    blocks: Vec<DataDictionaryItem>,
-    transactions: Vec<DataDictionaryItem>,
-    transactionLogs: Vec<DataDictionaryItem>,
+#[derive(Debug, Deserialize, Clone)]
+pub struct DataDictionaryItem {
+    pub name: String,
+    pub dataType: String,
 }
 
 pub fn title_block(title: &str) -> Block {
