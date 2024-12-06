@@ -207,8 +207,8 @@ fn draw_chain_list(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
         Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Percentage(90),
-                Constraint::Percentage(10),
+                Constraint::Percentage(70),
+                Constraint::Percentage(30),
             ])
             .split(area)
     };
@@ -219,7 +219,7 @@ fn draw_chain_list(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
         draw_tables_block(frame, app, left_chunks[1]);
     }
     
-    draw_controls_hint(frame, app, left_chunks[left_chunks.len()-1]);
+    draw_network_monitoring(frame, left_chunks[left_chunks.len()-1]);
 }
 
 fn draw_chains_block(frame: &mut ratatui::Frame, app: &App, area: Rect) {
@@ -277,34 +277,44 @@ fn draw_tables_block(frame: &mut ratatui::Frame, app: &App, area: Rect) {
     }
 }
 
-fn draw_controls_hint(frame: &mut ratatui::Frame, app: &App, area: Rect) {
-    let hints = vec![
-        "Enter: Select",
-        "Esc: Back",
-        "/: Search",
-        "q: Quit",
-    ];
+// TODO: Need to be modified for real-time network monitoring
+fn draw_network_monitoring(frame: &mut ratatui::Frame, area: Rect) {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    let window_size = area.width.min(100) as usize;
     
-    let hints_text = if app.show_tables {
-        Text::from(vec![
-            Line::from(hints.join(" | ")),
-            Line::from(vec![
-                " ".into(),
-                "c: Create Manuscript".magenta().bold().into()
-            ])
-        ])
-    } else {
-        Text::from(hints.join(" | "))
-    };
+    let mut history = vec![' '; window_size];
+    
+    for i in 0..window_size {
+        let past_time = now - (window_size - i - 1) as u64;
+        let rand_val = (past_time * i as u64) % 100;
+        history[i] = if rand_val < 30 { '⣼' } else { '⣤' };
+    }
+
+    let traffic_line = "━".repeat(area.width as usize - 20); // Leave space for text
+
+    let hints_text = Text::from(vec![
+        Line::from(vec![
+            Span::styled("Net Traffic: ", Style::default().fg(Color::White)),
+            Span::styled("14G/m ", Style::default().fg(Color::Green)),
+            Span::styled(traffic_line, Style::default().fg(Color::DarkGray))
+        ]),
+        Line::from(history.iter().collect::<String>()).fg(Color::Rgb(217, 98, 109)),
+        Line::from("⣿".repeat(window_size)).fg(Color::Rgb(217, 98, 109)),
+        Line::from("⣿".repeat(window_size)).fg(Color::Rgb(140, 60, 70)),
+    ]);
 
     let hints_block = Block::bordered()
-        .title(" Controls ")
+        .title(" System Resources ")
         .title_alignment(Alignment::Center)
         .border_set(border::THICK);
     
     let hints_paragraph = Paragraph::new(hints_text)
         .block(hints_block)
-        .alignment(Alignment::Center);
+        .alignment(Alignment::Left);
     
     frame.render_widget(hints_paragraph, area);
 }
@@ -318,7 +328,6 @@ fn create_chain_list_item<'a>(app: &'a App, chain: &'a crate::app::Chain, index:
         let display_time = if chain.time_ago == "unknown" { "-" } else { &chain.time_ago };
         display_time.white()
     };
-
     // Get the current filtered index
     let is_selected = if let Some(current_filtered_index) = app
         .filtered_chains
@@ -395,30 +404,13 @@ fn create_main_layout(frame: &mut ratatui::Frame) -> Vec<Rect> {
 }
 
 fn draw_tabs(frame: &mut ratatui::Frame, app: &App, area: Rect) {
-    let titles = vec!["NETWORK [1]", "MANUSCRIPTS [2]", "AVS [3]"];
+    let titles = vec!["NETWORK [1]", "MANUSCRIPTS [2]", "ZONE [3]"];
     let tabs = Tabs::new(titles)
         .block(Block::bordered().title("Tabs"))
         .select(app.current_tab)
         .style(Style::default())
         .highlight_style(Style::default().bold());
     frame.render_widget(tabs, area);
-}
-
-fn draw_jobs_status(app: &App) -> String {
-    if app.jobs_status.is_empty() {
-        return "No Jobs Running".to_string();
-    }
-
-    let mut status = String::new();
-    for job in app.jobs_status.iter() {
-        status.push_str(&format!("Job: {} - {}\n", job.name, match job.status {
-            JobState::Running => "Running".green(),
-            JobState::Pending => "Pending".yellow(),
-            JobState::Failed => "Failed".red(),
-            JobState::NotStarted => "Not Started".dark_gray(),
-        }));
-    }
-    status
 }
 
 fn draw_chain_details(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
