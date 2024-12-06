@@ -134,23 +134,27 @@ func init() {
 		}
 	})
 
-	// Add jobCmd and other commands to the root command
+	// Add CLI commands in logical groups
+	// Manuscript creation & deployment commands
 	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(deployManuscript)
 
-	// Add jobCmd to the root command
+	// Job management commands
 	rootCmd.AddCommand(jobListCmd)
 	rootCmd.AddCommand(jobStopCmd)
 	rootCmd.AddCommand(jobLogsCmd)
 
-	// Add chatCmd to the root command
+	// Interactive commands
 	rootCmd.AddCommand(chatCmd)
 
+	// Utility commands
 	rootCmd.AddCommand(versionCmd)
 
-	// Add deployManuscript to root command
-	deployManuscript.Flags().StringVar(&env, "env", "", "Specify the environment to deploy (e.g., local or chainbase)")
+	// Configure deployment flags
+	deployManuscript.Flags().StringVar(&env, "env", "", "Specify the environment to deploy (local or chainbase)")
 	deployManuscript.MarkFlagRequired("env")
-	rootCmd.AddCommand(deployManuscript)
+
+	// Disable the default completion command
 	rootCmd.CompletionOptions.HiddenDefaultCmd = true
 }
 
