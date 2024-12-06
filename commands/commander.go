@@ -189,6 +189,9 @@ func init() {
 	// Configure help from help_template.go
 	configureHelp(rootCmd)
 
+	// Ensure commands show up as added instead of alphabetically
+	cobra.EnableCommandSorting = false
+
 	// Add CLI commands in logical groups
 	// Manuscript creation & deployment commands
 	rootCmd.AddCommand(initCmd)
