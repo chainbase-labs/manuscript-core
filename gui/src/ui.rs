@@ -307,18 +307,18 @@ fn draw_network_monitoring(frame: &mut ratatui::Frame, app: &App, area: Rect) {
             Span::styled(traffic_line, Style::default().fg(Color::DarkGray)),
             Span::styled(format!(" {}", app.network_status.net), Style::default().fg(Color::Green)),
         ]),
-        Line::from(history.iter().collect::<String>()).fg(Color::Rgb(217, 98, 109)),
-        Line::from("⣿".repeat(window_size)).fg(Color::Rgb(217, 98, 109)),
-        Line::from("⣿".repeat(window_size)).fg(Color::Rgb(140, 60, 70)),
+        Line::from(history.iter().collect::<String>()).fg(Color::Rgb(5, 170, 171)),
+        Line::from("⣿".repeat(window_size)).fg(Color::Rgb(5, 170, 171)),
+        Line::from("⣿".repeat(window_size)).fg(Color::Rgb(2, 85, 85)),
         Line::default(),
 
         Line::from(vec![
             Span::styled("Pro Threads:", Style::default().fg(Color::White)),
-            Span::styled(compute_line, Style::default().fg(Color::DarkGray)),
+            Span::styled(compute_line, Style::default().fg(Color::DarkGray)), 
             Span::styled(format!(" {}", app.network_status.thread), Style::default().fg(Color::Green)),
         ]),
-        Line::from(compute_history.iter().collect::<String>()).fg(Color::Rgb(140, 200, 140)),
-        Line::from("⣿".repeat(window_size)).fg(Color::Rgb(70, 100, 70)),
+        Line::from(compute_history.iter().collect::<String>()).fg(Color::Rgb(231, 186, 80)),
+        Line::from("⣿".repeat(window_size)).fg(Color::Rgb(115, 93, 40)),
 
         Line::default(),
         Line::from(vec![
@@ -1121,14 +1121,15 @@ fn draw_help_popup(frame: &mut ratatui::Frame) {
         "Global Shortcuts",
         "────────────────",
         "",
-        "Enter      Select/Confirm",
+        "Enter      Select/Confirm", 
         "Esc        Back/Cancel",
         "/          Search",
         "q          Quit",
         "",
         "Tab/1/2/3  Switch tabs",
         "↑/↓        Navigate",
-        "e          Edit manuscript",
+        "c          Create manuscript",
+        "e          Edit manuscript", 
         "r          Run manuscript",
         "d          Deploy options",
     ];
@@ -1136,11 +1137,13 @@ fn draw_help_popup(frame: &mut ratatui::Frame) {
     let help_block = Block::bordered()
         .title(" Help (? to close) ")
         .title_alignment(Alignment::Center)
-        .border_set(border::THICK);
+        .border_set(border::THICK)
+        .style(Style::default().bg(Color::Rgb(10, 100, 100)));
 
     let help_paragraph = Paragraph::new(help_text.join("\n"))
         .block(help_block)
-        .alignment(Alignment::Left);
+        .alignment(Alignment::Left)
+        .style(Style::default().bg(Color::Rgb(10, 100, 100)).fg(Color::White));
 
     frame.render_widget(help_paragraph, help_window);
 }
