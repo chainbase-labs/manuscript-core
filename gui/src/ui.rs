@@ -214,7 +214,7 @@ fn draw_chain_list(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
         draw_tables_block(frame, app, left_chunks[1]);
     }
     
-    draw_network_monitoring(frame, left_chunks[left_chunks.len()-1]);
+    draw_network_monitoring(frame, app, left_chunks[left_chunks.len()-1]);
 }
 
 fn draw_chains_block(frame: &mut ratatui::Frame, app: &App, area: Rect) {
@@ -272,8 +272,7 @@ fn draw_tables_block(frame: &mut ratatui::Frame, app: &App, area: Rect) {
     }
 }
 
-// TODO: Need to be modified for real-time network monitoring
-fn draw_network_monitoring(frame: &mut ratatui::Frame, area: Rect) {
+fn draw_network_monitoring(frame: &mut ratatui::Frame, app: &App, area: Rect) {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
@@ -292,20 +291,21 @@ fn draw_network_monitoring(frame: &mut ratatui::Frame, area: Rect) {
         compute_history[i] = if compute_val < 1 { '⣴' } else { '⣤' };
     }
 
-    let cpu_power = 59.2;
-    let storage_power = 17.0;
-    let storage_total = "12PB";
+    let cpu_power = app.network_status.cpu
+        .trim_end_matches('%')
+        .parse::<f64>()
+        .unwrap_or(0.0);
 
-    let traffic_line = "╌".repeat(area.width as usize - 20);
-    let compute_line = "╌".repeat(area.width as usize - 19);
-    let cpu_line = "╌".repeat(area.width as usize - 17);
-    let storage_line = "╌".repeat(area.width as usize - 15);
+    let traffic_line = "╌".repeat(area.width as usize - 22);
+    let compute_line = "╌".repeat(area.width as usize - 22);
+    let cpu_line = "╌".repeat(area.width as usize - 20);
+    let storage_line = "╌".repeat(area.width as usize - 18);
 
     let hints_text = Text::from(vec![
         Line::from(vec![
             Span::styled("Net Traffic:", Style::default().fg(Color::White)),
             Span::styled(traffic_line, Style::default().fg(Color::DarkGray)),
-            Span::styled(" 14G/m", Style::default().fg(Color::Green)),
+            Span::styled(format!(" {}", app.network_status.net), Style::default().fg(Color::Green)),
         ]),
         Line::from(history.iter().collect::<String>()).fg(Color::Rgb(217, 98, 109)),
         Line::from("⣿".repeat(window_size)).fg(Color::Rgb(217, 98, 109)),
@@ -315,7 +315,7 @@ fn draw_network_monitoring(frame: &mut ratatui::Frame, area: Rect) {
         Line::from(vec![
             Span::styled("Pro Threads:", Style::default().fg(Color::White)),
             Span::styled(compute_line, Style::default().fg(Color::DarkGray)),
-            Span::styled(" 3K/m", Style::default().fg(Color::Green)),
+            Span::styled(format!(" {}", app.network_status.thread), Style::default().fg(Color::Green)),
         ]),
         Line::from(compute_history.iter().collect::<String>()).fg(Color::Rgb(140, 200, 140)),
         Line::from("⣿".repeat(window_size)).fg(Color::Rgb(70, 100, 70)),
@@ -324,7 +324,7 @@ fn draw_network_monitoring(frame: &mut ratatui::Frame, area: Rect) {
         Line::from(vec![
             Span::styled("Tol Power:", Style::default().fg(Color::White)),
             Span::styled(cpu_line, Style::default().fg(Color::DarkGray)),
-            Span::styled(format!("{:.1}%", cpu_power), Style::default().fg(Color::Green)),
+            Span::styled(format!(" {}%", app.network_status.cpu), Style::default().fg(Color::Green)),
         ]),
         Line::from({
             let mut spans = Vec::new();
@@ -346,7 +346,7 @@ fn draw_network_monitoring(frame: &mut ratatui::Frame, area: Rect) {
         Line::from(vec![
             Span::styled("Storage:", Style::default().fg(Color::White)),
             Span::styled(storage_line, Style::default().fg(Color::DarkGray)),
-            Span::styled(format!("{}", storage_total), Style::default().fg(Color::Green)),
+            Span::styled(format!(" {}PB ", app.network_status.storage), Style::default().fg(Color::Green)),
         ]),
         Line::from({
             let mut spans = Vec::new();
@@ -355,7 +355,7 @@ fn draw_network_monitoring(frame: &mut ratatui::Frame, area: Rect) {
                 let r = (0x10 as f64 + ((0x20 - 0x10) as f64 * progress)) as u8;
                 let g = (0x40 as f64 + ((0x60 - 0x40) as f64 * progress)) as u8;
                 let b = (0x10 as f64 + ((0x20 - 0x10) as f64 * progress)) as u8;
-                if i as f64 / window_size as f64 > storage_power / 100.0 {
+                if i as f64 / window_size as f64 > app.network_status.storage.parse::<f64>().unwrap_or(0.0) / 100.0 {
                     spans.push(Span::styled("■", Style::default().fg(Color::Rgb(32, 32, 32))));
                 } else {
                     spans.push(Span::styled("■", Style::default().fg(Color::Rgb(r, g, b))));
@@ -402,7 +402,7 @@ fn create_chain_list_item<'a>(app: &'a App, chain: &'a crate::app::Chain, index:
         Line::from(vec![
             format!("{:<3}⟠ {:<25}", index, chain.name).bold().white().bg(Color::DarkGray).into(),
             format!("{:<10}", chain.ticker).bold().white().bg(Color::DarkGray).into(),
-            format!("{:<10}", if chain.status == "Online" { "↿⇂5G/H" } else if chain.status == "Offline" { "↿⇂0" } else { "◑" }).bold()
+            format!("{:<10}", if chain.status == "Online" { format!("↿⇂{}", chain.net) } else if chain.status == "Offline" { "↿⇂".to_string() } else { "◑".to_string() }).bold()
                 .style(if chain.status == "Online" && chain.time_ago.contains("min") { 
                     Style::default().fg(Color::Green).bg(Color::DarkGray)
                 } else if chain.status == "Offline" {
@@ -430,7 +430,7 @@ fn create_chain_list_item<'a>(app: &'a App, chain: &'a crate::app::Chain, index:
                 } else { 
                     Style::default().fg(Color::Yellow) 
                 }).into(),
-            format!("{:<10}", if chain.status == "Online" { "↿⇂5G/H" } else if chain.status == "Offline" { "↿⇂0" } else { "◑" }).bold()
+                format!("{:<10}", if chain.status == "Online" { format!("↿⇂{}", chain.net) } else if chain.status == "Offline" { "↿⇂".to_string() } else { "◑".to_string() }).bold()
                 .style(if chain.status == "Online" && chain.time_ago.contains("min") { 
                     Style::default().fg(Color::Green)
                 } else if chain.status == "Offline" {

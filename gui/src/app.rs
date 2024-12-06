@@ -87,6 +87,7 @@ pub struct App {
     action_receiver: Option<mpsc::Receiver<(String, String)>>,
     pub logs_scroll_position: usize,
     pub show_help: bool,
+    pub network_status: NetworkStatus,
 }
 
 #[derive(Debug, Clone,)]
@@ -213,6 +214,7 @@ impl Clone for App {
             action_receiver: None,
             logs_scroll_position: self.logs_scroll_position,
             show_help: self.show_help,
+            network_status: self.network_status.clone(),
         }
     }
 }
@@ -240,6 +242,7 @@ pub struct Chain {
     pub dataDictionary: Vec<(String, Vec<DataDictionaryItem>)>,
     pub example: Option<HashMap<String, Vec<serde_json::Value>>>,
     pub overview: Option<String>,
+    pub net: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -290,6 +293,14 @@ impl SetupStep {
     }
 }
 
+#[derive(Debug, Deserialize, Clone, Default)]
+pub struct NetworkStatus {
+    pub cpu: String,
+    pub storage: String,
+    pub net: String,
+    pub thread: String,
+}
+
 impl App {
     pub async fn new() -> Self {
         let (sql_sender, sql_receiver) = mpsc::channel(32);
@@ -303,11 +314,11 @@ impl App {
         let data1 = signal1.by_ref().take(200).collect::<Vec<(f64, f64)>>();
         let data2 = signal2.by_ref().take(200).collect::<Vec<(f64, f64)>>();
         
-        let chains = match App::fetch_chains().await {
+        let (chains, network_status) = match App::fetch_chains().await {
             Ok(data) => data,
             Err(e) => {
                 eprintln!("Failed to fetch chains: {}", e);
-                Vec::new()
+                (Vec::new(), NetworkStatus::default())
             }
         };
 
@@ -397,17 +408,18 @@ impl App {
             action_receiver: Some(action_receiver),
             logs_scroll_position: 0,
             show_help: false,
+            network_status,
         };
 
         app
     }
 
-    async fn fetch_chains() -> Result<Vec<Chain>, reqwest::Error> {
+    async fn fetch_chains() -> Result<(Vec<Chain>, NetworkStatus), reqwest::Error> {
         let url = Settings::get_chains_url();
 
         match reqwest::get(url).await?.json::<Response>().await {
             Ok(response) => {
-                Ok(response.graphData.into_iter()
+                let chains = response.graphData.into_iter()
                     .map(|graph_data| {
                         let mut tables: Vec<(String, Vec<DataDictionaryItem>)> = graph_data.chain.dataDictionary
                             .into_iter()
@@ -426,13 +438,15 @@ impl App {
                             dataDictionary: tables,
                             example: graph_data.chain.example,
                             overview: graph_data.chain.overview,
+                            net: graph_data.chain.net,
                         }
                     })
-                    .collect())
+                    .collect();
+                Ok((chains, response.status))
             }
             Err(e) => {
-                println!("Failed to parse JSON response: {:?}", e);
-                Err(e)
+                eprintln!("Fatal error: Failed to parse JSON response: {:?}", e);
+                std::process::exit(1);
             }
         }
     }
@@ -1281,6 +1295,7 @@ const CUSTOM_LABEL_COLOR: Color = tailwind::SLATE.c200;
 #[derive(Debug, Deserialize)]
 struct Response {
     graphData: Vec<GraphData>,
+    status: NetworkStatus,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1298,6 +1313,7 @@ struct ChainData {
     dataDictionary: DataDictionary,
     example: Option<HashMap<String, Vec<serde_json::Value>>>,
     overview: Option<String>,
+    net: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
