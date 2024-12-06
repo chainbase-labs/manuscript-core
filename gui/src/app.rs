@@ -86,6 +86,7 @@ pub struct App {
     action_sender: Option<mpsc::Sender<(String, String)>>,
     action_receiver: Option<mpsc::Receiver<(String, String)>>,
     pub logs_scroll_position: usize,
+    pub show_help: bool,
 }
 
 #[derive(Debug, Clone,)]
@@ -211,6 +212,7 @@ impl Clone for App {
             action_sender: self.action_sender.clone(),
             action_receiver: None,
             logs_scroll_position: self.logs_scroll_position,
+            show_help: self.show_help,
         }
     }
 }
@@ -394,6 +396,7 @@ impl App {
             action_sender: Some(action_sender),
             action_receiver: Some(action_receiver),
             logs_scroll_position: 0,
+            show_help: false,
         };
 
         app
@@ -611,6 +614,21 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent, visible_height: usize) {
+        match key_event.code {
+            KeyCode::Char('?') => {
+                self.show_help = !self.show_help;
+                return;
+            }
+            _ => {}
+        }
+
+        if self.show_help {
+            if let KeyCode::Esc = key_event.code {
+                self.show_help = false;
+            }
+            return;
+        }
+
         if self.show_warning {
             self.show_warning = false;
         }

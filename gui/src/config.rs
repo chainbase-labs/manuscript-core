@@ -89,13 +89,13 @@ impl Settings {
     pub fn get_status_text() -> String {
         match &*SETTINGS {
             Ok(settings) => format!(
-                "Chainbase Network [{}] [{}] ",
+                "[? Help] Chainbase Network [{}] [{}] ",
                 settings.app.network,
                 settings.app.version
             ),
             Err(e) => {
                 eprintln!("Failed to load settings: {}", e);
-                String::from("Chainbase Network [Unknown] [Unknown]")
+                String::from("[? Help] Chainbase Network [Unknown] [Unknown]")
             }
         }
     }

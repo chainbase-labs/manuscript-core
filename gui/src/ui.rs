@@ -42,14 +42,14 @@ fn draw_popups(frame: &mut ratatui::Frame, app: &App) {
     if app.show_search {
         draw_search_popup(frame, app);
     }
-    // if app.show_warning {
-    //     draw_warning_popup(frame, app);
-    // }
     if app.show_deploy_options {
         draw_deploy_options_popup(frame, app);
     }
     if app.show_job_options {
         draw_job_options_popup(frame, app);
+    }
+    if app.show_help {
+        draw_help_popup(frame);
     }
 }
 
@@ -179,7 +179,7 @@ fn draw_status_bar(frame: &mut ratatui::Frame) {
     let status_text = Paragraph::new(Line::from(text)).alignment(Alignment::Right);
     frame.render_widget(
         status_text,
-        Rect::new(frame.area().width - 72, 1, 70, 1),
+        Rect::new(frame.area().width - 87, 1, 85, 1),
     );
 }
 
@@ -1051,4 +1051,45 @@ fn draw_job_logs_popup(frame: &mut ratatui::Frame, app: &App) {
         .scroll((app.logs_scroll_position as u16, 0));
 
     frame.render_widget(logs_paragraph, popup_area);
+}
+
+fn draw_help_popup(frame: &mut ratatui::Frame) {
+    let area = frame.area();
+    let help_window_width = 50;
+    let help_window_height = 15;
+    let help_window = Rect::new(
+        (area.width - help_window_width) / 2,
+        (area.height - help_window_height) / 2,
+        help_window_width,
+        help_window_height,
+    );
+
+    frame.render_widget(Clear, help_window);
+
+    let help_text = vec![
+        "Global Shortcuts",
+        "────────────────",
+        "",
+        "Enter      Select/Confirm",
+        "Esc        Back/Cancel",
+        "/          Search",
+        "q          Quit",
+        "",
+        "Tab/1/2/3  Switch tabs",
+        "↑/↓        Navigate",
+        "e          Edit manuscript",
+        "r          Run manuscript",
+        "d          Deploy options",
+    ];
+
+    let help_block = Block::bordered()
+        .title(" Help (? to close) ")
+        .title_alignment(Alignment::Center)
+        .border_set(border::THICK);
+
+    let help_paragraph = Paragraph::new(help_text.join("\n"))
+        .block(help_block)
+        .alignment(Alignment::Left);
+
+    frame.render_widget(help_paragraph, help_window);
 }
