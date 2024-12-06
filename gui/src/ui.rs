@@ -287,24 +287,57 @@ fn draw_network_monitoring(frame: &mut ratatui::Frame, area: Rect) {
     let window_size = area.width.min(100) as usize;
     
     let mut history = vec![' '; window_size];
+    let mut compute_history = vec![' '; window_size];
     
     for i in 0..window_size {
         let past_time = now - (window_size - i - 1) as u64;
         let rand_val = (past_time * i as u64) % 100;
-        history[i] = if rand_val < 30 { '⣼' } else { '⣤' };
+        let compute_val = (past_time * (i + 1) as u64) % 100;
+        history[i] = if rand_val < 30 { '⣷' } else { '⣤' };
+        compute_history[i] = if compute_val < 1 { '⣴' } else { '⣤' };
     }
 
-    let traffic_line = "━".repeat(area.width as usize - 20); // Leave space for text
+    let cpu_power = 79.0;
+    let power_threshold = (cpu_power / 100.0 * window_size as f64) as usize;
+
+    let traffic_line = "━".repeat(area.width as usize - 20);
+    let compute_line = "━".repeat(area.width as usize - 21);
+    let cpu_line = "━".repeat(area.width as usize - 21);
 
     let hints_text = Text::from(vec![
         Line::from(vec![
-            Span::styled("Net Traffic: ", Style::default().fg(Color::White)),
-            Span::styled("14G/m ", Style::default().fg(Color::Green)),
-            Span::styled(traffic_line, Style::default().fg(Color::DarkGray))
+            Span::styled("Net Traffic:", Style::default().fg(Color::White)),
+            Span::styled(traffic_line, Style::default().fg(Color::DarkGray)),
+            Span::styled(" 14G/m", Style::default().fg(Color::Green)),
         ]),
         Line::from(history.iter().collect::<String>()).fg(Color::Rgb(217, 98, 109)),
         Line::from("⣿".repeat(window_size)).fg(Color::Rgb(217, 98, 109)),
         Line::from("⣿".repeat(window_size)).fg(Color::Rgb(140, 60, 70)),
+        Line::default(),
+        Line::from(vec![
+            Span::styled("Pro Threads:", Style::default().fg(Color::White)),
+            Span::styled(compute_line, Style::default().fg(Color::DarkGray)),
+            Span::styled(" 1.1K/m", Style::default().fg(Color::Green)),
+        ]),
+        Line::from(compute_history.iter().collect::<String>()).fg(Color::Rgb(140, 200, 140)),
+        Line::from("⣿".repeat(window_size)).fg(Color::Rgb(70, 100, 70)),
+        Line::default(),
+        Line::from(vec![
+            Span::styled("Cpu Power:", Style::default().fg(Color::White)),
+            Span::styled(cpu_line, Style::default().fg(Color::DarkGray)),
+            Span::styled(format!("{:.1}%", cpu_power), Style::default().fg(Color::Green)),
+        ]),
+        Line::from({
+            let mut spans = Vec::new();
+            for i in 0..window_size {
+                let progress = i as f64 / power_threshold as f64;
+                let r = (0x5e as f64 + ((0xef - 0x5e) as f64 * progress)) as u8;
+                let g = (0x2d as f64 + ((0x53 - 0x2d) as f64 * progress)) as u8;
+                let b = (0x28 as f64 + ((0x6b - 0x28) as f64 * progress)) as u8;
+                spans.push(Span::styled("■", Style::default().fg(Color::Rgb(r, g, b))));
+            }
+            Line::from(spans)
+        }),
     ]);
 
     let hints_block = Block::bordered()
