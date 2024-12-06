@@ -22,7 +22,7 @@ Chainbase Manuscript™ Build The World's Largest Omnichain Data Network 🚀 �
 {{if .Flags.HasAvailableFlags}}🚩  Flags:
 {{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasExample}}
 
-Examples:
+🧠  Examples:
 {{.Example}}{{end}}
 `
 
