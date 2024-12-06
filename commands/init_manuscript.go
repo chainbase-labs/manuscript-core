@@ -147,13 +147,18 @@ func createManuscriptFile(dir string, ms pkg.Manuscript) error {
 }
 
 func createDockerComposeFile(dir string, ms *pkg.Manuscript) error {
+	fmt.Printf("Debug: Creating docker-compose file in directory: %s\n", dir)
 	composeFilePath := filepath.Join(dir, "docker-compose.yml")
 	dockComposeTemplate := static.DockerComposeTemplate
 	switch ms.Sink {
 	case defaultSink:
 		m, err := pkg.LoadConfig(manuscriptConfig)
 		if err != nil {
-			return fmt.Errorf("failed to load manuscript config: %w", err)
+			fmt.Printf("Debug: Creating new config as none exists or error loading: %v\n", err)
+			m = &pkg.Config{
+				BaseDir:     getHomeDir(),
+				Manuscripts: []pkg.Manuscript{},
+			}
 		}
 
 		ms.GraphQLImage = graphQLImage
@@ -161,35 +166,31 @@ func createDockerComposeFile(dir string, ms *pkg.Manuscript) error {
 			ms.GraphQLImage = graphQLARMImage
 		}
 
-		var excludePorts []int
-		for _, m := range m.Manuscripts {
-			if m.Name == ms.Name {
-				ms.Port = m.Port
-				ms.DbPort = m.DbPort
-				ms.DbUser = m.DbUser
-				ms.DbPassword = m.DbPassword
-				ms.GraphQLPort = m.GraphQLPort
-				dockComposeTemplate = static.DockerComposeWithPostgresqlContent
-				return createTemplateFile(composeFilePath, dockComposeTemplate, ms)
+		// Check if manuscript already exists in config
+		var existingMs *pkg.Manuscript
+		for _, manuscript := range m.Manuscripts {
+			if manuscript.Name == ms.Name {
+				existingMs = &manuscript
+				break
 			}
-			excludePorts = append(excludePorts, m.Port, m.GraphQLPort)
 		}
-		port, err := FindAvailablePort(8081, 8181, excludePorts)
-		if err != nil {
-			return fmt.Errorf("failed to find available port: %w", err)
+
+		if existingMs != nil {
+			// Use existing ports if manuscript is already configured
+			ms.Port = existingMs.Port
+			ms.DbPort = existingMs.DbPort
+			ms.DbUser = existingMs.DbUser
+			ms.DbPassword = existingMs.DbPassword
+			ms.GraphQLPort = existingMs.GraphQLPort
+		} else {
+			// Initialize new ports using the common function
+			if err := pkg.InitializePorts(ms); err != nil {
+				return fmt.Errorf("failed to initialize ports: %w", err)
+			}
 		}
-		ms.Port = port
-		excludePorts = append(excludePorts, port)
-		graphQLPort, err := FindAvailablePort(8081, 8181, excludePorts)
-		if err != nil {
-			return fmt.Errorf("failed to find available port: %w", err)
-		}
-		dbPort, err := FindAvailablePort(15432, 15532, excludePorts)
-		if err != nil {
-			return fmt.Errorf("failed to find available port: %w", err)
-		}
-		ms.DbPort = dbPort
-		ms.GraphQLPort = graphQLPort
+
+		fmt.Printf("Debug: Using ports - Flink: %d, GraphQL: %d, DB: %d\n",
+			ms.Port, ms.GraphQLPort, ms.DbPort)
 		dockComposeTemplate = static.DockerComposeWithPostgresqlContent
 	default:
 	}
@@ -293,29 +294,6 @@ func createTemplateFile(filePath, tmplContent string, data interface{}) error {
 	}
 
 	return nil
-}
-
-func FindAvailablePort(startPort, endPort int, exclude []int) (int, error) {
-	listeningPorts, err := pkg.GetListeningPorts()
-	if err != nil {
-		return 0, err
-	}
-
-	portMap := make(map[int]bool)
-	for _, port := range listeningPorts {
-		portMap[port] = true
-	}
-	for _, port := range exclude {
-		portMap[port] = true
-	}
-
-	for port := startPort; port <= endPort; port++ {
-		if !portMap[port] {
-			return port, nil
-		}
-	}
-
-	return 0, fmt.Errorf("no available ports in the range %d-%d", startPort, endPort)
 }
 
 func promptInput(prompt, defaultVal string) string {

@@ -341,6 +341,21 @@ fn draw_network_monitoring(frame: &mut ratatui::Frame, app: &App, area: Rect) {
             }
             Line::from(spans)
         }),
+        Line::from({
+            let mut spans = Vec::new();
+            for i in 0..window_size {
+                let progress = i as f64 / 9 as f64;
+                let r = (0x10 as f64 + ((0x20 - 0x10) as f64 * progress)) as u8;
+                let g = (0x40 as f64 + ((0x60 - 0x40) as f64 * progress)) as u8;
+                let b = (0x10 as f64 + ((0x20 - 0x10) as f64 * progress)) as u8;
+                if i as f64 / window_size as f64 > cpu_power / 100.0 {
+                    spans.push(Span::styled("■", Style::default().fg(Color::Rgb(32, 32, 32))));
+                } else {
+                    spans.push(Span::styled("■", Style::default().fg(Color::Rgb(r, g, b))));
+                }
+            }
+            Line::from(spans)
+        }),
 
         Line::default(),
         Line::from(vec![

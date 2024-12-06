@@ -198,6 +198,13 @@ Here are some of the planned improvements:
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/KagemniKarimu">
+                    <img src="https://avatars.githubusercontent.com/u/82295340?v=4" width="100;" alt="KagemniKarimu"/>
+                    <br />
+                    <sub><b>KagemniKarimu</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/AlanViast">
                     <img src="https://avatars.githubusercontent.com/u/9742385?v=4" width="100;" alt="AlanViast"/>
                     <br />
