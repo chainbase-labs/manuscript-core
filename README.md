@@ -218,6 +218,13 @@ Here are some of the planned improvements:
                     <sub><b>Elias Rad</b></sub>
                 </a>
             </td>
+            <td align="center">
+                <a href="https://github.com/jinmu0410">
+                    <img src="https://avatars.githubusercontent.com/u/33084817?v=4" width="100;" alt="jinmu0410"/>
+                    <br />
+                    <sub><b>jinmu0410</b></sub>
+                </a>
+            </td>
 		</tr>
 	<tbody>
 </table>
