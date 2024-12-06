@@ -5,15 +5,19 @@ use tokio::sync::mpsc;
 use crate::app::AppUpdate;
 use crate::app::SetupStep;
 use crate::app::SetupStepStatus;
+use base64::{Engine as _, engine::general_purpose::STANDARD};
 
 #[derive(Debug)]
-pub struct DockerManager {
+pub struct PreRun {
+    #[allow(dead_code)]
     image: String,
     api_endpoint: String,
     catalog_statement: String,
+    un: String,
+    pw: String,
 }
 
-impl DockerManager {
+impl PreRun {
     pub fn new() -> Self {
         Self {
             image: "repository.chainbase.com/manuscript-node/manuscript-debug:latest".to_string(),
@@ -36,103 +40,35 @@ impl DockerManager {
                 'table-default.snapshot.expire.limit' = '10000',
                 'table-default.snapshot.num.retained.max' = '2000'
             );"#.to_string(),
+            un: "un".to_string(),
+            pw: "pww".to_string(),
         }
     }
 
+    pub fn set_auth(&mut self, un: String, pw: String) {
+        self.un = un;
+        self.pw = pw;
+    }
+
+    fn get_auth_header(&self) -> String {
+        let credentials = format!("{}:{}", self.un, self.pw);
+        format!("Basic {}", STANDARD.encode(credentials))
+    }
+
     pub async fn setup(&self, sender: Option<mpsc::Sender<AppUpdate>>, sql: Option<String>) -> Result<String, String> {
-        // Step 1: Check Docker installation
-        // if let Some(sender) = &sender {
-        //     let _ = sender.send(AppUpdate::SetupProgress(SetupStep::CheckingDocker, SetupStepStatus::InProgress)).await;
-        // }
-        // if !self.check_docker_installed() {
-        //     return Err("Docker is not installed or not accessible".to_string());
-        // }
-
-        // Step 2: Pull the image
-        // if let Some(sender) = &sender {
-        //     let _ = sender.send(AppUpdate::SetupProgress(SetupStep::PullingImage, SetupStepStatus::InProgress)).await;
-        // }
-        // if let Err(e) = self.pull_image().await {
-        //     return Err(format!("Failed to pull image: {}", e));
-        // }
-
-        // Step 3: Run the container
-        // if let Some(sender) = &sender {
-        //     let _ = sender.send(AppUpdate::SetupProgress(SetupStep::StartingContainer, SetupStepStatus::InProgress)).await;
-        // }
-        // if let Err(e) = self.run_container().await {
-        //     return Err(format!("Failed to start container: {}", e));
-        // }
-
-        // Step 4: Submit SQL task
+        // Step 1: Submit SQL task
         if let Some(sender) = &sender {
             let _ = sender.send(AppUpdate::SetupProgress(SetupStep::SubmitSQLTask, SetupStepStatus::InProgress)).await;
         }
         let (session_handle, operation_handle) = self.submit_sql_task(sql.as_deref()).await?;
 
-        // Step 5: Wait for execution results
+        // Step 2: Wait for execution results
         if let Some(sender) = &sender {
             let _ = sender.send(AppUpdate::SetupProgress(SetupStep::WaitingForExecutionResults, SetupStepStatus::InProgress)).await;
         }
         let results = self.wait_for_results(&session_handle, &operation_handle).await?;
 
         Ok(format!("Setup completed successfully. Results:\n{}", results))
-    }
-
-    fn check_docker_installed(&self) -> bool {
-        Command::new("docker")
-            .arg("--version")
-            .output()
-            .is_ok()
-    }
-
-    async fn pull_image(&self) -> Result<(), String> {
-        let output = Command::new("docker")
-            .args(["pull", &self.image])
-            .output()
-            .map_err(|e| e.to_string())?;
-
-        if output.status.success() {
-            Ok(())
-        } else {
-            Err(String::from_utf8_lossy(&output.stderr).to_string())
-        }
-    }
-
-    async fn run_container(&self) -> Result<(), String> {
-        // Check if container already exists
-        let check_output = Command::new("docker")
-            .args(["ps", "-q", "-f", "name=manuscript-debug"])
-            .output()
-            .map_err(|e| e.to_string())?;
-
-        // If container exists (output not empty), return success
-        if !String::from_utf8_lossy(&check_output.stdout).trim().is_empty() {
-            return Ok(());
-        }
-
-        // Container doesn't exist, create and run it
-        let output = Command::new("docker")
-            .args([
-                "run",
-                "-d",  // Run in detached mode
-                "--rm",
-                "--name",
-                "manuscript-debug", 
-                "-p", "18083:8083",
-                "-p", "18081:8081",
-                &self.image,
-            ])
-            .output()
-            .map_err(|e| e.to_string())?;
-
-        if !output.status.success() {
-            return Err(String::from_utf8_lossy(&output.stderr).to_string());
-        }
-
-        // Wait for container to be ready
-        sleep(Duration::from_secs(5)).await;
-        Ok(())
     }
 
     async fn submit_sql_task(&self, sql: Option<&str>) -> Result<(String, String), String> {
@@ -161,6 +97,7 @@ impl DockerManager {
 
         loop {
             match client.post(format!("{}/v1/sessions", self.api_endpoint))
+                .header("Authorization", self.get_auth_header())
                 .send()
                 .await {
                     Ok(response) => {
@@ -201,6 +138,7 @@ impl DockerManager {
         
         let response = client.post(format!("{}/v1/sessions/{}/statements", self.api_endpoint, session_handle))
             .header("Content-Type", "application/json")
+            .header("Authorization", self.get_auth_header())
             .json(&serde_json::json!({ "statement": self.catalog_statement }))
             .send()
             .await
@@ -223,6 +161,7 @@ impl DockerManager {
         let client = reqwest::Client::new();
         let response = client.post(format!("{}/v1/sessions/{}/statements", self.api_endpoint, session_handle))
             .header("Content-Type", "application/json")
+            .header("Authorization", self.get_auth_header())
             .json(&serde_json::json!({ "statement": "use catalog paimon;" }))
             .send()
             .await
@@ -259,6 +198,7 @@ impl DockerManager {
         loop {
             match client.post(&url)
                 .header("Content-Type", "application/json")
+                .header("Authorization", self.get_auth_header())
                 .json(&body)
                 .send()
                 .await {
@@ -275,7 +215,6 @@ impl DockerManager {
                                     .ok_or_else(|| "Invalid operation handle format".to_string())
                             },
                             Err(e) => {
-                                println!("Failed to parse query response: {}", e);
                                 if retries >= max_retries {
                                     return Err(format!("Failed to parse query response after {} retries: {}", max_retries, e));
                                 }
@@ -306,6 +245,7 @@ impl DockerManager {
             }
 
             let response = client.get(format!("{}{}", self.api_endpoint, next_uri))
+                .header("Authorization", self.get_auth_header())
                 .send()
                 .await
                 .map_err(|e| format!("Failed to fetch results: {}", e))?;
@@ -408,6 +348,7 @@ impl DockerManager {
         let client = reqwest::Client::new();
         let response = client.post(format!("{}/v1/sessions/{}/statements", self.api_endpoint, session_handle))
             .header("Content-Type", "application/json")
+            .header("Authorization", self.get_auth_header())
             .json(&serde_json::json!({ "statement": "SET 'execution.runtime-mode' = 'batch';" }))
             .send()
             .await
@@ -427,8 +368,14 @@ impl DockerManager {
     }
 }
 
-impl Clone for DockerManager {
+impl Clone for PreRun {
     fn clone(&self) -> Self {
-        Self::new()
+        Self {
+            image: self.image.clone(),
+            api_endpoint: self.api_endpoint.clone(),
+            catalog_statement: self.catalog_statement.clone(),
+            un: self.un.clone(),
+            pw: self.pw.clone(),
+        }
     }
 } 
