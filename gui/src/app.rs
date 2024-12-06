@@ -922,6 +922,11 @@ impl App {
                             self.show_tables = true;
                             self.selected_table_index = Some(0);
                             self.update_example_data();
+                        } else {
+                            self.show_sql_window = true;
+                            self.sql_input = self.generate_initial_manuscript();
+                            self.sql_cursor_position = self.sql_input.len();
+                            self.current_tab = 1;
                         }
                     },
                     1 => {
@@ -1057,12 +1062,14 @@ impl App {
                 }
             }
             KeyCode::Char('c') => {
-                if self.show_tables {
-                    self.show_sql_window = true;
-                    self.sql_input = self.generate_initial_manuscript();
-                    self.sql_cursor_position = self.sql_input.len();
-                    self.current_tab = 1;
+                if !self.show_tables {
+                    self.selected_chain_index = 0;
+                    self.selected_table_index = Some(0);
                 }
+                self.show_sql_window = true;
+                self.sql_input = self.generate_initial_manuscript();
+                self.sql_cursor_position = self.sql_input.len();
+                self.current_tab = 1;
             }
             _ => {}
         }
