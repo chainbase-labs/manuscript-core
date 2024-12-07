@@ -1,4 +1,4 @@
-![manuscript](./images/manuscript_logo.png)
+![manuscript](./images/manuscript_logo_2.png)
 
 [![GitHub Version](https://img.shields.io/github/tag-pre/chainbase-labs/manuscript-core?label=Version&color=D4B68C)](https://github.com/chainbase-labs/manuscript-core/releases)
 ![PyPI License](https://img.shields.io/pypi/l/quixstreams?label=Licence&color=D4B68C)
