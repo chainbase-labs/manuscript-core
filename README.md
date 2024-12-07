@@ -1,5 +1,11 @@
 ![manuscript](./images/manuscript_logo_2.png)
 
+![macOS](https://img.shields.io/badge/-OSX-da644e?logo=apple)
+![Linux](https://img.shields.io/badge/-Linux-da644e?logo=linux)
+![FreeBSD](https://img.shields.io/badge/-FreeBSD-da644e?logo=freebsd)
+![NetBSD](https://img.shields.io/badge/-NetBSD-da644e?logo=netbsd)
+![OpenBSD](https://img.shields.io/badge/-OpenBSD-da644e?logo=openbsd)
+
 [![GitHub Version](https://img.shields.io/github/tag-pre/chainbase-labs/manuscript-core?label=Version&color=da644e)](https://github.com/chainbase-labs/manuscript-core/releases)
 ![PyPI License](https://img.shields.io/pypi/l/quixstreams?label=Licence&color=da644e)
 [![Docs](https://img.shields.io/badge/docs-chainbase.com-0345b2?label=Docs&color=da644e)](https://docs.chainbase.com/core-concepts/manuscript/overview#core-values-and-capabilities-of-manuscript)
