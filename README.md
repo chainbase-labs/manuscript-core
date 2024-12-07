@@ -1,11 +1,11 @@
 ![manuscript](./images/manuscript_logo_2.png)
 
-[![GitHub Version](https://img.shields.io/github/tag-pre/chainbase-labs/manuscript-core?label=Version&color=740800)](https://github.com/chainbase-labs/manuscript-core/releases)
-![PyPI License](https://img.shields.io/pypi/l/quixstreams?label=Licence&color=740800)
-[![Docs](https://img.shields.io/badge/docs-chainbase.com-0345b2?label=Docs&color=740800)](https://docs.chainbase.com/core-concepts/manuscript/overview#core-values-and-capabilities-of-manuscript)
-[![Discord](https://img.shields.io/badge/Chainbase-740800?logo=Discord)](https://discord.com/channels/933995010158907422/935156893872185344)
-[![Telegram](https://img.shields.io/badge/Chainbase-740800?logo=Telegram)](https://t.me/ChainbaseNetwork)
-[![X](https://img.shields.io/twitter/url?&color=740800&label=&style=social&url=https%3A%2F%2Fx.com%2FchainbaseHQ)](https://x.com/chainbaseHQ)
+[![GitHub Version](https://img.shields.io/github/tag-pre/chainbase-labs/manuscript-core?label=Version&color=da644e)](https://github.com/chainbase-labs/manuscript-core/releases)
+![PyPI License](https://img.shields.io/pypi/l/quixstreams?label=Licence&color=da644e)
+[![Docs](https://img.shields.io/badge/docs-chainbase.com-0345b2?label=Docs&color=da644e)](https://docs.chainbase.com/core-concepts/manuscript/overview#core-values-and-capabilities-of-manuscript)
+[![Discord](https://img.shields.io/badge/Chainbase-da644e?logo=Discord)](https://discord.com/channels/933995010158907422/935156893872185344)
+[![Telegram](https://img.shields.io/badge/Chainbase-da644e?logo=Telegram)](https://t.me/ChainbaseNetwork)
+[![X](https://img.shields.io/twitter/url?&color=da644e&label=&style=social&url=https%3A%2F%2Fx.com%2FchainbaseHQ)](https://x.com/chainbaseHQ)
 
 
 # Build The World's Largest Omnichain Data Network
