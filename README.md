@@ -1,5 +1,9 @@
 ![manuscript](./images/manuscript_logo_2.png)
 
+<a href="https://repology.org/project/btop/versions">
+    <img src="https://repology.org/badge/vertical-allrepos/btop.svg" alt="Packaging status" align="right">
+</a>
+
 ![macOS](https://img.shields.io/badge/-OSX-da644e?logo=apple)
 ![Linux](https://img.shields.io/badge/-Linux-da644e?logo=linux)
 ![FreeBSD](https://img.shields.io/badge/-FreeBSD-da644e?logo=freebsd)
