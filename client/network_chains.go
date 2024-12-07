@@ -20,16 +20,23 @@ type ChainBaseDatasetListItem struct {
 }
 
 type ChainResponse struct {
-	Code      int    `json:"code"`
-	Message   string `json:"message"`
-	GraphData []struct {
-		Chain struct {
-			ID             string                 `json:"id"`
-			Name           string                 `json:"name"`
-			DatabaseName   string                 `json:"databaseName"`
-			DataDictionary map[string][]TableInfo `json:"dataDictionary"`
-		} `json:"chain"`
-	} `json:"graphData"`
+    Code           int    `json:"code"`
+    Message        string `json:"message"`
+    GraphData      []struct {
+        Chain struct {
+            ID             string                 `json:"id"`
+            Name           string                 `json:"name"`
+            DatabaseName   string                 `json:"databaseName"`
+            DataDictionary map[string][]TableInfo `json:"dataDictionary"`
+        } `json:"chain"`
+    } `json:"graphData"`
+    TransactionLogs *[]TransactionLog `json:"transactionLogs,omitempty"`
+}
+
+type TransactionLog struct {
+    Timestamp string `json:"timestamp"`
+    Action    string `json:"action"`
+    Details   string `json:"details"`
 }
 
 type TableInfo struct {
