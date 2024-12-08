@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the version and base URL
-VERSION="v1.0.4"
+VERSION="v1.1.0"
 BASE_URL="https://github.com/chainbase-labs/manuscript-core/releases/download/$VERSION"
 
 # Determine OS type and set the download URL
