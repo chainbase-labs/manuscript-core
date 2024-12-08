@@ -1,4 +1,4 @@
-![manuscript](./images/manuscript_logo_2.png)
+![manuscript](./images/manuscript_logo_3.png)
 <div>
 <a href="https://chainbase.com/blockchains">
     <img src="https://chainbase.com/public/blockchains/logos/chain_status_1.svg" alt="Packaging status" align="right">
@@ -48,7 +48,6 @@ The vision of Manuscript is to realize “data trade” within the Chainbase net
 
 ## Getting Started 🏄
 ### Install Manuscript Client
-> ⚠️ **Note**: The manuscript data is only being trialed on the testnet and locally. Please do not use it in a production environment.
 ```shell
 # GUI
 curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install-gui.sh | bash
