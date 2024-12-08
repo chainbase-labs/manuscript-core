@@ -1,7 +1,7 @@
 ![manuscript](./images/manuscript_logo_2.png)
 <div>
 <a href="https://chainbase.com/blockchains">
-    <img src="https://chainbase.com/public/blockchains/logos/chain_status.svg" alt="Packaging status" align="right">
+    <img src="https://chainbase.com/public/blockchains/logos/chain_status_1.svg" alt="Packaging status" align="right">
 </a>
 
 ![macOS](https://img.shields.io/badge/-OSX-da644e?logo=apple)
@@ -52,12 +52,9 @@ The vision of Manuscript is to realize “data trade” within the Chainbase net
 ```shell
 # GUI
 curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install-gui.sh | bash
-
-# CLI
-curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install.sh | bash
 ```
 ### GUI
-![manuscript-gui](./images/manuscript-gui.png)
+![manuscript-gui](./images/manuscript-gui.jpg)
 
 ### Requirements
 [Docker Desktop 25.1+](https://www.docker.com/products/docker-desktop/)
