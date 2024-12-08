@@ -1,5 +1,5 @@
 ![manuscript](./images/manuscript_logo_2.png)
-
+<div>
 <a href="https://chainbase.com/blockchains">
     <img src="https://chainbase.com/public/blockchains/logos/chain_status.svg" alt="Packaging status" align="right">
 </a>
@@ -23,6 +23,7 @@ Chainbase is a global blockchain data network with an extensive dataset and clus
 ### what is manuscript?
 <div style="display: flex; align-items: center;">
 <img src="./images/manuscript_pipeline.png" alt="manuscript" style="margin-right: 10px;">
+</div>
 </div>
 
 Manuscript is not just a language specification; it’s a protocol, framework, and toolkit designed to simplify and unify data access and processing methods. Through Manuscript, developers and users can more easily interact with the vast amount of data in the Chainbase network, whether querying, analyzing, or applying this data.
