@@ -23,7 +23,10 @@
 # Build The World's Largest Omnichain Data Network
 Chainbase is a global blockchain data network with an extensive dataset and cluster worldwide. If we compare Chainbase’s global data network to a country, then Manuscript would be the language of this data network nation. Manuscript plays a crucial role in the Chainbase ecosystem, serving as a bridge connecting various data, services, and users.
 ### what is manuscript?
-![manuscript](./images/manuscript_pipeline.png)
+<a style="display: flex; align-items: center;">
+<img src="./images/manuscript_pipeline.png" alt="manuscript" style="margin-right: 10px;">
+</a>
+
 Manuscript is not just a language specification; it’s a protocol, framework, and toolkit designed to simplify and unify data access and processing methods. Through Manuscript, developers and users can more easily interact with the vast amount of data in the Chainbase network, whether querying, analyzing, or applying this data.
 The vision of Manuscript is to realize “data trade” within the Chainbase network, establishing a Chainbase ecosystem component that allows users to access any data through any means, across any service, using any language. This grand vision can be broken down into the following key aspects:
 
@@ -32,7 +35,11 @@ The vision of Manuscript is to realize “data trade” within the Chainbase net
 - Any data: Users should be able to access data in any format, such as: JSON, CSV, ORC, XML, XLSX, BLOB
 - Across any service: Users’ expected data storage services also vary, we hope users can access, transfer, and control data in any service, such as: RPC, S3, IPFS, Azblob, HDFS, Google Drive, BigQuery, WebDAV, MySQL, PostgreSQL
 ### Value of Manuscript
-![manuscript](./images/manuscript_value.png)
+<a style="display: flex; align-items: center;">
+<img src="./images/manuscript_value.png" alt="manuscript" style="margin-right: 10px;">
+</a>
+
+[//]: # (![manuscript]&#40;./images/manuscript_value.png&#41;)
 - **Programmability**: Manuscript provides powerful programmable interfaces that allow developers to customize data processing workflows according to their needs. This flexibility means that Manuscript can be used not only for simple data queries but also for building complex data analysis pipelines and applications. Through programmability, Manuscript opens up infinite possibilities for innovative applications of blockchain data.
 
 - **Interoperability**: With the booming development of blockchain technology, it’s becoming increasingly difficult for different blockchains to understand and process each other’s data. Manuscript can solve the interoperability problem of multi-chain and off-chain data aggregation in any dimension. By providing unified interfaces and data processing methods, Manuscript enables seamless integration of data from different blockchains, greatly improving the development efficiency and feasibility of cross-chain applications.
