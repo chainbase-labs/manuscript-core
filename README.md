@@ -21,9 +21,9 @@
 # Build The World's Largest Omnichain Data Network
 Chainbase is a global blockchain data network with an extensive dataset and cluster worldwide. If we compare Chainbase’s global data network to a country, then Manuscript would be the language of this data network nation. Manuscript plays a crucial role in the Chainbase ecosystem, serving as a bridge connecting various data, services, and users.
 ### what is manuscript?
-<a style="display: flex; align-items: center;">
-<img src="./images/manuscript_pipelinee.png" alt="manuscript" style="margin-right: 10px;">
-</a>
+<p style="display: flex; align-items: center;">
+<img src="./images/manuscript_pipeline.png" alt="manuscript" style="margin-right: 10px;">
+</p>
 
 Manuscript is not just a language specification; it’s a protocol, framework, and toolkit designed to simplify and unify data access and processing methods. Through Manuscript, developers and users can more easily interact with the vast amount of data in the Chainbase network, whether querying, analyzing, or applying this data.
 The vision of Manuscript is to realize “data trade” within the Chainbase network, establishing a Chainbase ecosystem component that allows users to access any data through any means, across any service, using any language. This grand vision can be broken down into the following key aspects:
