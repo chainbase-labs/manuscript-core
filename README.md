@@ -15,11 +15,9 @@
 [![Docs](https://img.shields.io/badge/docs-chainbase.com-0345b2?label=Docs&color=da644e)](https://docs.chainbase.com/core-concepts/manuscript/overview#core-values-and-capabilities-of-manuscript)
 [![Discord](https://img.shields.io/badge/Chainbase-da644e?logo=Discord)](https://discord.com/channels/933995010158907422/935156893872185344)
 [![Telegram](https://img.shields.io/badge/Chainbase-da644e?logo=Telegram)](https://t.me/ChainbaseNetwork)
-<a href="https%3A%2F%2Fx.com%2FchainbaseHQ" target="_blank">
+<a href="https%3A%2F%2Fx.com%2FchainbaseHQ" target="_blank" style="display: flex; align-items: center;">
 <img src="https://img.shields.io/badge/Twitter-da644e?logo=x&logoColor=white" alt="Twitter" />
 </a>
-
-
 # Build The World's Largest Omnichain Data Network
 Chainbase is a global blockchain data network with an extensive dataset and cluster worldwide. If we compare Chainbase’s global data network to a country, then Manuscript would be the language of this data network nation. Manuscript plays a crucial role in the Chainbase ecosystem, serving as a bridge connecting various data, services, and users.
 ### what is manuscript?
