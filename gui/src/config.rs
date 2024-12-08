@@ -42,6 +42,13 @@ lazy_static! {
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {
         let mut builder = Config::builder();
+        
+        let default_config = include_str!("../config/default.yaml");
+        builder = builder
+            .add_source(config::File::from_str(
+                default_config,
+                config::FileFormat::Yaml
+            ));
 
         let exe_path = std::env::current_exe()
             .unwrap_or_else(|_| std::path::PathBuf::from("."));
@@ -52,25 +59,14 @@ impl Settings {
             "../config/default.yaml".to_string(),
             "../../config/default.yaml".to_string(),
             format!("{}/config/default.yaml", exe_dir.display()),
-            format!("{}/config/default.yaml",
-                std::env::var("OUT_DIR").unwrap_or_else(|_| String::from("target/debug"))),
         ];
 
-        let mut config_loaded = false;
         for location in config_locations {
             let path = Path::new(&location);
             if path.exists() {
-                let file = File::with_name(&location).format(FileFormat::Yaml);
-                builder = builder.add_source(file);
-                config_loaded = true;
+                builder = builder.add_source(File::with_name(&location).format(FileFormat::Yaml));
                 break;
-            } else {
-                println!("Configuration file not found: {}", location);
             }
-        }
-
-        if !config_loaded {
-            return Err(ConfigError::NotFound("Could not find config file".into()));
         }
 
         builder.build()?.try_deserialize()
