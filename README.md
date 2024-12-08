@@ -1,7 +1,7 @@
 ![manuscript](./images/manuscript_logo_2.png)
 
-<a href="https://repology.org/project/btop/versions">
-    <img src="https://repology.org/badge/vertical-allrepos/btop.svg" alt="Packaging status" align="right">
+<a href="https://chainbase.com/blockchains">
+    <img src="https://chainbase.com/public/blockchains/logos/chain_status.svg" alt="Packaging status" align="right">
 </a>
 
 ![macOS](https://img.shields.io/badge/-OSX-da644e?logo=apple)
