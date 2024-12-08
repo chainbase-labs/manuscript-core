@@ -46,10 +46,6 @@ The vision of Manuscript is to realize “data trade” within the Chainbase net
 
 ## ✨ Videos
 
-<https://github.com/user-attachments/assets/80dfb1c2-3a4e-4e85-bd2b-12d5ca0b5639>
-
-<https://github.com/user-attachments/assets/7ac316a8-ffc1-4381-a268-7f07292ad200>
-
 ## Getting Started 🏄
 ### Install Manuscript Client
 > ⚠️ **Note**: The manuscript data is only being trialed on the testnet and locally. Please do not use it in a production environment.
