@@ -176,12 +176,14 @@ var versionCmd = &cobra.Command{
 	Long: `ℹ️  Manuscript CLI Version Information
 
 Shows:
-🔷 CLI version
-🔷 Build info (coming soon)
-🔷 API versions (coming soon)`,
+🛠️ Manuscript Core version
+🏗️ Build info
+💻 System information
+🐳 Docker environment details`,
 	Example: `>> manuscript-cli version`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("manuscript-cli version %s\n", version)
+		verbosity, _ := cmd.Flags().GetBool("verbose")
+		showVersion(verbosity)
 	},
 }
 
@@ -211,6 +213,9 @@ func init() {
 	// Configure deployment flags
 	deployManuscript.Flags().StringVar(&env, "env", "", "Specify the environment to deploy (local or chainbase)")
 	deployManuscript.MarkFlagRequired("env")
+
+	// Configure version command flags
+	versionCmd.Flags().BoolP("verbose", "v", false, "Display detailed version information")
 
 	// Disable the default completion command
 	rootCmd.CompletionOptions.HiddenDefaultCmd = true
