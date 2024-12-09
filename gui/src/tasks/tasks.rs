@@ -5,6 +5,7 @@ use tokio::time::Duration;
 use super::docker::{DOCKER_COMPOSE_TEMPLATE, DOCKER_COMPOSE_TEMPLATE_SOLANA, JOB_CONFIG_TEMPLATE, MANUSCRIPT_TEMPLATE, MANUSCRIPT_TEMPLATE_SOLANA};
 use crate::config::Settings;
 use std::collections::HashSet;
+use std::thread;
 
 #[derive(Debug, Clone)]
 pub struct JobManager;
@@ -29,6 +30,7 @@ pub enum JobState {
     Pending,
     Failed,
     NotStarted,
+    PullingImage,
 }
 
 #[derive(Debug)]
@@ -295,6 +297,7 @@ impl JobManager {
         // Create and start docker-compose with the correct name
         self.create_docker_compose(&job_dir, &config)?;
         self.start_docker_compose(&job_dir)?;
+        // thread::sleep(Duration::from_secs(10));
 
         Ok(())
     }
@@ -527,7 +530,7 @@ impl JobManager {
 
                                 let status = if !has_containers {
                                     JobState::NotStarted
-                                } else if all_running { 
+                                } else if all_running {
                                     JobState::Running 
                                 } else { 
                                     JobState::Pending 

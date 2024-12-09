@@ -51,6 +51,9 @@ fn draw_popups(frame: &mut ratatui::Frame, app: &App) {
     if app.show_help {
         draw_help_popup(frame);
     }
+    if app.show_warning {
+        draw_warning_popup(frame);
+    }
 }
 
 fn draw_manuscripts_tab(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
@@ -689,6 +692,7 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         let style = match job.status {
             JobState::Running => Style::default().fg(Color::Green),
             JobState::Pending => Style::default().fg(Color::Yellow),
+            JobState::PullingImage => Style::default().fg(Color::Yellow),
             JobState::Failed => Style::default().fg(Color::Red),
             JobState::NotStarted => Style::default().fg(Color::Yellow),
         };
@@ -713,7 +717,8 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &App, area: Rect) {
                 format!("{:<10}", 
                     match job.status {
                         JobState::Running => "Running",
-                        JobState::Pending => "Pending",
+                        JobState::Pending => "Pulling Image...",
+                        JobState::PullingImage => "Pulling Image...",
                         JobState::Failed => "Failed",
                         JobState::NotStarted => "Not Started",
                     }
@@ -1146,4 +1151,34 @@ fn draw_help_popup(frame: &mut ratatui::Frame) {
         .style(Style::default().bg(Color::Rgb(10, 100, 100)).fg(Color::White));
 
     frame.render_widget(help_paragraph, help_window);
+}
+
+fn draw_warning_popup(frame: &mut ratatui::Frame) {
+    let area = frame.area();
+        let warning_width = 80;
+        let warning_height = 4;
+        let warning_x = (area.width - warning_width) / 2;
+        let warning_y = (area.height - warning_height) / 2;
+        
+        let warning_area = Rect::new(
+            warning_x,
+            warning_y,
+            warning_width,
+            warning_height,
+        );
+
+        frame.render_widget(Clear, warning_area);
+        
+        let warning_block = Block::bordered()
+            .title(" Warning ")
+            .title_alignment(Alignment::Center)
+            .border_type(BorderType::Thick)
+            .style(Style::default().bg(Color::Red));
+
+        let warning_text = Paragraph::new("`docker` or `docker compose` are required but not installed:\nhttps://docs.chainbase.com/core-concepts/manuscript/QuickStart/prerequisites")
+            .block(warning_block)
+            .alignment(Alignment::Center)
+            .style(Style::default().fg(Color::White));
+
+        frame.render_widget(warning_text, warning_area);
 }

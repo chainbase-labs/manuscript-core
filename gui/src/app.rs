@@ -18,6 +18,7 @@ use crate::tasks::tasks::{JobsCommand, JobsUpdate, JobStatus};
 use aes_gcm::{Aes128Gcm, Key, Nonce};
 use aes_gcm::aead::{Aead, KeyInit};
 use base64;
+use std::process::Command;
 
 #[derive(Debug)]
 pub struct App {
@@ -654,8 +655,21 @@ impl App {
                 }
                 KeyCode::Enter => {
                     if self.selected_deploy_option == 0 {
+                        // Check if docker is installed
+                        if !self.check_docker_installed() {
+                            self.show_warning = true;
+                            self.show_deploy_options = false;
+                            return;
+                        }
+                        
                         if let Some(yaml_content) = &self.saved_manuscript {
-                            self.job_manager.create_config_file(yaml_content);
+                            let yaml_content = yaml_content.clone();
+                            let job_manager = self.job_manager.clone();
+                            tokio::spawn(async move {
+                                if let Err(e) = job_manager.create_config_file(&yaml_content) {
+                                    eprintln!("Failed to create config file: {}", e);
+                                }
+                            });
                         }
                     }
                     self.show_deploy_options = false;
@@ -1294,6 +1308,18 @@ impl App {
         let cipher = Aes128Gcm::new(key);
         let plaintext = cipher.decrypt(Nonce::from_slice(nonce), ciphertext).map_err(|_| "Failed to decrypt password")?;
         Ok(String::from_utf8(plaintext).map_err(|_| "Failed to convert plaintext to string")?)
+    }
+
+    fn check_docker_installed(&self) -> bool {
+        let docker_check = Command::new("docker")
+            .arg("--version")
+            .output();
+        
+        let compose_check = Command::new("docker")
+            .args(["compose", "--version"])
+            .output();
+
+        docker_check.is_ok() && compose_check.is_ok()
     }
 }
 
