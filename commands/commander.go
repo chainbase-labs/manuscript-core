@@ -9,7 +9,7 @@ import (
 
 var (
 	env     string
-	version = "1.0.4"
+	version = "1.1.0"
 )
 
 func Execute(args []string) error {
