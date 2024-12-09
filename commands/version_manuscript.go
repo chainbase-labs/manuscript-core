@@ -9,7 +9,12 @@ import (
 
 // Build-time variables set via ldflags
 // Build command would be:
-// go build -ldflags "-X commands.gitCommit=$(git rev-parse --short HEAD) -X commands.buildDate=$(date -u +%Y-%m-%d:%H:%M:%S) -X commands.goVersion=$(go version | cut -d' ' -f3) -X commands.rustVersion=$(rustc --version | cut -d' ' -f2)"
+//
+//	go build -ldflags "-X manuscript-core/commands.gitCommit=$(git rev-parse --short HEAD) \
+//	                  -X manuscript-core/commands.buildDate=$(date -u '+%Y-%m-%d:%H:%M:%S') \
+//						 -X manuscript-core/commands.goVersion=$(go version | cut -d' ' -f3) \
+//	                  -X manuscript-core/commands.rustVersion=$(rustc --version | cut -d' ' -f2)" \
+//	       -o manuscript-cli main.go
 var (
 	gitCommit   = "unknown" // Set by build flags
 	buildDate   = "unknown" // Set by build flags
