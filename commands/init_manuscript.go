@@ -101,7 +101,7 @@ func InitManuscript() {
 	}
 
 	selectedChain, selectedDatabase := selectChain(chains, "🏂 3. Please select a chainbase network dataset from the list below: ", defaultDatabase)
-	selectedTable := selectTable(chains, selectedChain, "🧲 4. Please select a table from the list below: ", defaultTable)
+	selectedTable := selectTable(chains, selectedChain, defaultDatabase, "🧲 4. Please select a table from the list below: ", defaultTable)
 
 	outputChoice := promptOutputTarget()
 	fmt.Printf("\n\033[33m🏄🏄 Summary of your selections:\033[0m\n")
@@ -354,23 +354,41 @@ func selectChain(chains []*client.ChainBaseDatasetListItem, prompt, defaultChain
 	return chains[index-1].Name, chains[index-1].DatabaseName
 }
 
-func selectTable(chains []*client.ChainBaseDatasetListItem, selectedChain, prompt, defaultTable string) string {
-	defaultChainIndex := 1
+func selectTable(chains []*client.ChainBaseDatasetListItem, selectedChain, defaultChain, prompt, defaultTable string) string {
 	fmt.Println("\r\033[33m" + prompt + "\u001B[0m")
-	for i, table := range chains[defaultChainIndex].Tables {
+
+	// Find the chain in the list
+	var chainIndex int
+	for i, chain := range chains {
+		if chain.Name == selectedChain || chain.DatabaseName == selectedChain {
+			chainIndex = i
+			break
+		}
+	}
+
+	// Display available tables
+	availableTables := chains[chainIndex].Tables
+	for i, table := range availableTables {
 		fmt.Printf("%d: %s\n", i+1, table)
 	}
+
+	// Prompt user for table choice
 	tableChoice := promptInput("Enter your choice(default is blocks)\u001B[0m: ", "")
 	if tableChoice == "" {
 		fmt.Printf("\u001B[32m✓ Defaulting to table: %s\u001B[0m\n\n", defaultTable)
 		return defaultTable
 	}
+
+	// Validate user input
 	index, err := strconv.Atoi(tableChoice)
-	if err != nil || index < 1 || index > len(chains[defaultChainIndex].Tables) {
+	if err != nil || index < 1 || index > len(availableTables) {
 		fmt.Printf("Invalid choice. Defaulting to table: %s\n", defaultTable)
 		return defaultTable
 	}
-	tableName := chains[defaultChainIndex].Tables[index-1]
+
+	// Return selected table
+	tableName := availableTables[index-1]
+	// Handle special case if transaction logs is selected
 	if tableName == "transactionLogs" {
 		tableName = "transaction_logs"
 	}
