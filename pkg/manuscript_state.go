@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"net/http"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -68,10 +69,15 @@ func (sd *StateDetector) DetectState() (ManuscriptState, error) {
 		return StateFailed, nil
 	}
 
-	// Analyze Flink logs to determine the current state
+	// Analyze Flink logs to determine the current state. If they're unreachable -> UNKNOWN
 	state, err := sd.analyzeFlinkLogs(jobManagerName)
 	if err != nil {
 		return StateUnknown, fmt.Errorf("failed to analyze logs: %w", err)
+	}
+
+	// If the state is RUNNING, check if the GraphQL endpoint is reachable. If it's not -> INITIALIZING
+	if state == StateRunning && !sd.checkGraphQLEndpoint() {
+		return StateInitializing, nil
 	}
 
 	return state, nil
@@ -176,4 +182,19 @@ func GetContainerLogs(ctx context.Context, containerName string, lines int) ([]s
 
 	// Return the logs and any error that occurred during scanning
 	return logs, scanner.Err()
+}
+
+func (sd *StateDetector) checkGraphQLEndpoint() bool {
+	url := fmt.Sprintf("http://127.0.0.1:%d/healthz", sd.manuscript.GraphQLPort)
+	client := &http.Client{
+		Timeout: 2 * time.Second, // Short timeout to avoid hanging
+	}
+
+	resp, err := client.Get(url)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	return resp.StatusCode == http.StatusOK
 }
