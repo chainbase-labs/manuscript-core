@@ -92,6 +92,10 @@ func InitManuscript() {
 	fmt.Printf("\033[32m✓ Manuscript base directory set to: %s\033[0m\n\n", manuscriptDir)
 
 	manuscriptName := promptInput("🏂 2. Enter your manuscript name (default is demo)\u001B[0m: ", "demo")
+	if err := checkExistingManuscript(manuscriptName); err != nil {
+		logErrorAndReturn(fmt.Sprintf("Cannot create manuscript: %v", err), nil)
+		return
+	}
 	if checkDockerContainerExists(manuscriptName) {
 		logErrorAndReturn(fmt.Sprintf("Manuscript with name [ %s ] already exists. Please choose a different name.", manuscriptName), nil)
 	}
@@ -319,6 +323,49 @@ func checkDockerContainerExists(manuscriptName string) bool {
 		}
 	}
 	return false
+}
+
+func checkExistingManuscript(name string) error {
+	// Check if manuscript directory exists
+	msConfig, err := pkg.LoadConfig(manuscriptConfig)
+	if err != nil {
+		return fmt.Errorf("failed to load manuscript config: %w", err)
+	}
+
+	manuscriptPath := filepath.Join(msConfig.BaseDir, manuscriptBaseName, name)
+	if _, err := os.Stat(manuscriptPath); !os.IsNotExist(err) {
+		return fmt.Errorf("manuscript directory already exists at %s.", manuscriptPath)
+	}
+
+	// Check if manuscript containers are running
+	dockers, err := pkg.RunDockerPs()
+	if err != nil {
+		return fmt.Errorf("failed to check running containers: %w", err)
+	}
+
+	containerNames := []string{
+		fmt.Sprintf("%s-jobmanager-1", name),
+		fmt.Sprintf("%s-taskmanager-1", name),
+		fmt.Sprintf("%s-postgres-1", name),
+		fmt.Sprintf("%s-hasura-1", name),
+	}
+
+	for _, docker := range dockers {
+		for _, containerName := range containerNames {
+			if docker.Name == containerName {
+				return fmt.Errorf("manuscript containers for '%s' already exist. Please stop and remove them first", name)
+			}
+		}
+	}
+
+	// Check if manuscript is in config
+	for _, ms := range msConfig.Manuscripts {
+		if ms.Name == name {
+			return fmt.Errorf("manuscript '%s' already exists in configuration. \n Consider cleaning %s", name, manuscriptConfig)
+		}
+	}
+
+	return nil
 }
 
 func fetchChainBaseDatasets() ([]*client.ChainBaseDatasetListItem, error) {
