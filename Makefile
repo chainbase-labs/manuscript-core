@@ -55,7 +55,7 @@ test:
 
 # Install binaries to /usr/local/bin with `make install`
 .PHONY: install
-install: all
+install:
 	@echo "Installing binaries..."
 	cp $(CLI_DIR)/$(BINARY_NAME_CLI) /usr/local/bin/
 	cp $(GUI_DIR)/target/release/$(BINARY_NAME_GUI) /usr/local/bin/
