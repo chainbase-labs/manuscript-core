@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"manuscript-core/client"
 	"manuscript-core/pkg"
 	"net/http"
 	"time"
@@ -46,42 +45,52 @@ func ListJobs() {
 		if err != nil {
 			log.Fatalf("Error: Failed to get docker ps: %v", err)
 		}
+
 		if len(dockers) == 0 {
 			fmt.Println("\r🟡 There are no jobs running...")
 			return nil
 		}
 
-		jobNumber := 0
 		manuscripts, err := pkg.LoadConfig(manuscriptConfig)
-		for _, m := range manuscripts.Manuscripts {
-			if m.Port != 0 {
-				c := client.NewFlinkUiClient(fmt.Sprintf("http://localhost:%d", m.Port))
-				jobs, err := c.GetJobsList()
-				if err != nil {
-					fmt.Printf("\r🟡 Manuscript: \u001B[34m%s\u001B[0m | State: \033[33mInitializing...(may wait for 2 minutes)\033[0m\n", m.Name)
-				}
-				if len(jobs) == 0 && err == nil {
-					fmt.Printf("\r🟡 Manuscript: \u001B[34m%s\u001B[0m | State: \033[33mInitializing...\033[0m\n", m.Name)
-				}
-				for _, job := range jobs {
-					jobNumber++
-					startTime := formatTimestamp(job.StartTime)
-					duration := formatDurationToMinutes(job.Duration)
-
-					switch job.State {
-					case "RUNNING":
-						trackHasuraTable(m.Name)
-						fmt.Printf("\r🟢 %d: Manuscript: \033[32m%s\033[0m | State: \033[32m%s\033[0m | Start Time: %s | Duration: %v | GraphQL: http://127.0.0.1:%d\n", jobNumber, m.Name, job.State, startTime, duration, m.GraphQLPort)
-					case "CANCELED":
-						fmt.Printf("\r🟡 %d: Manuscript: %s | State: \033[33m%s\033[0m | Start Time: %s | Duration: %v\n", jobNumber, m.Name, job.State, startTime, duration)
-					default:
-						fmt.Printf("\r⚪️ %d: Manuscript: %s | State: %s | Start Time: %s | Duration: %v\n", jobNumber, m.Name, job.State, startTime, duration)
-					}
-				}
-			}
+		if err != nil {
+			return fmt.Errorf("failed to load configuration: %w", err)
 		}
-		return err
+
+		jobNumber := 0
+		for _, m := range manuscripts.Manuscripts {
+			jobNumber++
+
+			detector := pkg.NewStateDetector(&m, dockers)
+			state, err := detector.DetectState()
+			if err != nil {
+				log.Printf("Warning: Failed to detect state for %s: %v", m.Name, err)
+				state = pkg.StateUnknown
+			}
+
+			displayJobStatus(jobNumber, &m, state)
+		}
+		return nil
 	})
+}
+
+func displayJobStatus(jobNumber int, m *pkg.Manuscript, state pkg.ManuscriptState) {
+	switch state {
+	case pkg.StateRunning:
+		fmt.Printf("\r🟢 %d: Manuscript: \033[32m%s\033[0m | State: \033[32m%s\033[0m | GraphQL: http://127.0.0.1:%d\n",
+			jobNumber, m.Name, state, m.GraphQLPort)
+	case pkg.StateInitializing:
+		fmt.Printf("\r🟡 %d: Manuscript: \033[34m%s\033[0m | State: \033[33m%s\033[0m\n",
+			jobNumber, m.Name, state)
+	case pkg.StateFailed:
+		fmt.Printf("\r🔴 %d: Manuscript: %s | State: \033[31m%s\033[0m\n",
+			jobNumber, m.Name, state)
+	case pkg.StateStopped:
+		fmt.Printf("\r⚫ %d: Manuscript: %s | State: \033[90m%s\033[0m\n",
+			jobNumber, m.Name, state)
+	default:
+		fmt.Printf("\r⚪ %d: Manuscript: %s | State: %s\n",
+			jobNumber, m.Name, state)
+	}
 }
 
 func JobLogs(jobName string) {
