@@ -7,6 +7,8 @@ import (
 	"log"
 	"manuscript-core/pkg"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -39,38 +41,108 @@ func formatDurationToMinutes(durationMs int64) string {
 	return fmt.Sprintf("%d minutes", durationMinutes)
 }
 
-func ListJobs() {
+func ListJobs(dir string) {
 	_ = pkg.ExecuteStepWithLoading("Checking jobs", false, func() error {
-		dockers, err := pkg.RunDockerPs()
+		// Step 1: Check for running Docker containers
+		dockers, err := getRunningContainers()
 		if err != nil {
-			log.Fatalf("Error: Failed to get docker ps: %v", err)
+			return err
 		}
 
+		// Always show if no containers are running
 		if len(dockers) == 0 {
-			fmt.Println("\r🟡 There are no jobs running...")
+			fmt.Println("\r📍 There are no jobs running...")
+		}
+
+		// Step 2: Get manuscripts based on source (config or directory)
+		manuscripts, err := getManuscripts(dir)
+		if err != nil {
+			return fmt.Errorf("failed to get manuscripts: %w", err)
+		}
+
+		if len(manuscripts) == 0 {
+			if dir != "" {
+				fmt.Printf("\r⚠️ No manuscript files found in %s\n", dir)
+			}
 			return nil
 		}
 
-		manuscripts, err := pkg.LoadConfig(manuscriptConfig)
-		if err != nil {
-			return fmt.Errorf("failed to load configuration: %w", err)
-		}
-
-		jobNumber := 0
-		for _, m := range manuscripts.Manuscripts {
-			jobNumber++
-
-			detector := pkg.NewStateDetector(&m, dockers)
-			state, err := detector.DetectState()
-			if err != nil {
-				log.Printf("Warning: Failed to detect state for %s: %v", m.Name, err)
-				state = pkg.StateUnknown
-			}
-
-			displayJobStatus(jobNumber, &m, state)
-		}
+		// Step 3: Check and display state for each manuscript
+		displayManuscriptStates(manuscripts, dockers)
 		return nil
 	})
+}
+
+// getRunningContainers retrieves all running Docker containers
+func getRunningContainers() ([]pkg.ContainerInfo, error) {
+	dockers, err := pkg.RunDockerPs()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get docker processes: %w", err)
+	}
+	return dockers, nil
+}
+
+// getManuscripts retrieves manuscript configurations from either config file or directory
+func getManuscripts(dir string) ([]pkg.Manuscript, error) {
+	if dir == "" {
+		return getManuscriptsFromConfig()
+	}
+	return getManuscriptsFromDirectory(dir)
+}
+
+// getManuscriptsFromConfig loads manuscripts from the config file
+func getManuscriptsFromConfig() ([]pkg.Manuscript, error) {
+	config, err := pkg.LoadConfig(manuscriptConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load configuration: %w", err)
+	}
+	return config.Manuscripts, nil
+}
+
+// getManuscriptsFromDirectory scans directory for manuscript.yaml files
+func getManuscriptsFromDirectory(dir string) ([]pkg.Manuscript, error) {
+	// Check if directory exists
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return nil, fmt.Errorf("directory does not exist: %s", dir)
+	}
+
+	var manuscripts []pkg.Manuscript
+	// Read only the immediate subdirectories
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			// Check for manuscript.yaml in each immediate subdirectory
+			manuscriptPath := filepath.Join(dir, entry.Name(), "manuscript.yaml")
+			if _, err := os.Stat(manuscriptPath); err == nil {
+				manuscript, err := pkg.ParseYAML(manuscriptPath)
+				if err != nil {
+					log.Printf("Warning: Failed to parse %s: %v", manuscriptPath, err)
+					continue
+				}
+				manuscripts = append(manuscripts, *manuscript)
+			}
+		}
+	}
+
+	return manuscripts, nil
+}
+
+// displayManuscriptStates checks and displays the state of each manuscript
+func displayManuscriptStates(manuscripts []pkg.Manuscript, dockers []pkg.ContainerInfo) {
+	for i, m := range manuscripts {
+		detector := pkg.NewStateDetector(&m, dockers)
+		state, err := detector.DetectState()
+		if err != nil {
+			log.Printf("Warning: Failed to detect state for %s: %v", m.Name, err)
+			state = pkg.StateUnknown
+		}
+
+		displayJobStatus(i+1, &m, state)
+	}
 }
 
 func displayJobStatus(jobNumber int, m *pkg.Manuscript, state pkg.ManuscriptState) {
