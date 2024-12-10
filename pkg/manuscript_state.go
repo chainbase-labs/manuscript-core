@@ -153,8 +153,8 @@ func (sd *StateDetector) analyzeFlinkLogs(containerName string) (ManuscriptState
 		return StateInitializing, nil
 	}
 
-	// By default, return INITIALIZING state
-	return StateInitializing, nil
+	// By default, if a manuscript survives all checks, return RUNNING state
+	return StateRunning, nil
 }
 
 func GetContainerLogs(ctx context.Context, containerName string, lines int) ([]string, error) {
