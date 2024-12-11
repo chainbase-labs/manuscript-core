@@ -349,7 +349,6 @@ public class ETLProcessor {
             ((Map<String, Object>) sink.get("config")).get("password")
     );
 
-    // SQL 실행
     logger.info("Executing SQL for Kafka sink: {}", sql);
     tEnv.executeSql(sql);
     logger.info("Kafka sink created successfully.");
