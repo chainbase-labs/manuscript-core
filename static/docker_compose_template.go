@@ -1,10 +1,9 @@
 package static
 
 var DockerComposeTemplate = `
-version: '3.2'
 name: {{.Name}}
 services:
-  jobmanager: 
+  jobmanager:
     image: repository.chainbase.com/manuscript-node/manuscript-node:latest
     user: "flink"
     command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
@@ -37,7 +36,6 @@ networks:
   ms_network:`
 
 var DockerComposeWithPostgresqlContent = `
-version: '3.2'
 name: {{.Name}}
 services:
   jobmanager:
