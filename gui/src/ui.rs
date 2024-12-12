@@ -874,7 +874,7 @@ fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
             let docker_status = if app.docker_setup_in_progress {
                 format!("Docker setup in progress... ({} seconds)", app.docker_setup_timer / 10)
             } else {
-                "🏄🏻 Manuscript console: Debug your manuscript before deploying it locally or to the network.".to_string()
+                format!("🏄🏻 Manuscript console: Debug your manuscript before deploying it locally or to the network.")
             };
 
             let docker_status_widget = Paragraph::new(Text::from(
