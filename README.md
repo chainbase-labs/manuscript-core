@@ -90,6 +90,9 @@ Here's an example of how to <b>process</b> data from chainbase with manuscript:
 😆😆 data has never been so simple...
 
 ### Key Concepts
+Default location for the Manuscript configuration file:   `~/.manuscript_config.ini`  
+For local setups, data storage directory:  `~/manuscripts/<name>`  
+
 There are two primary objects:
 - `manuscript.yaml` - A script file used to describe the data processing workflow, defining data sources, data processing methods, and the final data flow direction.
 - `docker-compose.yaml` - The Docker Compose file defines a local container cluster environment, allowing developers to test locally. After testing, it can be deployed to the Chainbase distributed network.
