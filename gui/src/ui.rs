@@ -14,12 +14,33 @@ use sysinfo::System;
 const CUSTOM_LABEL_COLOR: Color = Color::White;
 const GAUGE2_COLOR: Style = Style::new().fg(Color::Rgb(10, 100, 100));
 
+// Function to check if the terminal area is sufficient for rendering
+fn is_area_sufficient(area: Rect, min_width: u16, min_height: u16) -> bool {
+    area.width >= min_width && area.height >= min_height
+}
+
 pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
     app.update_jobs_status();
-    
+
+    // Get terminal size
+    let size = frame.size();
+    const MIN_WIDTH: u16 = 80;
+    const MIN_HEIGHT: u16 = 24;
+
+    // Check if terminal is too small
+    if size.width < MIN_WIDTH || size.height < MIN_HEIGHT {
+        // Render a warning message if the terminal is too small
+        let warning = Paragraph::new("Terminal too small. Please resize to at least 80x24.")
+            .alignment(Alignment::Center)
+            .style(Style::default().fg(Color::Red));
+        frame.render_widget(warning, size);
+        return;
+    }
+
+    // Proceed with rendering if size is sufficient
     let main_chunks = create_main_layout(frame);
     draw_tabs(frame, app, main_chunks[0]);
-    
+
     match app.current_tab {
         0 => draw_network_tab(frame, app, main_chunks[1]),
         1 => draw_manuscripts_tab(frame, app, main_chunks[1]),
@@ -28,7 +49,7 @@ pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
     }
 
     draw_status_bar(frame);
-    draw_popups(frame, app);    
+    draw_popups(frame, app);
 
     if app.job_logs.is_some() {
         draw_job_logs_popup(frame, app);
@@ -668,7 +689,16 @@ fn draw_chain_details(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
     }
 }
 
-fn draw_jobs_list(frame: &mut ratatui::Frame, app: &App, area: Rect) {
+fn draw_jobs_list(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
+    // Check if the area is too small to render the jobs list
+    if !is_area_sufficient(area, 30, 10) {
+        let warning = Paragraph::new("Insufficient space for jobs list.")
+            .alignment(Alignment::Center)
+            .style(Style::default().fg(Color::Red));
+        frame.render_widget(warning, area);
+        return;
+    }
+
     let left_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -682,7 +712,7 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         .title(" Manuscript Jobs ")
         .title_alignment(Alignment::Center)
         .border_set(border::THICK);
-    
+
     // Convert jobs into ListItems
     let job_list = app.jobs_status.iter().enumerate().map(|(index, job)| {
         let duration = job.containers.first()
@@ -758,11 +788,20 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &App, area: Rect) {
 }
 
 fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
+    // Check if the area is too small to render the SQL editor
+    if !is_area_sufficient(area, 40, 15) {
+        let warning = Paragraph::new("Insufficient space for SQL editor.")
+            .alignment(Alignment::Center)
+            .style(Style::default().fg(Color::Red));
+        frame.render_widget(warning, area);
+        return;
+    }
+
     let right_block = Block::bordered()
         .title(" SQL Editor ")
         .title_alignment(Alignment::Center)
         .border_set(border::THICK);
-    
+
     if app.saved_manuscript.is_some() {
         let right_chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -832,7 +871,7 @@ fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
             // 1. Progress gauge
             if app.state == AppState::Started {
                 let label = Span::styled(
-                    format!("{:.1}%", app.progress1()),
+                    format!("{:.1}%", app.progress1),
                     Style::new().italic().bold().fg(CUSTOM_LABEL_COLOR),
                 );
                 let gauge = Gauge::default()
@@ -843,7 +882,7 @@ fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
                 frame.render_widget(gauge, gauge_chunks[1]);
             }
 
-            // 2. status
+            // 2. Status
             let docker_status = if app.docker_setup_in_progress {
                 format!("Docker setup in progress... ({} seconds)", app.docker_setup_timer / 10)
             } else {
@@ -858,7 +897,7 @@ fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
             frame.render_widget(docker_status_widget, gauge_chunks[2]);
 
             // Add a tips message
-            let tips_message = "📣 If you are using substreams with solana, it will automatically synchronize all tables.  ";
+            let tips_message = "📣 If you are using substreams with solana, it will automatically synchronize all tables.";
             let tips_widget = Paragraph::new(Text::from(
                 Span::styled(tips_message, Style::default().fg(Color::Yellow))
             ))
@@ -867,8 +906,8 @@ fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
             frame.render_widget(tips_widget, gauge_chunks[3]);
 
             // 3. Setup progress
-            let steup_msg_lines = app.get_setup_progress_lines();
-            let progress_widget = Paragraph::new(steup_msg_lines)
+            let setup_msg_lines = app.get_setup_progress_lines();
+            let progress_widget = Paragraph::new(setup_msg_lines)
                 .alignment(Alignment::Left)
                 .wrap(ratatui::widgets::Wrap { trim: true })
                 .block(Block::default().padding(Padding::horizontal(3)));
@@ -882,7 +921,7 @@ fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
             frame.render_widget(paragraph_msg, gauge_chunks[5]);
 
             frame.render_stateful_widget(
-                Scrollbar::new(ScrollbarOrientation::VerticalRight)
+                Scrollbar::new(ratatui::widgets::ScrollbarOrientation::VerticalRight)
                     .begin_symbol(Some("↑"))
                     .end_symbol(Some("↓")),
                 area,
@@ -932,7 +971,7 @@ fn draw_search_popup(frame: &mut ratatui::Frame, app: &App) {
     frame.render_widget(search_paragraph, search_window);
 }
 
-fn draw_deploy_options_popup(frame: &mut ratatui::Frame, app: &App) {
+fn draw_deploy_options_popup(frame: &mut ratatui::Frame, app: &mut App) {
     let area = frame.area();
     let window_width = 40;
     let window_height = 4;
@@ -1159,7 +1198,7 @@ fn draw_warning_popup(frame: &mut ratatui::Frame) {
         let warning_height = 4;
         let warning_x = (area.width - warning_width) / 2;
         let warning_y = (area.height - warning_height) / 2;
-        
+
         let warning_area = Rect::new(
             warning_x,
             warning_y,
@@ -1168,7 +1207,7 @@ fn draw_warning_popup(frame: &mut ratatui::Frame) {
         );
 
         frame.render_widget(Clear, warning_area);
-        
+
         let warning_block = Block::bordered()
             .title(" Warning ")
             .title_alignment(Alignment::Center)
