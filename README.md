@@ -132,12 +132,21 @@ Here are some of the planned improvements:
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/youngpriince">
+                    <img src="https://avatars.githubusercontent.com/u/110453347?v=4" width="100;" alt="youngpriince"/>
+                    <br />
+                    <sub><b>ypszn</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/AlanViast">
                     <img src="https://avatars.githubusercontent.com/u/9742385?v=4" width="100;" alt="AlanViast"/>
                     <br />
                     <sub><b>Alan Viast</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/nnsW3">
                     <img src="https://avatars.githubusercontent.com/u/146735585?v=4" width="100;" alt="nnsW3"/>
@@ -145,8 +154,6 @@ Here are some of the planned improvements:
                     <sub><b>Elias Rad</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/fishTsai20">
                     <img src="https://avatars.githubusercontent.com/u/123794723?v=4" width="100;" alt="fishTsai20"/>
@@ -162,10 +169,10 @@ Here are some of the planned improvements:
                 </a>
             </td>
             <td align="center">
-                <a href="https://github.com/youngpriince">
-                    <img src="https://avatars.githubusercontent.com/u/110453347?v=4" width="100;" alt="youngpriince"/>
+                <a href="https://github.com/junyoungcross">
+                    <img src="https://avatars.githubusercontent.com/u/96804462?v=4" width="100;" alt="junyoungcross"/>
                     <br />
-                    <sub><b>ypszn</b></sub>
+                    <sub><b>김준영</b></sub>
                 </a>
             </td>
 		</tr>
