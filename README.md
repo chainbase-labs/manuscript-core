@@ -48,10 +48,27 @@ The vision of Manuscript is to realize “data trade” within the Chainbase net
 
 ## Getting Started 🏄
 ### Install Manuscript Client
+You may choose to run any client or compile from the source code:
 ```shell
 # GUI
 curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install-gui.sh | bash
+
+# CUI
+curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install.sh | bash
+
+# or make
+➜  manuscript-core git:(main) ✗ make
+Available targets:
+  🔧 all           - Build both CLI and GUI
+  🐹 cli           - Build only the CLI
+  🦀 gui           - Build only the GUI
+  🧹 clean         - Clean build artifacts
+  🧪 test          - Run tests for both projects
+  📦 install       - Install both binaries to /usr/local/bin
+  📦 install-cli   - Install only the CLI binary to /usr/local/bin
+  📦 install-gui   - Install only the GUI binary to /usr/local/bin
 ```
+
 ### GUI
 ![manuscript-gui](./images/manuscript_gui_1.jpg)
 
@@ -73,6 +90,9 @@ Here's an example of how to <b>process</b> data from chainbase with manuscript:
 😆😆 data has never been so simple...
 
 ### Key Concepts
+Default location for the Manuscript configuration file:   `~/.manuscript_config.ini`  
+For local setups, data storage directory:  `~/manuscripts/<name>`  
+
 There are two primary objects:
 - `manuscript.yaml` - A script file used to describe the data processing workflow, defining data sources, data processing methods, and the final data flow direction.
 - `docker-compose.yaml` - The Docker Compose file defines a local container cluster environment, allowing developers to test locally. After testing, it can be deployed to the Chainbase distributed network.
