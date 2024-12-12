@@ -48,10 +48,27 @@ The vision of Manuscript is to realize “data trade” within the Chainbase net
 
 ## Getting Started 🏄
 ### Install Manuscript Client
+You may choose to run any client or compile from the source code:
 ```shell
 # GUI
 curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install-gui.sh | bash
+
+# CUI
+curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install.sh | bash
+
+# or make
+➜  manuscript-core git:(main) ✗ make
+Available targets:
+  🔧 all           - Build both CLI and GUI
+  🐹 cli           - Build only the CLI
+  🦀 gui           - Build only the GUI
+  🧹 clean         - Clean build artifacts
+  🧪 test          - Run tests for both projects
+  📦 install       - Install both binaries to /usr/local/bin
+  📦 install-cli   - Install only the CLI binary to /usr/local/bin
+  📦 install-gui   - Install only the GUI binary to /usr/local/bin
 ```
+
 ### GUI
 ![manuscript-gui](./images/manuscript_gui_1.jpg)
 
