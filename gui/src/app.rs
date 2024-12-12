@@ -40,8 +40,6 @@ pub struct App {
     pub sql_error: Option<String>,
     pub sql_columns: Vec<Column>,
     pub sql_data: Vec<Vec<serde_json::Value>>,
-    sql_sender: Option<mpsc::Sender<Result<serde_json::Value, String>>>,
-    sql_receiver: Option<mpsc::Receiver<Result<serde_json::Value, String>>>,
     pub sql_timer: u64, 
     pub pre_run: PreRun,
     pub debug_result: Option<String>,
@@ -59,9 +57,9 @@ pub struct App {
     pub current_setup_step: Option<SetupStep>,
     pub vertical_scroll: usize,
     pub vertical_scroll_state: ratatui::widgets::ScrollbarState,
-    pub signal1: SinSignal,
+    signal1: SinSignal,
     pub data1: Vec<(f64, f64)>,
-    pub signal2: SinSignal,
+    signal2: SinSignal,
     pub data2: Vec<(f64, f64)>,
     pub window: [f64; 2],
     pub x: f64,
@@ -76,7 +74,7 @@ pub struct App {
     pub deploy_options: Vec<(String, bool)>,
     pub transformed_sql: Option<String>,
     pub jobs_status: Vec<JobStatus>,
-    jobs_monitor_sender: Option<mpsc::Sender<JobsCommand>>,
+    jobs_monitor_sender: Option<mpsc::Sender<JobsUpdate>>,
     jobs_monitor_receiver: Option<mpsc::Receiver<JobsUpdate>>,
     pub selected_job_index: usize,
     pub show_job_options: bool,
@@ -167,8 +165,6 @@ impl Clone for App {
             sql_error: self.sql_error.clone(),
             sql_columns: self.sql_columns.clone(),
             sql_data: self.sql_data.clone(),
-            sql_sender: self.sql_sender.clone(),
-            sql_receiver: None,
             sql_timer: self.sql_timer,
             pre_run: self.pre_run.clone(),
             debug_result: self.debug_result.clone(),
@@ -304,10 +300,9 @@ pub struct NetworkStatus {
 
 impl App {
     pub async fn new() -> Self {
-        let (sql_sender, sql_receiver) = mpsc::channel(32);
         let (update_sender, update_receiver) = mpsc::channel(32);
         let (jobs_command_tx, jobs_command_rx) = mpsc::channel(32);
-        let (jobs_update_tx, jobs_update_rx) = mpsc::channel(32);
+        let (jobs_update_tx, mut jobs_update_rx) = mpsc::channel(32);
         let (action_sender, action_receiver) = mpsc::channel(32);
         
         let mut signal1 = SinSignal::new(0.2, 3.0, 18.0);
@@ -327,10 +322,12 @@ impl App {
         
         // Create a clone of job_manager for the monitor task
         let monitor_job_manager = job_manager.clone();
+        let tx1 = jobs_update_tx.clone();
+        let tx2 = jobs_update_tx.clone();
         
         // Start the jobs monitor in a separate task
         tokio::spawn(async move {
-            monitor_job_manager.jobs_monitor(jobs_command_rx, jobs_update_tx).await;
+            monitor_job_manager.jobs_monitor(jobs_command_rx, tx1).await;
         });
 
         let job_options = vec!["edit", "logs", "start", "stop", "graphql", "delete"];
@@ -358,8 +355,6 @@ impl App {
             sql_error: None,
             sql_columns: Vec::new(),
             sql_data: Vec::new(),
-            sql_sender: Some(sql_sender),
-            sql_receiver: Some(sql_receiver),
             sql_timer: 0,
             pre_run,
             debug_result: None,
@@ -397,7 +392,7 @@ impl App {
             ],
             transformed_sql: None,
             jobs_status: Vec::new(),
-            jobs_monitor_sender: Some(jobs_command_tx),
+            jobs_monitor_sender: Some(tx2),
             jobs_monitor_receiver: Some(jobs_update_rx),
             selected_job_index: 0,
             show_job_options: false,
@@ -579,7 +574,7 @@ impl App {
             return;
         }
 
-        let total_duration = 200;
+        let total_duration = 300;
         self.progress1 = (self.docker_setup_timer as f64 * 100.0 / total_duration as f64).min(100.0);
         
         if self.progress1 >= 100.0 {
@@ -665,11 +660,20 @@ impl App {
                         if let Some(yaml_content) = &self.saved_manuscript {
                             let yaml_content = yaml_content.clone();
                             let job_manager = self.job_manager.clone();
-                            tokio::spawn(async move {
-                                if let Err(e) = job_manager.create_config_file(&yaml_content) {
-                                    eprintln!("Failed to create config file: {}", e);
+
+
+                            match self.jobs_monitor_sender.clone() {
+                                Some(tx) => {
+                                    tokio::spawn(async move {
+                                        if let Err(e) = job_manager.create_config_file(&yaml_content, tx).await {
+                                            eprintln!("Failed to create config file: {}", e);
+                                        }
+                                    });
                                 }
-                            });
+                                None => {
+                                    println!("No sender available!");
+                                }
+                            }
                         }
                     }
                     self.show_deploy_options = false;

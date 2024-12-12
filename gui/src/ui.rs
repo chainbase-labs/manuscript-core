@@ -22,18 +22,8 @@ fn is_area_sufficient(area: Rect, min_width: u16, min_height: u16) -> bool {
 pub fn draw(frame: &mut ratatui::Frame, app: &mut App) {
     app.update_jobs_status();
 
-    // Get terminal size
-    let size = frame.size();
-    const MIN_WIDTH: u16 = 80;
-    const MIN_HEIGHT: u16 = 24;
-
     // Check if terminal is too small
-    if size.width < MIN_WIDTH || size.height < MIN_HEIGHT {
-        // Render a warning message if the terminal is too small
-        let warning = Paragraph::new("Terminal too small. Please resize to at least 80x24.")
-            .alignment(Alignment::Center)
-            .style(Style::default().fg(Color::Red));
-        frame.render_widget(warning, size);
+    if !check_terminal_size(frame) {
         return;
     }
 
@@ -75,6 +65,22 @@ fn draw_popups(frame: &mut ratatui::Frame, app: &App) {
     if app.show_warning {
         draw_warning_popup(frame);
     }
+}
+
+fn check_terminal_size(frame: &mut ratatui::Frame) -> bool {
+    let size = frame.size();
+    const MIN_WIDTH: u16 = 80;
+    const MIN_HEIGHT: u16 = 24;
+
+    if size.width < MIN_WIDTH || size.height < MIN_HEIGHT {
+        // Render a warning message if the terminal is too small
+        let warning = Paragraph::new("Terminal too small. Please resize to at least 80x24.")
+            .alignment(Alignment::Center)
+            .style(Style::default().fg(Color::Red));
+        frame.render_widget(warning, size);
+        return false;
+    }
+    true
 }
 
 fn draw_manuscripts_tab(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
@@ -725,6 +731,7 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
             JobState::PullingImage => Style::default().fg(Color::Yellow),
             JobState::Failed => Style::default().fg(Color::Red),
             JobState::NotStarted => Style::default().fg(Color::Yellow),
+            JobState::Creating => Style::default().fg(Color::Yellow),
         };
 
         let is_selected = index == app.selected_job_index;
@@ -751,6 +758,7 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
                         JobState::PullingImage => "Pulling Image...",
                         JobState::Failed => "Failed",
                         JobState::NotStarted => "Not Started",
+                        JobState::Creating => "Creating (pull images while take few minutes..)",
                     }
                 ),
                 style
@@ -971,7 +979,7 @@ fn draw_search_popup(frame: &mut ratatui::Frame, app: &App) {
     frame.render_widget(search_paragraph, search_window);
 }
 
-fn draw_deploy_options_popup(frame: &mut ratatui::Frame, app: &mut App) {
+fn draw_deploy_options_popup(frame: &mut ratatui::Frame, app: &App) {
     let area = frame.area();
     let window_width = 40;
     let window_height = 4;
@@ -1110,7 +1118,7 @@ const LOGO: &str = "
 const LOGO_LETTER: &str = "
   █████╗██╗  ██╗ █████╗ ██╗███╗   ██╗██████╗  █████╗ ███████╗███████╗
 ██╔════╝██║  ██║██╔══██╗██║████╗  ██║██╔══██╗██╔══██╗██╔════╝██╔════╝
-██║     ███████║███████║██║██╔██╗ ██║██████╔╝███████║███████╗█████╗  
+██║     ███████║███████║██║██╔██╗ ██║██████╔╝███████║███████╗████���╗  
 ██║     ██╔══██║██╔══██║██║██║╚██╗██║██╔══██╗██╔══██║╚════██║██╔══╝  
 ╚██████╗██║  ██║██║  ██║██║██║ ╚████║██████╔╝██║  ██║███████║███████╗
   ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝";

@@ -31,6 +31,7 @@ pub enum JobState {
     Failed,
     NotStarted,
     PullingImage,
+    Creating,
 }
 
 #[derive(Debug)]
@@ -200,7 +201,7 @@ impl JobManager {
         Ok(None)
     }
 
-    pub fn create_config_file(&self, yaml_content: &str) -> io::Result<()> {
+    pub async fn create_config_file(&self, yaml_content: &str, tx: mpsc::Sender<JobsUpdate>) -> io::Result<()> {
         let home_dir = dirs::home_dir()
             .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found"))?;
         
@@ -208,11 +209,11 @@ impl JobManager {
         let config_path = home_dir.join(".manuscript_config.ini");
         
         // Read existing config if it exists
-        let mut existing_content = if config_path.exists() {
+        let existing_content = if config_path.exists() {
             std::fs::read_to_string(&config_path)?
         } else {
             // Initialize with system info if file doesn't exist
-            let os_type = if cfg!(target_os = "darwin") {
+            let os_type = if cfg!(target_os = "macos") {
                 "darwin"
             } else if cfg!(target_os = "linux") {
                 "linux"
@@ -296,6 +297,13 @@ impl JobManager {
 
         // Create and start docker-compose with the correct name
         self.create_docker_compose(&job_dir, &config)?;
+
+        let _ = tx.send(JobsUpdate::Status(vec![JobStatus {
+            name: config.name,
+            status: JobState::Creating,
+            containers: Vec::new(),
+        }])).await;
+
         self.start_docker_compose(&job_dir)?;
         // thread::sleep(Duration::from_secs(10));
 
