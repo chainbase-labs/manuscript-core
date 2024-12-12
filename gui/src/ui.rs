@@ -959,7 +959,7 @@ fn draw_search_popup(frame: &mut ratatui::Frame, app: &App) {
     frame.render_widget(search_paragraph, search_window);
 }
 
-fn draw_deploy_options_popup((frame: &mut ratatui::Frame, app: &mut App) {
+fn draw_deploy_options_popup(frame: &mut ratatui::Frame, app: &mut App) {
     let area = frame.area();
     let window_width = 40;
     let window_height = 4;
