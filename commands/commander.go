@@ -60,6 +60,8 @@ Each job shows:
 Status indicators:
 🟢 Running - Job is active and processing data
 🟡 Warning - Job needs attention
+🔴 Failed - Job encountered an error
+⚫ Stopped - Job was stopped
 ⚪️ Other - Various other states`,
 	Example: `>> manuscript-cli list`,
 	Run: func(cmd *cobra.Command, args []string) {
