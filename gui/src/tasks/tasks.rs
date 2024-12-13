@@ -5,8 +5,6 @@ use tokio::time::Duration;
 use super::docker::{DOCKER_COMPOSE_TEMPLATE, DOCKER_COMPOSE_TEMPLATE_SOLANA, JOB_CONFIG_TEMPLATE, MANUSCRIPT_TEMPLATE, MANUSCRIPT_TEMPLATE_SOLANA};
 use crate::config::Settings;
 use std::collections::HashSet;
-use std::thread;
-
 #[derive(Debug, Clone)]
 pub struct JobManager;
 
@@ -106,7 +104,6 @@ impl JobManager {
 
         match action {
             "edit" => {
-                // Read the manuscript.yaml file
                 let yaml_content = std::fs::read_to_string(job_dir.join("manuscript.yaml"))?;
                 Ok(Some(yaml_content))
             },
@@ -120,6 +117,10 @@ impl JobManager {
                 } else {
                     Ok(Some(format!("Error: {}", String::from_utf8_lossy(&output.stderr))))
                 }
+            },
+            "graphql" => {
+                self.handle_graphql_action(job_name, &home_dir).await?;
+                Ok(None)
             },
             "delete" => {
                 // First, stop containers
@@ -162,26 +163,18 @@ impl JobManager {
                     .args(["compose", "down"])
                     .output()?;
                 Ok(None)
-            },
-            "graphql" => {
-                if let Some(port) = self.get_job_graphql_port(job_name)? {
-                    let url = format!("http://127.0.0.1:{}", port);
-                    webbrowser::open(&url)
-                        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
-                }
-                Ok(None)
             }
             _ => Ok(None)
         }
     }
 
-    fn get_job_graphql_port(&self, job_name: &str) -> io::Result<Option<u16>> {
-        let home_dir = dirs::home_dir()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found"))?;
-
+    async fn handle_graphql_action(&self, job_name: &str, home_dir: &std::path::Path) -> io::Result<()> {
         let content = std::fs::read_to_string(home_dir.join(".manuscript_config.ini"))?;
-        
         let mut current_section = "";
+        let mut port = None;
+        let mut table = None;
+        let mut chain = None;
+
         for line in content.lines() {
             let line = line.trim();
             
@@ -190,15 +183,120 @@ impl JobManager {
                 continue;
             }
             
-            if current_section == job_name && line.starts_with("graphqlPort") {
-                if let Some(port_str) = line.split('=').nth(1) {
-                    if let Ok(port) = port_str.trim().parse::<u16>() {
-                        return Ok(Some(port));
+            if current_section == job_name {
+                if line.starts_with("graphqlPort") {
+                    if let Some(val) = line.split('=').nth(1) {
+                        port = val.trim().parse::<u16>().ok();
+                    }
+                }
+                if line.starts_with("table") {
+                    if let Some(val) = line.split('=').nth(1) {
+                        table = Some(val.trim().to_string());
+                    }
+                }
+                if line.starts_with("chain") {
+                    if let Some(val) = line.split('=').nth(1) {
+                        chain = Some(val.trim().to_string());
                     }
                 }
             }
         }
-        Ok(None)
+
+        if let (Some(port), Some(table), Some(chain)) = (port, table, chain) {
+            let url = format!("http://127.0.0.1:{}", port);
+            
+            // TODO: The data here needs to be upgraded to automatically obtain from the protocol.
+            let payload = if chain == "solana" {
+                serde_json::json!({
+                    "type": "bulk",
+                    "source": "default", 
+                    "resource_version": 1,
+                    "args": [{
+                        "type": "postgres_track_tables",
+                        "args": {
+                            "allow_warnings": true,
+                            "tables": [
+                                {"table": {"name": "blocks", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "cursors", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "mpl_token_metadata_create_metadata_account_v3_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "mpl_token_metadata_other_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "pumpfun_create_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "pumpfun_initialize_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "pumpfun_set_params_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "pumpfun_swap_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "pumpfun_withdraw_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "raydium_amm_deposit_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "raydium_amm_initialize_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "raydium_amm_swap_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "raydium_amm_withdraw_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "raydium_amm_withdraw_pnl_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "spl_token_approve_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "spl_token_burn_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "spl_token_close_account_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "spl_token_freeze_account_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "spl_token_initialize_account_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "spl_token_initialize_immutable_owner_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "spl_token_initialize_mint_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "spl_token_initialize_multisig_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "spl_token_mint_to_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "spl_token_revoke_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "spl_token_set_authority_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "spl_token_sync_native_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "spl_token_thaw_account_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "spl_token_transfer_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "substreams_history", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "system_program_advance_nonce_account_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "system_program_allocate_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "system_program_allocate_with_seed_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "system_program_assign_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "system_program_assign_with_seed_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "system_program_authorize_nonce_account_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "system_program_create_account_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "system_program_create_account_with_seed_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "system_program_initialize_nonce_account_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "system_program_transfer_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "system_program_transfer_with_seed_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "system_program_upgrade_nonce_account_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "system_program_withdraw_nonce_account_events", "schema": "public"}, "source": "default"},
+                                {"table": {"name": "transactions", "schema": "public"}, "source": "default"}
+                            ]
+                        }
+                    }]
+                })
+            } else {
+                serde_json::json!({
+                    "type": "bulk",
+                    "source": "default",
+                    "resource_version": 1,
+                    "args": [{
+                        "type": "postgres_track_tables",
+                        "args": {
+                            "allow_warnings": true,
+                            "tables": [{
+                                "table": {
+                                    "name": table,
+                                    "schema": "public"
+                                },
+                                "source": "default"
+                            }]
+                        }
+                    }]
+                })
+            };
+
+            let client = reqwest::Client::new();
+            let response = client.post(format!("{}/v1/metadata", url))
+                .json(&payload)
+                .send()
+                .await
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+
+            // Open browser after metadata request succeeds
+            webbrowser::open(&url)
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+        }
+
+        Ok(())
     }
 
     pub async fn create_config_file(&self, yaml_content: &str, tx: mpsc::Sender<JobsUpdate>) -> io::Result<()> {
