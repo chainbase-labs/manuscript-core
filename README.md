@@ -1,22 +1,22 @@
-![manuscript](./images/manuscript_logo_3.png)
+![manuscript](./images/manuscript_logo.png)
 <div>
 <a href="https://chainbase.com/blockchains">
     <img src="https://chainbase.com/public/blockchains/logos/chain_status_1.svg" alt="Packaging status" align="right">
 </a>
 
-![macOS](https://img.shields.io/badge/-OSX-da644e?logo=apple)
-![Linux](https://img.shields.io/badge/-Linux-da644e?logo=linux)
-![FreeBSD](https://img.shields.io/badge/-FreeBSD-da644e?logo=freebsd)
-![NetBSD](https://img.shields.io/badge/-NetBSD-da644e?logo=netbsd)
-![OpenBSD](https://img.shields.io/badge/-OpenBSD-da644e?logo=openbsd)
+![macOS](https://img.shields.io/badge/-OSX-4c4293?logo=apple)
+![Linux](https://img.shields.io/badge/-Linux-4c4293?logo=linux)
+![FreeBSD](https://img.shields.io/badge/-FreeBSD-4c4293?logo=freebsd)
+![NetBSD](https://img.shields.io/badge/-NetBSD-4c4293?logo=netbsd)
+![OpenBSD](https://img.shields.io/badge/-OpenBSD-4c4293?logo=openbsd)
 
-[![GitHub Version](https://img.shields.io/github/tag-pre/chainbase-labs/manuscript-core?label=Version&color=da644e)](https://github.com/chainbase-labs/manuscript-core/releases)
-![PyPI License](https://img.shields.io/pypi/l/quixstreams?label=Licence&color=da644e)
-[![Docs](https://img.shields.io/badge/docs-chainbase.com-0345b2?label=Docs&color=da644e)](https://docs.chainbase.com/core-concepts/manuscript/overview#core-values-and-capabilities-of-manuscript)
-[![Discord](https://img.shields.io/badge/Chainbase-da644e?logo=Discord)](https://discord.com/channels/933995010158907422/935156893872185344)
-[![Telegram](https://img.shields.io/badge/Chainbase-da644e?logo=Telegram)](https://t.me/ChainbaseNetwork)
+[![GitHub Version](https://img.shields.io/github/tag-pre/chainbase-labs/manuscript-core?label=Version&color=4c4293)](https://github.com/chainbase-labs/manuscript-core/releases)
+![PyPI License](https://img.shields.io/pypi/l/quixstreams?label=Licence&color=4c4293)
+[![Docs](https://img.shields.io/badge/docs-chainbase.com-0345b2?label=Docs&color=4c4293)](https://docs.chainbase.com/core-concepts/manuscript/overview#core-values-and-capabilities-of-manuscript)
+[![Discord](https://img.shields.io/badge/Chainbase-4c4293?logo=Discord)](https://discord.com/channels/933995010158907422/935156893872185344)
+[![Telegram](https://img.shields.io/badge/Chainbase-4c4293?logo=Telegram)](https://t.me/ChainbaseNetwork)
 <a href="https%3A%2F%2Fx.com%2FchainbaseHQ" target="_blank" style="display: flex; align-items: center;">
-<img src="https://img.shields.io/badge/Twitter-da644e?logo=x&logoColor=white" alt="Twitter" />
+<img src="https://img.shields.io/badge/Twitter-4c4293?logo=x&logoColor=white" alt="Twitter" />
 </a>
 # Build The World's Largest Omnichain Data Network
 Chainbase is a global blockchain data network with an extensive dataset and cluster worldwide. If we compare Chainbase’s global data network to a country, then Manuscript would be the language of this data network nation. Manuscript plays a crucial role in the Chainbase ecosystem, serving as a bridge connecting various data, services, and users.

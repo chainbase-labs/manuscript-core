@@ -757,7 +757,7 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
                         JobState::Pending => "Pulling Image...",
                         JobState::PullingImage => "Pulling Image...",
                         JobState::Failed => "Failed",
-                        JobState::NotStarted => "Not Started",
+                        JobState::NotStarted => "Not Started (pull images while take few minutes..)",
                         JobState::Creating => "Creating (pull images while take few minutes..)",
                     }
                 ),
