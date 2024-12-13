@@ -15,7 +15,7 @@
 [![Docs](https://img.shields.io/badge/docs-chainbase.com-0345b2?label=Docs&color=4c4293)](https://docs.chainbase.com/core-concepts/manuscript/overview#core-values-and-capabilities-of-manuscript)
 [![Discord](https://img.shields.io/badge/Chainbase-4c4293?logo=Discord)](https://discord.com/channels/933995010158907422/935156893872185344)
 [![Telegram](https://img.shields.io/badge/Chainbase-4c4293?logo=Telegram)](https://t.me/ChainbaseNetwork)
-<a href="https%3A%2F%2Fx.com%2FchainbaseHQ" target="_blank" style="display: flex; align-items: center;">
+<a href="https://x.com/chainbasehq" target="_blank" style="display: flex; align-items: center;">
 <img src="https://img.shields.io/badge/Twitter-4c4293?logo=x&logoColor=white" alt="Twitter" />
 </a>
 # Build The World's Largest Omnichain Data Network
@@ -49,14 +49,16 @@ The vision of Manuscript is to realize “data trade” within the Chainbase net
 ## Getting Started 🏄
 ### Install Manuscript Client
 You may choose to run any client or compile from the source code:
+##### GUI
 ```shell
-# GUI
 curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install-gui.sh | bash
-
-# CUI
+```
+#### CUI
+```shell
 curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install.sh | bash
-
-# or make
+```
+#### MAKE
+```shell
 ➜  manuscript-core git:(main) ✗ make
 Available targets:
   🔧 all           - Build both CLI and GUI
