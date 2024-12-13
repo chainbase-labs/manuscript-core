@@ -1,7 +1,7 @@
 ![manuscript](./images/manuscript_logo.png)
 <div>
 <a href="https://chainbase.com/blockchains">
-    <img src="https://chainbase.com/public/blockchains/logos/chain_status_1.svg" alt="Packaging status" align="right">
+    <img src="https://chainbase.com/public/blockchains/logos/chain_status_2.svg" alt="Packaging status" align="right">
 </a>
 
 ![macOS](https://img.shields.io/badge/-OSX-4c4293?logo=apple)
