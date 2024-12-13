@@ -47,8 +47,9 @@ You'll be prompted to select:
 }
 
 var jobListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all manuscript jobs",
+	Use:     "list",
+	Aliases: []string{"ls"},
+	Short:   "List all manuscript jobs",
 	Long: `📋 View all running manuscript jobs
 
 Each job shows:
