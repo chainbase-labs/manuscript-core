@@ -53,7 +53,7 @@ You may choose to run any client or compile from the source code:
 ```shell
 curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install-gui.sh | bash
 ```
-#### CUI
+#### CLI
 ```shell
 curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install.sh | bash
 ```
