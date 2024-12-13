@@ -18,15 +18,16 @@ import (
 )
 
 const (
-	manuscriptBaseName = "manuscript"
-	manuscriptBaseDir  = "$HOME"
-	manuscriptConfig   = "$HOME/.manuscript_config.ini"
-	networkChainURL    = "https://api.chainbase.com"
-	defaultDatabase    = "zkevm"
-	defaultTable       = "blocks"
-	defaultSink        = "postgres"
-	graphQLImage       = "repository.chainbase.com/manuscript-node/graphql-engine:latest"
-	graphQLARMImage    = "repository.chainbase.com/manuscript-node/graphql-engine-arm64:latest"
+	manuscriptBaseName   = "manuscript"
+	manuscriptBaseDir    = "$HOME"
+	manuscriptConfig     = "$HOME/.manuscript_config.ini"
+	networkChainURL      = "https://api.chainbase.com"
+	networkChainEndpoint = "/api/v1/metadata/network_chains"
+	defaultDatabase      = "zkevm"
+	defaultTable         = "blocks"
+	defaultSink          = "postgres"
+	graphQLImage         = "repository.chainbase.com/manuscript-node/graphql-engine:latest"
+	graphQLARMImage      = "repository.chainbase.com/manuscript-node/graphql-engine-arm64:latest"
 )
 
 func executeInitManuscript(ms pkg.Manuscript) {
@@ -323,7 +324,7 @@ func checkDockerContainerExists(manuscriptName string) bool {
 func fetchChainBaseDatasets() ([]*client.ChainBaseDatasetListItem, error) {
 	var chains []*client.ChainBaseDatasetListItem
 	err := pkg.ExecuteStepWithLoading("Checking Datasets From Network", false, func() error {
-		c := client.NewChainBaseClient(networkChainURL)
+		c := client.NewChainBaseClient(networkChainURL, networkChainEndpoint)
 		var err error
 		chains, err = c.GetChainBaseDatasetList()
 		if err != nil {
