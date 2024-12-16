@@ -15,7 +15,7 @@ GO_LDFLAGS=-ldflags "\
 -X manuscript-core/commands.rustVersion=$(RUST_VERSION)"
 
 # Directory Locations
-CLI_DIR=.
+CLI_DIR=cli
 GUI_DIR=gui
 
 # Default to help when nothing is specified by user
