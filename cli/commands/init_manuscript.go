@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	manuscriptBaseName   = "manuscript"
+	manuscriptBaseName   = "manuscripts"
 	manuscriptBaseDir    = "$HOME"
 	manuscriptConfig     = "$HOME/.manuscript_config.ini"
 	networkChainURL      = "https://api.chainbase.com"

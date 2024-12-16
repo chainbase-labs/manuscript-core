@@ -41,7 +41,7 @@ func formatDurationToMinutes(durationMs int64) string {
 	return fmt.Sprintf("%d minutes", durationMinutes)
 }
 
-func ListJobs(dir string) {
+func ListJobs(config *pkg.Config) {
 	_ = pkg.ExecuteStepWithLoading("Checking jobs", false, func() error {
 		// Step 1: Check for running Docker containers
 		dockers, err := getRunningContainers()
@@ -54,21 +54,8 @@ func ListJobs(dir string) {
 			fmt.Println("\r📍 There are no jobs running...")
 		}
 
-		// Step 2: Get manuscripts based on source (config or directory)
-		manuscripts, err := getManuscripts(dir)
-		if err != nil {
-			return fmt.Errorf("failed to get manuscripts: %w", err)
-		}
-
-		if len(manuscripts) == 0 {
-			if dir != "" {
-				fmt.Printf("\r⚠️ No manuscript files found in %s\n", dir)
-			}
-			return nil
-		}
-
 		// Step 3: Check and display state for each manuscript
-		displayManuscriptStates(manuscripts, dockers)
+		displayManuscriptStates(config.Manuscripts, dockers)
 		return nil
 	})
 }
