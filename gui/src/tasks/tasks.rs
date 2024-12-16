@@ -493,9 +493,12 @@ impl JobManager {
             name: yaml["name"].as_str().unwrap_or("demo").to_string(),
             spec_version: yaml["specVersion"].as_str().unwrap_or("v1.0.0").to_string(),
             parallelism: yaml["parallelism"].as_u64().unwrap_or(1),
-            db_port: yaml["port"].as_u64().unwrap_or(15432) as u16,
-            graphql_port: yaml["graphqlPort"].as_u64().unwrap_or(19080) as u16,
-            job_port: yaml["port"].as_u64().unwrap_or(18080) as u16,
+            db_port: self.get_available_port(15432, 15439)
+                .unwrap_or(15432),
+            graphql_port: self.get_available_port(19080, 19090)
+                .unwrap_or(19080),
+            job_port: self.get_available_port(18080, 18090)
+                .unwrap_or(18080),
             source: SourceConfig {
                 name: source["name"].as_str().unwrap_or("").to_string(),
                 dataset_type: source["type"].as_str().unwrap_or("dataset").to_string(),
