@@ -2,6 +2,8 @@ package commands
 
 import (
 	"fmt"
+	"log"
+	"manuscript-core/pkg"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -47,8 +49,9 @@ You'll be prompted to select:
 }
 
 var jobListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all manuscript jobs",
+	Use:     "list [directory]",
+	Aliases: []string{"ls"},
+	Short:   "List all manuscript jobs",
 	Long: `📋 View all running manuscript jobs
 
 Each job shows:
@@ -60,10 +63,28 @@ Each job shows:
 Status indicators:
 🟢 Running - Job is active and processing data
 🟡 Warning - Job needs attention
-⚪️ Other - Various other states`,
-	Example: `>> manuscript-cli list`,
+🔴 Failed - Job encountered an error
+⚫ Stopped - Job was stopped
+
+Usage:
+- Run without arguments to check default directory
+- Specify a directory path to check manuscripts in that location`,
+	Example: `>> manuscript-cli ls
+>> manuscript-cli list /path/to/manuscripts`,
+	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		ListJobs()
+		var dir string
+		// if no args, use default manuscript directory
+		if len(args) == 0 {
+			config, err := pkg.LoadConfig(manuscriptConfig)
+			if err != nil {
+				log.Fatalf("Error: Failed to load config: %v", err)
+			}
+			dir = fmt.Sprintf("%s/%s", config.BaseDir, manuscriptBaseName)
+		} else {
+			dir = args[0] // use specified directory if user input
+		}
+		ListJobs(dir)
 	},
 }
 
