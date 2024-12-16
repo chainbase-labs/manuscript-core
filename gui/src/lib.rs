@@ -4,3 +4,4 @@ pub mod app;
 pub mod ui;
 pub mod prerun;
 pub mod tasks;
+pub mod logger;

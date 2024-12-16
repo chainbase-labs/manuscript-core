@@ -21,3 +21,6 @@ base64 = "0.22.1"
 aes-gcm = "0.10.3"
 sysinfo = "0.33.0"
 rand = "0.8.5"
+log = "0.4"
+simplelog = "0.12"
+time = { version = "0.3", features = ["macros"] }
