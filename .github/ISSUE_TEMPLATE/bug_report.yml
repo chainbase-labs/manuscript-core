@@ -20,11 +20,8 @@ body:
       label: Environment
       description: Tell us about your environment
       placeholder: >
-        $ manuscript-gui version
-        manuscript-cli version 1.1.0
-        
-        $ manuscript-cli version
-        manuscript-cli version 1.1.0
+        $ manuscript-gui version 
+          manuscript-cli version 1.1.0
 
         $ manuscript-cli version --verbose
         Manuscript CLI:
