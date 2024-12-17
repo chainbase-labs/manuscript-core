@@ -1,5 +1,5 @@
 # Variables
-VERSION ?= 1.1.0
+VERSION ?= 1.1.1
 GIT_COMMIT=$(shell git rev-parse --short HEAD)
 BUILD_DATE=$(shell date -u '+%Y-%m-%d:%H:%M:%S')
 GO_VERSION=$(shell go version | cut -d' ' -f3)
