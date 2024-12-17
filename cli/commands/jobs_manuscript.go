@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -129,6 +130,36 @@ func displayManuscriptStates(manuscripts []pkg.Manuscript, dockers []pkg.Contain
 		}
 
 		displayJobStatus(i+1, &m, state)
+
+		if state == pkg.StateRunning {
+			// hasura metadata endpoint tracks tables
+			url := fmt.Sprintf("http://127.0.0.1:%d/v1/metadata", m.GraphQLPort)
+
+			payload := fmt.Sprintf(`{
+				"type": "bulk",
+				"source": "default", 
+				"resource_version": 1,
+				"args": [{
+					"type": "postgres_track_tables",
+					"args": {
+						"allow_warnings": true,
+						"tables": [{
+							"table": {
+								"name": "%s",
+								"schema": "public"
+							},
+							"source": "default"
+						}]
+					}
+				}]
+			}`, m.Table)
+
+			resp, err := http.Post(url, "application/json", strings.NewReader(payload))
+			if err != nil {
+				return
+			}
+			defer resp.Body.Close()
+		}
 	}
 }
 
