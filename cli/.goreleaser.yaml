@@ -9,7 +9,7 @@ before:
 builds:
   - env:
       - CGO_ENABLED=0
-      - VERSION=$(curl -s https://api.github.com/repos/chainbase-labs/manuscript-core/releases/latest | grep 'tag_name' | cut -d'"' -f4)"
+      - VERSION=$(curl -s https://api.github.com/repos/chainbase-labs/manuscript-core/releases/latest | grep 'tag_name' | cut -d'"' -f4)
     goos:
       - linux
       - windows
