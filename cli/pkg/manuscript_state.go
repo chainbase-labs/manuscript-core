@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os/exec"
-	"regexp"
 	"strings"
 	"time"
 )
@@ -70,7 +69,7 @@ func (sd *StateDetector) DetectState() (ManuscriptState, error) {
 	}
 
 	// Analyze Flink logs to determine the current state. If they're unreachable -> UNKNOWN
-	state, err := sd.analyzeFlinkLogs(jobManagerName)
+	state, err := sd.checkContainerStatus(jobManagerName)
 	if err != nil {
 		return StateUnknown, fmt.Errorf("failed to analyze logs: %w", err)
 	}
@@ -83,84 +82,28 @@ func (sd *StateDetector) DetectState() (ManuscriptState, error) {
 	return state, nil
 }
 
-// analyzeFlinkLogs scans the logs of a Flink container to determine the current state
-func (sd *StateDetector) analyzeFlinkLogs(containerName string) (ManuscriptState, error) {
-	// Create a context that will timeout after 5 seconds and ensure cleanup with defer
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	// Get the last 500 lines of logs
-	logs, err := GetContainerLogs(ctx, containerName, 500)
+func (sd *StateDetector) checkContainerStatus(containerName string) (ManuscriptState, error) {
+	dockers, err := RunDockerPs()
 	if err != nil {
 		return StateUnknown, fmt.Errorf("failed to get container logs: %w", err)
 	}
 
-	// Create variables to store the most recent relevant log entries
-	var lastRunningMatch string
-	var lastInitMatch string
-	var lastFailMatch string
-	var lastFinishMatch string
-
-	// Define regular expressions to match relevant log entries
-	patterns := map[string]*regexp.Regexp{
-		string(StateRunning): regexp.MustCompile(
-			`(Job .+\(.+\) (switched to RUNNING|switched from .+ to RUNNING)|` +
-				`Completed checkpoint \d+ for job)`),
-		string(StateFailed): regexp.MustCompile(
-			`(Job [a-f0-9-]+ \(.*\) switched to FAILED|` +
-				`Exception in thread|Error|FATAL|` +
-				`Task failure|JobManager failure)`),
-		string(StateInitializing): regexp.MustCompile(
-			`(Starting JobManager|` +
-				`Starting TaskManager|` +
-				`Created new job|` +
-				`Submitting job|` +
-				`Job [a-f0-9-]+ \(.*\) is being submitted)`),
-		string(StateRunning) + "_FINISHED": regexp.MustCompile(`Job [a-f0-9-]+ \(.*\) switched to FINISHED`),
+	container := sd.findContainer(containerName)
+	if container == nil {
+		return StateUnknown, fmt.Errorf("container not found: %s", containerName)
 	}
 
-	// Scan logs from newest to oldest
-	for i := len(logs) - 1; i >= 0; i-- {
-		line := logs[i]
-		// Check if the log entry matches any of the relevant patterns
-		if patterns[string(StateRunning)].MatchString(line) && lastRunningMatch == "" {
-			lastRunningMatch = line
-		}
-		if patterns[string(StateFailed)].MatchString(line) && lastFailMatch == "" {
-			lastFailMatch = line
-		}
-		if patterns[string(StateInitializing)].MatchString(line) && lastInitMatch == "" {
-			lastInitMatch = line
-		}
-		if patterns[string(StateRunning)+"_FINISHED"].MatchString(line) && lastFinishMatch == "" {
-			lastFinishMatch = line
+	for _, docker := range dockers {
+		if docker.Name == containerName {
+			if strings.Contains(docker.Status, "Up") {
+				return StateRunning, nil
+			} else if strings.Contains(docker.Status, "Exited") {
+				return StateFailed, nil
+			}
 		}
 	}
 
-	// Return state based on most recent relevant log entry
-	if lastFinishMatch != "" {
-		// If we found a FINISHED state and there's no FAILED state after it -> RUNNING
-		if lastFailMatch == "" || strings.Index(lastFinishMatch, lastFailMatch) > 0 {
-			return StateRunning, nil
-		}
-	}
-	if lastRunningMatch != "" {
-		// If we found a RUNNING state and there's no FAILED state after it -> RUNNING
-		if lastFailMatch == "" || strings.Index(lastRunningMatch, lastFailMatch) > 0 {
-			return StateRunning, nil
-		}
-	}
-	if lastFailMatch != "" {
-		// If we found a FAILED pattern match, and it survived other checks -> FAILED
-		return StateFailed, nil
-	}
-	if lastInitMatch != "" {
-		// If we found an INITIALIZING pattern match, and it survived other checks -> INITIALIZING
-		return StateInitializing, nil
-	}
-
-	// By default, if a manuscript survives all checks, return RUNNING state
-	return StateRunning, nil
+	return StateUnknown, nil
 }
 
 func GetContainerLogs(ctx context.Context, containerName string, lines int) ([]string, error) {
