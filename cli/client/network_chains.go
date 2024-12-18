@@ -9,8 +9,9 @@ import (
 )
 
 type ChainBaseClient struct {
-	baseURL    string
-	httpClient *http.Client
+	baseURL       string
+	chainEndpoint string
+	httpClient    *http.Client
 }
 
 type ChainBaseDatasetListItem struct {
@@ -20,23 +21,23 @@ type ChainBaseDatasetListItem struct {
 }
 
 type ChainResponse struct {
-    Code           int    `json:"code"`
-    Message        string `json:"message"`
-    GraphData      []struct {
-        Chain struct {
-            ID             string                 `json:"id"`
-            Name           string                 `json:"name"`
-            DatabaseName   string                 `json:"databaseName"`
-            DataDictionary map[string][]TableInfo `json:"dataDictionary"`
-        } `json:"chain"`
-    } `json:"graphData"`
-    TransactionLogs *[]TransactionLog `json:"transactionLogs,omitempty"`
+	Code      int    `json:"code"`
+	Message   string `json:"message"`
+	GraphData []struct {
+		Chain struct {
+			ID             string                 `json:"id"`
+			Name           string                 `json:"name"`
+			DatabaseName   string                 `json:"databaseName"`
+			DataDictionary map[string][]TableInfo `json:"dataDictionary"`
+		} `json:"chain"`
+	} `json:"graphData"`
+	TransactionLogs *[]TransactionLog `json:"transactionLogs,omitempty"`
 }
 
 type TransactionLog struct {
-    Timestamp string `json:"timestamp"`
-    Action    string `json:"action"`
-    Details   string `json:"details"`
+	Timestamp string `json:"timestamp"`
+	Action    string `json:"action"`
+	Details   string `json:"details"`
 }
 
 type TableInfo struct {
@@ -45,9 +46,10 @@ type TableInfo struct {
 	Description string `json:"description"`
 }
 
-func NewChainBaseClient(baseURL string) *ChainBaseClient {
+func NewChainBaseClient(baseURL string, chainEndpoint string) *ChainBaseClient {
 	return &ChainBaseClient{
-		baseURL: baseURL,
+		baseURL:       baseURL,
+		chainEndpoint: chainEndpoint,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -55,7 +57,7 @@ func NewChainBaseClient(baseURL string) *ChainBaseClient {
 }
 
 func (c *ChainBaseClient) GetChainBaseDatasetList() ([]*ChainBaseDatasetListItem, error) {
-	url := fmt.Sprintf("%s/api/v1/metadata/network_chains", c.baseURL)
+	url := fmt.Sprintf("%s%s", c.baseURL, c.chainEndpoint)
 
 	resp, err := c.httpClient.Get(url)
 	if err != nil {

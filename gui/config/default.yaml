@@ -5,7 +5,7 @@ api:
 
 app:
   network: "TestNet"
-  version: "v1.1.0"
+  version: "v1.1.1"
 
 node:
   job_manager_image_arm64: "repository.chainbase.com/manuscript-node/manuscript-node:latest"

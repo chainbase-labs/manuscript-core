@@ -27,19 +27,13 @@ jobs:
           go-version: 1.22
       - name: Get Manuscript CLI Version
         run: |
+          cd cli && \
           MANUSCRIPT_CLI_VERSION='v'$(go run main.go version | tr -s ' ' | awk '{print $NF}')
           echo "MANUSCRIPT_CLI_VERSION=$MANUSCRIPT_CLI_VERSION" >> $GITHUB_ENV
       - name: Get Git Tag Version
         run: |
           Git_TAG_VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
           echo "Git_TAG_VERSION=$Git_TAG_VERSION" >> $GITHUB_ENV
-      - name: Check if versions match
-        run: |
-          if [ "${{ env.MANUSCRIPT_CLI_VERSION }}" != "${{ env.Git_TAG_VERSION }}" ]; then
-            echo "Versions do not match!"
-            exit 1
-          fi
-          echo "Versions match!"
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -48,5 +42,6 @@ jobs:
           # 'latest', 'nightly', or a semver
           version: "~> v2"
           args: release --clean
+          workdir: cli
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

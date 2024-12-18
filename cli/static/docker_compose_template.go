@@ -15,7 +15,7 @@ services:
       - ./data/log:/opt/flink/log
       - ./manuscript.yaml:/opt/flink/manuscript.yaml
     networks:
-      - ms_network
+      - ms_network_{{ .Name }}
 
   taskmanager:
     image: repository.chainbase.com/manuscript-node/manuscript-node:latest
@@ -30,10 +30,10 @@ services:
       - ./data/log:/opt/flink/log
       - ./manuscript.yaml:/opt/flink/manuscript.yaml
     networks:
-      - ms_network
+      - ms_network_{{ .Name }}
 
 networks:
-  ms_network:`
+  ms_network_{{ .Name }}:`
 
 var DockerComposeWithPostgresqlContent = `
 name: {{.Name}}
@@ -50,7 +50,7 @@ services:
       - ./data/log:/opt/flink/log
       - ./manuscript.yaml:/opt/flink/manuscript.yaml
     networks:
-      - ms_network
+      - ms_network_{{ .Name }}
 
   taskmanager:
     image: repository.chainbase.com/manuscript-node/manuscript-node:latest
@@ -65,7 +65,7 @@ services:
       - ./data/log:/opt/flink/log
       - ./manuscript.yaml:/opt/flink/manuscript.yaml
     networks:
-      - ms_network
+      - ms_network_{{ .Name }}
 
   postgres:
     image: postgres:16.4
@@ -78,7 +78,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_DB=${POSTGRES_DB:-public}
     networks:
-      - ms_network
+      - ms_network_{{ .Name }}
     restart: unless-stopped
 
   hasura:
@@ -91,8 +91,8 @@ services:
       HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/{{.Database}}
       HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
     networks:
-      - ms_network
+      - ms_network_{{ .Name }}
     restart: unless-stopped
 
 networks:
-  ms_network:`
+  ms_network_{{ .Name }}:`

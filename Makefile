@@ -1,5 +1,5 @@
 # Variables
-VERSION ?= 1.1.0
+VERSION ?= 1.1.1
 GIT_COMMIT=$(shell git rev-parse --short HEAD)
 BUILD_DATE=$(shell date -u '+%Y-%m-%d:%H:%M:%S')
 GO_VERSION=$(shell go version | cut -d' ' -f3)
@@ -15,7 +15,7 @@ GO_LDFLAGS=-ldflags "\
 -X manuscript-core/commands.rustVersion=$(RUST_VERSION)"
 
 # Directory Locations
-CLI_DIR=.
+CLI_DIR=cli
 GUI_DIR=gui
 
 # Default to help when nothing is specified by user

@@ -56,7 +56,7 @@ func TestGetChainBaseDatasetList(t *testing.T) {
 	}))
 	defer mockServer.Close()
 
-	client := NewChainBaseClient(mockServer.URL)
+	client := NewChainBaseClient(mockServer.URL, "/api/v1/metadata/network_chains")
 
 	chains, err := client.GetChainBaseDatasetList()
 

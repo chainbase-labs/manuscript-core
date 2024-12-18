@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"manuscript-core/pkg"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -9,7 +10,7 @@ import (
 
 var (
 	env     string
-	version = "1.1.0"
+	version = "1.1.1"
 )
 
 func Execute(args []string) error {
@@ -47,8 +48,9 @@ You'll be prompted to select:
 }
 
 var jobListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all manuscript jobs",
+	Use:     "list",
+	Aliases: []string{"ls"},
+	Short:   "List all manuscript jobs",
 	Long: `📋 View all running manuscript jobs
 
 Each job shows:
@@ -60,10 +62,21 @@ Each job shows:
 Status indicators:
 🟢 Running - Job is active and processing data
 🟡 Warning - Job needs attention
-⚪️ Other - Various other states`,
-	Example: `>> manuscript-cli list`,
+🔴 Failed - Job encountered an error
+⚫ Stopped - Job was stopped
+
+Usage:
+- Run without arguments to check default directory
+- Specify a directory path to check manuscripts in that location`,
+	Example: `>> manuscript-cli ls
+>> manuscript-cli list /path/to/manuscripts`,
+	Args: cobra.MaximumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		ListJobs()
+		config, err := pkg.LoadConfig(manuscriptConfig)
+		if err != nil {
+			fmt.Println("Error: Failed to load manuscript config: %v", err)
+		}
+		ListJobs(config)
 	},
 }
 
