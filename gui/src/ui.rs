@@ -70,11 +70,11 @@ fn draw_popups(frame: &mut ratatui::Frame, app: &App) {
 fn check_terminal_size(frame: &mut ratatui::Frame) -> bool {
     let size = frame.size();
     const MIN_WIDTH: u16 = 80;
-    const MIN_HEIGHT: u16 = 24;
+    const MIN_HEIGHT: u16 = 28;
 
     if size.width < MIN_WIDTH || size.height < MIN_HEIGHT {
         // Render a warning message if the terminal is too small
-        let warning = Paragraph::new("Terminal too small. Please resize to at least 80x24.")
+        let warning = Paragraph::new("Terminal too small. Please resize to at least 80x28.")
             .alignment(Alignment::Center)
             .style(Style::default().fg(Color::Red));
         frame.render_widget(warning, size);
