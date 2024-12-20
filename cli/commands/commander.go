@@ -71,9 +71,27 @@ Usage:
 
 var configShowCmd = &cobra.Command{
 	Use:   "show",
-	Short: "Show current manuscript configuration",
+	Short: "Show manuscript configuration",
+	Long: `📋 Show Manuscript Configuration
+
+Options:
+--summary  Show condensed overview of configuration
+
+Display includes:
+• Config file location
+• Base directory
+• Manuscript counts
+• Port assignments
+• Disk vs config differences`,
+	Example: `>> manuscript-cli config show
+>> manuscript-cli config show --summary`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ConfigShow()
+		summary, _ := cmd.Flags().GetBool("summary")
+		if summary {
+			ShowConfigSummary()
+		} else {
+			ConfigShow()
+		}
 	},
 }
 
@@ -286,9 +304,10 @@ func init() {
 	// Utility commands
 	rootCmd.AddCommand(versionCmd)
 
-	// Add flags to config clean command
+	// Add flags to config subcommands
 	configCleanCmd.Flags().Bool("all", false, "Remove all manuscripts")
 	configCleanCmd.Flags().Bool("force", false, "Skip confirmation for removal")
+	configShowCmd.Flags().BoolP("summary", "s", false, "Show condensed overview of configuration")
 
 	// Configure deployment flags
 	deployManuscript.Flags().StringVar(&env, "env", "", "Specify the environment to deploy (local or chainbase)")
