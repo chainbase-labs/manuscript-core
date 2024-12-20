@@ -74,7 +74,7 @@ Usage:
 	Run: func(cmd *cobra.Command, args []string) {
 		config, err := pkg.LoadConfig(manuscriptConfig)
 		if err != nil {
-			fmt.Println("Error: Failed to load manuscript config: %v", err)
+			fmt.Printf("Error: Failed to load manuscript config: %v", err)
 		}
 		ListJobs(config)
 	},
