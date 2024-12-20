@@ -29,31 +29,27 @@ func ConfigShow() {
 	fmt.Printf("📋 Manuscript Configuration:\n\n%s\n", string(jsonData))
 }
 
-func ConfigClean(selective bool, manuscripts []string) {
+func ConfigClean(all bool, force bool, manuscripts []string) {
 	config, err := pkg.LoadConfig(manuscriptConfig)
 	if err != nil {
 		log.Fatalf("Error: Failed to load manuscript config: %v", err)
 	}
 
-	// Keep track of original system settings
-	originalBaseDir := config.BaseDir
-	originalSystemInfo := config.SystemInfo
-
-	if !selective {
-		// Clean all manuscripts mode
-		fmt.Print("⚠️  Warning: This will remove all manuscript configurations. Continue? (y/N): ")
-		var response string
-		fmt.Scanln(&response)
-
-		if strings.ToLower(response) != "y" {
-			fmt.Println("Operation cancelled.")
-			return
+	if all {
+		if !force {
+			fmt.Print("⚠️  Warning: This will remove all manuscript configurations. Continue? (y/N): ")
+			var response string
+			fmt.Scanln(&response)
+			if strings.ToLower(response) != "y" {
+				fmt.Println("Operation cancelled.")
+				return
+			}
 		}
 
-		// Create new config preserving system settings
-		err := pkg.SaveConfig(manuscriptConfig, &pkg.Config{
-			BaseDir:     originalBaseDir,    // Preserve original BaseDir
-			SystemInfo:  originalSystemInfo, // Preserve original SystemInfo
+		// Keep system settings but remove all manuscripts
+		err := pkg.SaveConfigFresh(manuscriptConfig, &pkg.Config{
+			BaseDir:     config.BaseDir,
+			SystemInfo:  config.SystemInfo,
 			Manuscripts: []pkg.Manuscript{},
 		})
 
@@ -70,51 +66,66 @@ func ConfigClean(selective bool, manuscripts []string) {
 	var removedCount int
 
 	for _, ms := range config.Manuscripts {
-		if len(manuscripts) > 0 {
-			// If specific manuscripts were provided
-			if contains(manuscripts, ms.Name) {
-				fmt.Printf("Remove manuscript '%s'? (y/N): ", ms.Name)
-				var response string
-				fmt.Scanln(&response)
+		shouldKeep := true
 
-				if strings.ToLower(response) != "y" {
-					remainingManuscripts = append(remainingManuscripts, ms)
-					fmt.Printf("Keeping manuscript '%s'\n", ms.Name)
+		// If specific manuscripts provided
+		if len(manuscripts) > 0 {
+			if contains(manuscripts, ms.Name) {
+				if !force {
+					fmt.Printf("Remove manuscript '%s'? (y/N): ", ms.Name)
+					var response string
+					fmt.Scanln(&response)
+					if strings.ToLower(response) == "y" {
+						shouldKeep = false
+						fmt.Printf("Removed manuscript '%s'\n", ms.Name)
+						removedCount++
+					} else {
+						fmt.Printf("Keeping manuscript '%s'\n", ms.Name)
+					}
 				} else {
+					shouldKeep = false
 					fmt.Printf("Removed manuscript '%s'\n", ms.Name)
 					removedCount++
 				}
 			} else {
-				remainingManuscripts = append(remainingManuscripts, ms)
+				shouldKeep = true
 			}
 		} else {
-			// If no specific manuscripts were provided, ask for each
-			fmt.Printf("Remove manuscript '%s'? (y/N): ", ms.Name)
-			var response string
-			fmt.Scanln(&response)
-
-			if strings.ToLower(response) != "y" {
-				remainingManuscripts = append(remainingManuscripts, ms)
-				fmt.Printf("Keeping manuscript '%s'\n", ms.Name)
+			// No specific manuscripts provided, ask for each
+			if !force {
+				fmt.Printf("Remove manuscript '%s'? (y/N): ", ms.Name)
+				var response string
+				fmt.Scanln(&response)
+				if strings.ToLower(response) == "y" {
+					shouldKeep = false
+					fmt.Printf("Removed manuscript '%s'\n", ms.Name)
+					removedCount++
+				} else {
+					fmt.Printf("Keeping manuscript '%s'\n", ms.Name)
+				}
 			} else {
+				shouldKeep = false
 				fmt.Printf("Removed manuscript '%s'\n", ms.Name)
 				removedCount++
 			}
 		}
-	}
 
-	// Save updated config
-	err = pkg.SaveConfig(manuscriptConfig, &pkg.Config{
-		BaseDir:     originalBaseDir,
-		SystemInfo:  originalSystemInfo,
-		Manuscripts: remainingManuscripts,
-	})
-
-	if err != nil {
-		log.Fatalf("Error: Failed to update config: %v", err)
+		if shouldKeep {
+			remainingManuscripts = append(remainingManuscripts, ms)
+		}
 	}
 
 	if removedCount > 0 {
+		err := pkg.SaveConfigFresh(manuscriptConfig, &pkg.Config{
+			BaseDir:     config.BaseDir,
+			SystemInfo:  config.SystemInfo,
+			Manuscripts: remainingManuscripts,
+		})
+
+		if err != nil {
+			log.Fatalf("Error: Failed to update config: %v", err)
+		}
+
 		fmt.Printf("🧹 Successfully removed %d manuscript(s)\n", removedCount)
 	} else {
 		fmt.Println("ℹ️  No manuscripts were removed")
@@ -129,4 +140,66 @@ func contains(slice []string, str string) bool {
 		}
 	}
 	return false
+}
+
+func removeManuscriptsFromConfig(config *pkg.Config, manuscriptsToRemove []string, force bool) (*pkg.Config, int) {
+	var remainingManuscripts []pkg.Manuscript
+	removedCount := 0
+
+	for _, ms := range config.Manuscripts {
+		shouldKeep := true
+
+		// If specific manuscripts listed, check if this one should be removed
+		if len(manuscriptsToRemove) > 0 {
+			if contains(manuscriptsToRemove, ms.Name) {
+				if !force {
+					fmt.Printf("Remove manuscript '%s'? (y/N): ", ms.Name)
+					if confirmRemoval() {
+						shouldKeep = false
+						removedCount++
+						fmt.Printf("Removed manuscript '%s'\n", ms.Name)
+					} else {
+						fmt.Printf("Keeping manuscript '%s'\n", ms.Name)
+					}
+				} else {
+					shouldKeep = false
+					removedCount++
+					fmt.Printf("Removed manuscript '%s'\n", ms.Name)
+				}
+			}
+		} else {
+			// No specific manuscripts listed, ask about each one
+			if !force {
+				fmt.Printf("Remove manuscript '%s'? (y/N): ", ms.Name)
+				if confirmRemoval() {
+					shouldKeep = false
+					removedCount++
+					fmt.Printf("Removed manuscript '%s'\n", ms.Name)
+				} else {
+					fmt.Printf("Keeping manuscript '%s'\n", ms.Name)
+				}
+			} else {
+				shouldKeep = false
+				removedCount++
+				fmt.Printf("Removed manuscript '%s'\n", ms.Name)
+			}
+		}
+
+		if shouldKeep {
+			remainingManuscripts = append(remainingManuscripts, ms)
+		}
+	}
+
+	// Create new config with same settings but updated manuscript list
+	return &pkg.Config{
+		BaseDir:     config.BaseDir,
+		SystemInfo:  config.SystemInfo,
+		Manuscripts: remainingManuscripts,
+	}, removedCount
+}
+
+func confirmRemoval() bool {
+	var response string
+	fmt.Scanln(&response)
+	return strings.ToLower(response) == "y"
 }

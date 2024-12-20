@@ -78,10 +78,30 @@ var configShowCmd = &cobra.Command{
 }
 
 var configCleanCmd = &cobra.Command{
-	Use:   "clean",
+	Use:   "clean [manuscript-names...]",
 	Short: "Clean manuscript configuration file",
+	Long: `🧹 Clean Manuscript Configuration
+
+Options:
+--all    Remove all manuscripts
+--force  Skip confirmation for removal
+
+Examples:
+• Clean specific manuscripts with confirmation:
+  manuscript-cli config clean manuscript1 manuscript2
+
+• Clean specific manuscripts without confirmation:
+  manuscript-cli config clean manuscript1 manuscript2 --force
+
+• Clean all manuscripts with confirmation:
+  manuscript-cli config clean --all
+
+• Clean all manuscripts without confirmation:
+  manuscript-cli config clean --all --force`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ConfigClean()
+		all, _ := cmd.Flags().GetBool("all")
+		force, _ := cmd.Flags().GetBool("force")
+		ConfigClean(all, force, args)
 	},
 }
 
@@ -265,6 +285,10 @@ func init() {
 
 	// Utility commands
 	rootCmd.AddCommand(versionCmd)
+
+	// Add flags to config clean command
+	configCleanCmd.Flags().Bool("all", false, "Remove all manuscripts")
+	configCleanCmd.Flags().Bool("force", false, "Skip confirmation for removal")
 
 	// Configure deployment flags
 	deployManuscript.Flags().StringVar(&env, "env", "", "Specify the environment to deploy (local or chainbase)")
