@@ -94,7 +94,7 @@ Display includes:
 	Run: func(cmd *cobra.Command, args []string) {
 		summary, _ := cmd.Flags().GetBool("summary")
 		if summary {
-			ShowConfigSummary()
+			ConfigShowSummary()
 		} else {
 			ConfigShow()
 		}

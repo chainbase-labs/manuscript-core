@@ -10,6 +10,7 @@ import (
 	"strings"
 )
 
+// ConfigSummary is a struct to hold summarized manuscript configuration details
 type ConfigSummary struct {
 	ConfigLocation    string
 	BaseDir           string
@@ -18,12 +19,15 @@ type ConfigSummary struct {
 	Discrepancies     []string
 }
 
+// ConfigLocation prints the location of the manuscript config file
 func ConfigLocation() {
 	configPath := os.ExpandEnv(manuscriptConfig)
 	fmt.Printf("📁 Manuscript config location: %s\n", configPath)
 }
 
+// ConfigShow prints the whole manuscript configuration as JSON
 func ConfigShow() {
+	// Load manuscript config
 	config, err := pkg.LoadConfig(manuscriptConfig)
 	if err != nil {
 		log.Fatalf("Error: Failed to load manuscript config: %v", err)
@@ -35,21 +39,27 @@ func ConfigShow() {
 		log.Fatalf("Error: Failed to marshal config: %v", err)
 	}
 
+	// Print JSON data to console
 	fmt.Printf("📋 Manuscript Configuration:\n\n%s\n", string(jsonData))
 }
 
-func ShowConfigSummary() {
+// ConfigShowSummary prints a summarized view of the manuscript configuration
+func ConfigShowSummary() {
+	// Load manuscript config
 	configPath := os.ExpandEnv(manuscriptConfig)
 	config, err := pkg.LoadConfig(manuscriptConfig)
 	if err != nil {
 		log.Fatalf("Error: Failed to load manuscript config: %v", err)
 	}
 
+	// Build summary and display
 	summary := buildConfigSummary(configPath, config)
 	displaySummary(summary)
 }
 
+// buildConfigSummary creates a ConfigSummary struct from the manuscript config
 func buildConfigSummary(configPath string, config *pkg.Config) ConfigSummary {
+	// Create summary struct
 	summary := ConfigSummary{
 		ConfigLocation:    configPath,
 		BaseDir:           config.BaseDir,
@@ -62,14 +72,19 @@ func buildConfigSummary(configPath string, config *pkg.Config) ConfigSummary {
 		if err != nil {
 			fmt.Printf("⚠️  Warning: Could not read manuscripts from disk: %v\n", err)
 		}
+		// Tracks manuscripts which are in the base directory but not in the config
 		summary.DiskManuscripts = manuscripts
+		// Find discrepancies between disk and config
 		summary.Discrepancies = findDiscrepancies(manuscripts, config.Manuscripts)
 	}
 
+	// Return summary
 	return summary
 }
 
+// findManuscriptsOnDisk reads the base directory and returns a list of manuscripts
 func findManuscriptsOnDisk(baseDir string) ([]string, error) {
+	// Find all manuscripts in the manuscripts directory
 	var manuscripts []string
 	manuscriptsDir := filepath.Join(baseDir, "manuscripts")
 
@@ -78,6 +93,7 @@ func findManuscriptsOnDisk(baseDir string) ([]string, error) {
 		return nil, err
 	}
 
+	// Check each entry in the directory
 	for _, entry := range entries {
 		if entry.IsDir() {
 			// Check if manuscript.yaml exists in the directory
@@ -87,9 +103,11 @@ func findManuscriptsOnDisk(baseDir string) ([]string, error) {
 			}
 		}
 	}
+	// Return list of manuscripts
 	return manuscripts, nil
 }
 
+// findDiscrepancies compares manuscripts on disk with those in the config
 func findDiscrepancies(diskMss []string, configMss []pkg.Manuscript) []string {
 	var discrepancies []string
 	configMap := make(map[string]bool)
@@ -117,9 +135,11 @@ func findDiscrepancies(diskMss []string, configMss []pkg.Manuscript) []string {
 		}
 	}
 
+	// Return discrepancies as a list of strings
 	return discrepancies
 }
 
+// displaySummary prints the ConfigSummary struct to the console in a human-readable format
 func displaySummary(summary ConfigSummary) {
 	fmt.Println("\n📊 Manuscript Configuration Summary")
 	fmt.Println("──────────────────────────────────")
@@ -147,12 +167,15 @@ func displaySummary(summary ConfigSummary) {
 	}
 }
 
+// ConfigClean removes manuscript configurations from the config file
 func ConfigClean(all bool, force bool, manuscripts []string) {
+	// Load manuscript config
 	config, err := pkg.LoadConfig(manuscriptConfig)
 	if err != nil {
 		log.Fatalf("Error: Failed to load manuscript config: %v", err)
 	}
 
+	// check if all flag is set
 	if all {
 		if !force {
 			fmt.Print("⚠️  Warning: This will remove all manuscript configurations. Continue? (y/N): ")
@@ -171,10 +194,12 @@ func ConfigClean(all bool, force bool, manuscripts []string) {
 			Manuscripts: []pkg.Manuscript{},
 		})
 
+		// Check for errors
 		if err != nil {
 			log.Fatalf("Error: Failed to clean config: %v", err)
 		}
 
+		// Print success message
 		fmt.Println("🧹 All manuscript configurations cleaned successfully!")
 		return
 	}
@@ -228,11 +253,13 @@ func ConfigClean(all bool, force bool, manuscripts []string) {
 			}
 		}
 
+		// Add manuscript to remaining list if it should be kept
 		if shouldKeep {
 			remainingManuscripts = append(remainingManuscripts, ms)
 		}
 	}
 
+	// Save updated config with remaining manuscripts
 	if removedCount > 0 {
 		err := pkg.SaveConfigFresh(manuscriptConfig, &pkg.Config{
 			BaseDir:     config.BaseDir,
@@ -240,12 +267,15 @@ func ConfigClean(all bool, force bool, manuscripts []string) {
 			Manuscripts: remainingManuscripts,
 		})
 
+		// Check for errors
 		if err != nil {
 			log.Fatalf("Error: Failed to update config: %v", err)
 		}
 
+		// Print success message
 		fmt.Printf("🧹 Successfully removed %d manuscript(s)\n", removedCount)
 	} else {
+		// No manuscripts removed
 		fmt.Println("ℹ️  No manuscripts were removed")
 	}
 }
@@ -260,6 +290,7 @@ func contains(slice []string, str string) bool {
 	return false
 }
 
+// Helper function removeManuscriptsFromConfig removes specific manuscripts from the config
 func removeManuscriptsFromConfig(config *pkg.Config, manuscriptsToRemove []string, force bool) (*pkg.Config, int) {
 	var remainingManuscripts []pkg.Manuscript
 	removedCount := 0
@@ -303,6 +334,7 @@ func removeManuscriptsFromConfig(config *pkg.Config, manuscriptsToRemove []strin
 			}
 		}
 
+		// Add manuscript to remaining list if it should be kept
 		if shouldKeep {
 			remainingManuscripts = append(remainingManuscripts, ms)
 		}
@@ -316,6 +348,7 @@ func removeManuscriptsFromConfig(config *pkg.Config, manuscriptsToRemove []strin
 	}, removedCount
 }
 
+// Helper function to confirm removal of a manuscript
 func confirmRemoval() bool {
 	var response string
 	fmt.Scanln(&response)
