@@ -47,6 +47,44 @@ You'll be prompted to select:
 	},
 }
 
+var configCmd = &cobra.Command{
+	Use:   "config",
+	Short: "Manage manuscript configuration",
+	Long: `🔧 Manage Manuscript Configuration
+
+Actions:
+📁 View config file location
+📋 Show current configuration
+🧹 Clean configuration file
+
+Usage:
+- Run without arguments to see config location
+- Use 'show' to view full configuration
+- Use 'clean' to remove all configurations`,
+	Example: `>> manuscript-cli config
+>> manuscript-cli config show
+>> manuscript-cli config clean`,
+	Run: func(cmd *cobra.Command, args []string) {
+		ConfigLocation()
+	},
+}
+
+var configShowCmd = &cobra.Command{
+	Use:   "show",
+	Short: "Show current manuscript configuration",
+	Run: func(cmd *cobra.Command, args []string) {
+		ConfigShow()
+	},
+}
+
+var configCleanCmd = &cobra.Command{
+	Use:   "clean",
+	Short: "Clean manuscript configuration file",
+	Run: func(cmd *cobra.Command, args []string) {
+		ConfigClean()
+	},
+}
+
 var jobListCmd = &cobra.Command{
 	Use:     "list",
 	Aliases: []string{"ls"},
@@ -211,6 +249,11 @@ func init() {
 	// Manuscript creation & deployment commands
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(deployManuscript)
+
+	// Add config commands
+	configCmd.AddCommand(configShowCmd)
+	configCmd.AddCommand(configCleanCmd)
+	rootCmd.AddCommand(configCmd)
 
 	// Job management commands
 	rootCmd.AddCommand(jobListCmd)
