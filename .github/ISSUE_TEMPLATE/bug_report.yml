@@ -20,21 +20,12 @@ body:
       label: Environment
       description: Tell us about your environment
       placeholder: >
-        $ manuscript-gui version 
-          manuscript-cli version 1.1.0
+        Please provide:
+        - manuscript-core version
+        - Docker Desktop Version
+        - System OS Information
 
-        $ manuscript-cli version --verbose
-        Manuscript CLI:
-          Version:    1.0.4
-          Go version: go1.21.0
-          OS/Arch:    darwin/arm64
-
-        System Information:
-          Darwin MacBook-Pro.local 23.0.0 Darwin Kernel Version 23.0.0: x86_64
-
-        Docker Environment:
-          Docker Engine:   '24.0.6'
-          Docker Desktop:  '24.0.6'
+        If manuscript-cli is installed, run `manuscript cli version -v` and paste the output here.
     validations:
       required: true
 
