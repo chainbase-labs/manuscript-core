@@ -13,6 +13,7 @@ var (
 	version = "1.1.1"
 )
 
+// Execute runs the CLI commands
 func Execute(args []string) error {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -21,6 +22,8 @@ func Execute(args []string) error {
 	return nil
 }
 
+// *** MAIN COMMANDS *** //
+// `init` command to initialize a new manuscript project
 var initCmd = &cobra.Command{
 	Use:     "init",
 	Aliases: []string{"ini", "in", "i"},
@@ -47,6 +50,7 @@ You'll be prompted to select:
 	},
 }
 
+// `config` command to manage manuscript configuration
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Manage manuscript configuration",
@@ -69,6 +73,8 @@ Usage:
 	},
 }
 
+// SUB-COMMANDS for `config` command //
+// `config show` command to display manuscript configuration
 var configShowCmd = &cobra.Command{
 	Use:   "show",
 	Short: "Show manuscript configuration",
@@ -95,6 +101,7 @@ Display includes:
 	},
 }
 
+// `config clean` command to remove manuscript configurations from config file
 var configCleanCmd = &cobra.Command{
 	Use:   "clean [manuscript-names...]",
 	Short: "Clean manuscript configuration file",
@@ -123,6 +130,8 @@ Examples:
 	},
 }
 
+// *** JOB COMMANDS *** //
+// `list` command to show all manuscript jobs
 var jobListCmd = &cobra.Command{
 	Use:     "list",
 	Aliases: []string{"ls"},
@@ -156,6 +165,7 @@ Usage:
 	},
 }
 
+// `stop` command to stop a manuscript job
 var jobStopCmd = &cobra.Command{
 	Use:   "stop <job_name>",
 	Short: "Stop a manuscript job",
@@ -175,6 +185,7 @@ Note: Restart jobs using 'deploy' command`,
 	},
 }
 
+// `logs` command to view logs of a manuscript job
 var jobLogsCmd = &cobra.Command{
 	Use:   "logs <job_name>",
 	Short: "View logs of a manuscript job",
@@ -192,6 +203,8 @@ Shows:
 		JobLogs(args[0])
 	},
 }
+
+// `chat` command to chat with the dataset AI for Text-2-SQL queries
 var chatCmd = &cobra.Command{
 	Use:     "chat <job_name>",
 	Aliases: []string{"c"},
@@ -222,6 +235,7 @@ Required Env Vars:
 	},
 }
 
+// `deploy` command to deploy a manuscript.yaml file
 var deployManuscript = &cobra.Command{
 	Use:     "deploy <manuscript-file>",
 	Aliases: []string{"d"},
@@ -259,6 +273,8 @@ Requirements:
 	},
 }
 
+// *** UTILITY COMMANDS *** //
+// `version` command to show the version of manuscript-cli
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Show the version of manuscript-cli",
@@ -277,13 +293,24 @@ Shows:
 }
 
 func init() {
-	// Configure help from help_template.go
+	// Set help from help_template.go for root command
 	configureHelp(rootCmd)
 
 	// Ensure commands show up as added instead of alphabetically
 	cobra.EnableCommandSorting = false
 
-	// Add CLI commands in logical groups
+	// Add commands to root
+	addCLICommands()
+
+	// Add flags to each command and subcommand
+	configureFlags()
+
+	// Disable the default completion command
+	rootCmd.CompletionOptions.HiddenDefaultCmd = true
+}
+
+// Add CLI commands in logical groups
+func addCLICommands() {
 	// Manuscript creation & deployment commands
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(deployManuscript)
@@ -304,6 +331,10 @@ func init() {
 	// Utility commands
 	rootCmd.AddCommand(versionCmd)
 
+}
+
+// Configure flags for each command
+func configureFlags() {
 	// Add flags to config subcommands
 	configCleanCmd.Flags().Bool("all", false, "Remove all manuscripts")
 	configCleanCmd.Flags().Bool("force", false, "Skip confirmation for removal")
@@ -315,11 +346,9 @@ func init() {
 
 	// Configure version command flags
 	versionCmd.Flags().BoolP("verbose", "v", false, "Display detailed version information")
-
-	// Disable the default completion command
-	rootCmd.CompletionOptions.HiddenDefaultCmd = true
 }
 
+// Default Command for CLI
 var rootCmd = &cobra.Command{
 	Use: "manuscript-cli [command]",
 }
