@@ -2,10 +2,11 @@ package pkg
 
 import (
 	"fmt"
-	"gopkg.in/ini.v1"
 	"os"
 	"runtime"
 	"strings"
+
+	"gopkg.in/ini.v1"
 )
 
 type Config struct {
@@ -69,6 +70,7 @@ func LoadConfig(filePath string) (*Config, error) {
 	return config, nil
 }
 
+// SaveConfig saves the config to the specified file path, merging with existing settings
 func SaveConfig(filePath string, newConfig *Config) error {
 	if newConfig.BaseDir != "" {
 		_, err := os.Stat(newConfig.BaseDir)
@@ -135,4 +137,48 @@ func SaveConfig(filePath string, newConfig *Config) error {
 	}
 
 	return nil
+}
+
+// SaveConfigFresh creates a completely new config file without merging existing settings
+func SaveConfigFresh(filePath string, newConfig *Config) error {
+	if strings.Contains(filePath, "$HOME") {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return err
+		}
+		filePath = strings.Replace(filePath, "$HOME", homeDir, 1)
+	}
+
+	// Create new empty INI file
+	cfg := ini.Empty()
+
+	// Set base configuration
+	if newConfig.BaseDir != "" {
+		cfg.Section("").Key("baseDir").SetValue(newConfig.BaseDir)
+	}
+	if newConfig.SystemInfo != "" {
+		cfg.Section("").Key("systemInfo").SetValue(newConfig.SystemInfo)
+	}
+
+	// Save manuscripts directly
+	for _, manuscript := range newConfig.Manuscripts {
+		section := cfg.Section(manuscript.Name)
+		section.Key("baseDir").SetValue(manuscript.BaseDir)
+		section.Key("name").SetValue(manuscript.Name)
+		section.Key("specVersion").SetValue(manuscript.SpecVersion)
+		section.Key("parallelism").SetValue(fmt.Sprintf("%d", manuscript.Parallelism))
+		section.Key("chain").SetValue(manuscript.Chain)
+		section.Key("table").SetValue(manuscript.Table)
+		section.Key("database").SetValue(manuscript.Database)
+		section.Key("query").SetValue(manuscript.Query)
+		section.Key("sink").SetValue(manuscript.Sink)
+		section.Key("port").SetValue(fmt.Sprintf("%d", manuscript.Port))
+		section.Key("dbPort").SetValue(fmt.Sprintf("%d", manuscript.DbPort))
+		section.Key("dbUser").SetValue(manuscript.DbUser)
+		section.Key("dbPassword").SetValue(manuscript.DbPassword)
+		section.Key("graphqlPort").SetValue(fmt.Sprintf("%d", manuscript.GraphQLPort))
+	}
+
+	// Write directly to file
+	return cfg.SaveTo(filePath)
 }
