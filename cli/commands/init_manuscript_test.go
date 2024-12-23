@@ -28,7 +28,7 @@ func TestInitManuscriptDockerIntegration(t *testing.T) {
 
 	t.Log("Changed to temporary directory")
 
-	InitManuscript()
+	InitManuscriptInteractive()
 	t.Log("InitManuscript was called")
 
 	manuscriptDir := "manuscript"

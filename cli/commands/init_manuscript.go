@@ -67,7 +67,8 @@ func executeInitManuscript(ms pkg.Manuscript) {
 	}
 }
 
-func InitManuscript() {
+// InitManuscript initializes a manuscript interactively
+func InitManuscriptInteractive() {
 	// Check if manuscript config exists
 	manuscriptDir := getHomeDir()
 	msConfig, err := pkg.LoadConfig(manuscriptConfig)
@@ -200,6 +201,85 @@ func createDockerComposeFile(dir string, ms *pkg.Manuscript) error {
 	default:
 	}
 	return createTemplateFile(composeFilePath, dockComposeTemplate, ms)
+}
+
+// InitManuscriptNonInteractive initializes a manuscript without user interaction, useful for CLI function
+func InitManuscriptNonInteractive(manuscriptName, output, protocol, dataset string) {
+	// Validate output type
+	if output != "postgresql" && output != "console" {
+		log.Fatalf("Error: Invalid output type. Must be 'postgresql' or 'console'")
+	}
+
+	// Convert output type to sink type
+	sink := "Print"
+	if output == "postgresql" {
+		sink = "postgres"
+	}
+
+	// Validate manuscript name
+	if err := checkExistingManuscript(manuscriptName); err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+
+	// Get manuscript directory
+	manuscriptDir := getHomeDir()
+	msConfig, err := pkg.LoadConfig(manuscriptConfig)
+	if err != nil {
+		log.Fatalf("Error: Failed to load manuscript config: %v", err)
+	}
+	if msConfig.BaseDir != "" {
+		manuscriptDir = msConfig.BaseDir
+	}
+
+	// Validate protocol and dataset exist
+	chains, err := fetchChainBaseDatasets()
+	if err != nil {
+		log.Fatalf("Error: Failed to fetch available datasets: %v", err)
+	}
+
+	// Verify protocol exists
+	var foundProtocol bool
+	var selectedDatabase string
+	for _, chain := range chains {
+		if chain.DatabaseName == protocol {
+			foundProtocol = true
+			selectedDatabase = chain.DatabaseName
+			break
+		}
+	}
+	if !foundProtocol {
+		log.Fatalf("Error: Protocol '%s' not found in available datasets", protocol)
+	}
+
+	// Verify dataset exists for the protocol
+	var foundDataset bool
+	for _, chain := range chains {
+		if chain.DatabaseName == protocol {
+			for _, table := range chain.Tables {
+				if table == dataset {
+					foundDataset = true
+					break
+				}
+			}
+		}
+	}
+	if !foundDataset {
+		log.Fatalf("Error: Dataset '%s' not found in protocol '%s'", dataset, protocol)
+	}
+
+	// Create manuscript structure
+	ms := pkg.Manuscript{
+		BaseDir:  manuscriptDir,
+		Name:     manuscriptName,
+		Chain:    protocol,
+		Table:    dataset,
+		Database: selectedDatabase,
+		Query:    fmt.Sprintf("Select * From %s_%s", selectedDatabase, dataset),
+		Sink:     sink,
+	}
+
+	fmt.Printf("\033[32m🚀 Deploying manuscript %s...\033[0m\n", ms.Name)
+	executeInitManuscript(ms)
 }
 
 func checkDockerInstalled() error {
