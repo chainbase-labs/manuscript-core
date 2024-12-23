@@ -32,7 +32,7 @@ const (
 
 func executeInitManuscript(ms pkg.Manuscript) {
 	manuscriptName := strings.ToLower(strings.ReplaceAll(ms.Name, " ", "_"))
-	manuscriptDir := fmt.Sprintf("%s/%s", ms.BaseDir, manuscriptName)
+	manuscriptDir := filepath.Join(ms.BaseDir, manuscriptBaseName, manuscriptName)
 
 	steps := []struct {
 		name string
@@ -70,26 +70,27 @@ func executeInitManuscript(ms pkg.Manuscript) {
 // InitManuscript initializes a manuscript interactively
 func InitManuscriptInteractive() {
 	// Check if manuscript config exists
-	manuscriptDir := getHomeDir()
+	baseDir := getHomeDir()
 	msConfig, err := pkg.LoadConfig(manuscriptConfig)
 	if err != nil {
 		logErrorAndReturn("Failed to load manuscript config", err)
 	}
 	if msConfig.BaseDir != "" {
-		manuscriptDir = msConfig.BaseDir
+		baseDir = msConfig.BaseDir
 	}
 
 	// Prompt user for manuscript name, chain, table, and output target
-	prompt := fmt.Sprintf("👋 1. Enter your manuscript base directory (default is %s)\u001B[0m: ", manuscriptDir)
-	manuscriptDir = promptInput(prompt, manuscriptDir)
-	if err := pkg.SaveConfig(manuscriptConfig, &pkg.Config{BaseDir: manuscriptDir}); err != nil {
+	prompt := fmt.Sprintf("👋 1. Enter your manuscript base directory (default is %s)\u001B[0m: ", baseDir)
+	baseDir = promptInput(prompt, baseDir)
+	fmt.Printf("\r A %s folder will be created at this location", manuscriptBaseName)
+	if err := pkg.SaveConfig(manuscriptConfig, &pkg.Config{BaseDir: baseDir}); err != nil {
 		logErrorAndReturn("Failed to save manuscript config", err)
 		return
 	}
-	if strings.HasSuffix(manuscriptDir, "/") {
-		manuscriptDir = strings.TrimSuffix(manuscriptDir, "/")
-	}
-	manuscriptDir = fmt.Sprintf("%s/%s", manuscriptDir, manuscriptBaseName)
+
+	baseDir = strings.TrimSuffix(baseDir, "/")
+
+	manuscriptDir := fmt.Sprintf("%s/%s", baseDir, manuscriptBaseName)
 	fmt.Printf("\033[32m✓ Manuscript base directory set to: %s\033[0m\n\n", manuscriptDir)
 
 	manuscriptName := promptInput("🏂 2. Enter your manuscript name (default is demo)\u001B[0m: ", "demo")
@@ -222,13 +223,13 @@ func InitManuscriptNonInteractive(manuscriptName, output, protocol, dataset stri
 	}
 
 	// Get manuscript directory
-	manuscriptDir := getHomeDir()
+	baseDir := getHomeDir()
 	msConfig, err := pkg.LoadConfig(manuscriptConfig)
 	if err != nil {
 		log.Fatalf("Error: Failed to load manuscript config: %v", err)
 	}
 	if msConfig.BaseDir != "" {
-		manuscriptDir = msConfig.BaseDir
+		baseDir = msConfig.BaseDir
 	}
 
 	// Validate protocol and dataset exist
@@ -269,7 +270,7 @@ func InitManuscriptNonInteractive(manuscriptName, output, protocol, dataset stri
 
 	// Create manuscript structure
 	ms := pkg.Manuscript{
-		BaseDir:  manuscriptDir,
+		BaseDir:  baseDir,
 		Name:     manuscriptName,
 		Chain:    protocol,
 		Table:    dataset,
