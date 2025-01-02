@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"manuscript-core/pkg"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -11,6 +12,19 @@ import (
 var (
 	env     string
 	version = "1.1.1"
+	//Output types for manuscript
+	validOutputs = map[string]bool{
+		"postgresql": true,
+		"console":    true,
+	}
+	// Generate a string of valid output types for error messages
+	validOutputList = func() string {
+		options := make([]string, 0, len(validOutputs))
+		for opt := range validOutputs {
+			options = append(options, opt)
+		}
+		return strings.Join(options, ", ")
+	}()
 )
 
 // Execute runs the CLI commands
@@ -25,10 +39,23 @@ func Execute(args []string) error {
 // *** MAIN COMMANDS *** //
 // `init` command to initialize a new manuscript project
 var initCmd = &cobra.Command{
-	Use:     "init",
+	Use:     "init [manuscript-name]",
 	Aliases: []string{"ini", "in", "i"},
 	Short:   "Initialize and start local manuscript containers",
 	Long: `📦 Initialize a new Manuscript project
+
+	🎮 Two modes available:
+
+	1. 📱 Interactive Mode:
+				manuscript-cli init
+				Let the CLI guide you through setup with prompts
+
+	2. ⚡ Non-interactive Mode:
+				manuscript-cli init <manuscript-name> \
+						--output <output-type> \
+						--protocol <database-name> \
+						--dataset <table-name>
+				Specify all parameters directly on command line
 
 Setup Steps:
 ✨ Create project structure & configs
@@ -36,17 +63,65 @@ Setup Steps:
 🔌 Configure database connections
 🚀 Set up GraphQL endpoints
 
-You'll be prompted to select:
+If interactive, you'll be prompted to select:
 • Project name     ✅
 • Chain type       ✅
 • Tables           ✅
 • Output format    ✅`,
-	Example: `>> manuscript-cli i
->> manuscript-cli ini
->> manuscript-cli init`,
-	Args: cobra.ExactArgs(0),
+	Example: `>> manuscript-cli init
+>> manuscript-cli init my-manuscript --output postgresql --protocol solana --dataset blocks
+>> manuscript-cli init ./solana_maxi --output console --protocol solana --dataset blocks`,
+	// Argument Validation
+	Args: cobra.MaximumNArgs(1),
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		output, _ := cmd.Flags().GetString("output")
+		protocol, _ := cmd.Flags().GetString("protocol")
+		dataset, _ := cmd.Flags().GetString("dataset")
+
+		// If flags are provided, manuscript name must be provided
+		if len(args) == 0 && (output != "" || protocol != "" || dataset != "") {
+			return fmt.Errorf("manuscript name is required when using flags")
+		}
+
+		// If manuscript name is provided, all flags must be provided
+		if len(args) > 0 && (output == "" || protocol == "" || dataset == "") {
+			return fmt.Errorf("output, protocol, and dataset flags are required when providing manuscript name")
+		}
+
+		// If one flag is provided, all must be provided
+		flagsProvided := output != "" || protocol != "" || dataset != ""
+		if flagsProvided {
+			if output == "" {
+				return fmt.Errorf("--output flag is required when using non-interactive mode")
+			}
+			if protocol == "" {
+				return fmt.Errorf("--protocol flag is required when using non-interactive mode")
+			}
+			if dataset == "" {
+				return fmt.Errorf("--dataset flag is required when using non-interactive mode")
+			}
+
+			// Validate output type
+			if !validOutputs[output] {
+				return fmt.Errorf("invalid output type '%s': must be one of: %s",
+					output, validOutputList)
+			}
+		}
+
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
-		InitManuscript()
+		output, _ := cmd.Flags().GetString("output")
+		protocol, _ := cmd.Flags().GetString("protocol")
+		dataset, _ := cmd.Flags().GetString("dataset")
+
+		if len(args) > 0 && output != "" && protocol != "" && dataset != "" {
+			// Non-interactive mode
+			InitManuscriptNonInteractive(args[0], output, protocol, dataset)
+		} else {
+			// Interactive mode
+			InitManuscriptInteractive()
+		}
 	},
 }
 
@@ -335,6 +410,11 @@ func addCLICommands() {
 
 // Configure flags for each command
 func configureFlags() {
+	// Configure init command flags
+	initCmd.Flags().String("output", "", "Output type (postgresql or console)")
+	initCmd.Flags().String("protocol", "", "Protocol/database name")
+	initCmd.Flags().String("dataset", "", "Dataset/table name")
+
 	// Add flags to config subcommands
 	configCleanCmd.Flags().Bool("all", false, "Remove all manuscripts")
 	configCleanCmd.Flags().Bool("force", false, "Skip confirmation for removal")
