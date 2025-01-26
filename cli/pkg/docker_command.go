@@ -34,6 +34,13 @@ func extractPorts(portInfo string) []string {
 	return ports
 }
 
+// getDockerContainers filters and returns a list of Docker containers.
+// It checks if the container name contains any of the following substrings:
+// "manager", "postgres", or "hasura".
+//
+// Returns:
+//
+//	[]string - A list of matching container names.
 func RunDockerPs() ([]ContainerInfo, error) {
 	cmd := exec.Command("docker", "ps", "-a")
 	output, err := cmd.Output()
