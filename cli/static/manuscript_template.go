@@ -43,7 +43,7 @@ sinks:
     database: {{.Database}}
     schema: public
     table: {{.Table}}
-    primary_key: block_number
+    primary_key: {{ range .Sinks }}{{ .PrimaryKey }}{{ break }}{{ end }}
     config:
       host: postgres
       port: 5432
