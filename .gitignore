@@ -7,3 +7,4 @@ dist/
 flink/flink-1.18.1
 gui/target
 out
+flink/data
