@@ -4,3 +4,6 @@ flink/runner/target
 examples/*/data/
 manuscript/
 dist/
+flink/flink-1.18.1
+gui/target
+out
