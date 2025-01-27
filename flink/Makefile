@@ -19,7 +19,7 @@ run:
 		echo "Error: manuscript.yaml not found at $$ms_abs_path"; \
 		exit 1; \
 	fi; \
-	image=$${image:-ms_flink:$$(git rev-parse --abbrev-ref HEAD)-$$(git rev-parse --short HEAD)}; \
+	image=$${image:-ms_flink:$$(git rev-parse --abbrev-ref HEAD | sed "s#/#-#g")-$$(git rev-parse --short HEAD)}; \
 	data_path=$${data_path:-./data}; \
 	export MS_FLINK_IMAGE=$$image; \
 	export MANUSCRIPT_DATA_PATH=$$data_path; \

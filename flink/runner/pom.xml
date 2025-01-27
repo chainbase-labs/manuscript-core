@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.chainbase.manuscript</groupId>
@@ -30,7 +30,7 @@ under the License.
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<flink.version>1.18.1</flink.version>
-		<target.java.version>1.8</target.java.version>
+		<target.java.version>1.11</target.java.version>
 		<scala.binary.version>2.12</scala.binary.version>
 		<maven.compiler.source>${target.java.version}</maven.compiler.source>
 		<maven.compiler.target>${target.java.version}</maven.compiler.target>
@@ -54,12 +54,186 @@ under the License.
 
 	<dependencies>
 		<!-- Apache Flink dependencies -->
+		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-connector-jdbc -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-connector-jdbc</artifactId>
+			<version>3.1.2-1.18</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-cep -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-cep</artifactId>
+			<version>${flink.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-json -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-json</artifactId>
+			<version>${flink.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/com.ververica/flink-sql-connector-postgres-cdc -->
+		<dependency>
+			<groupId>com.ververica</groupId>
+			<artifactId>flink-sql-connector-postgres-cdc</artifactId>
+			<version>2.4.1</version>
+			<!--			<scope>provided</scope>-->
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-table-runtime -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-table-runtime</artifactId>
+			<version>${flink.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-core</artifactId>
+			<version>${log4j.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.paimon/paimon-codegen -->
+		<dependency>
+			<groupId>org.apache.paimon</groupId>
+			<artifactId>paimon-codegen</artifactId>
+			<version>0.8.1</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.paimon/paimon-oss-impl -->
+		<dependency>
+			<groupId>org.apache.paimon</groupId>
+			<artifactId>paimon-oss-impl</artifactId>
+			<version>0.8.1</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.postgresql/postgresql -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>42.6.0</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-connector-files -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-connector-files</artifactId>
+			<version>${flink.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-csv -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-csv</artifactId>
+			<version>${flink.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-scala -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-scala_2.12</artifactId>
+			<version>${flink.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-table-api-java-uber -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-table-api-java-uber</artifactId>
+			<version>${flink.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-1.2-api -->
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-1.2-api</artifactId>
+			<version>${log4j.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-slf4j-impl -->
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-slf4j-impl</artifactId>
+			<version>${log4j.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.paimon/paimon-flink-1.18 -->
+		<dependency>
+			<groupId>org.apache.paimon</groupId>
+			<artifactId>paimon-flink-1.18</artifactId>
+			<version>0.8.1</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.paimon/paimon-s3 -->
+		<dependency>
+			<groupId>org.apache.paimon</groupId>
+			<artifactId>paimon-s3</artifactId>
+			<version>0.8.1</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-table-planner-loader -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-table-planner-loader</artifactId>
+			<version>${flink.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-api -->
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-api</artifactId>
+			<version>${log4j.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.paimon/paimon-bundle -->
+		<dependency>
+			<groupId>org.apache.paimon</groupId>
+			<artifactId>paimon-bundle</artifactId>
+			<version>0.8.1</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.paimon/paimon-oss -->
+		<dependency>
+			<groupId>org.apache.paimon</groupId>
+			<artifactId>paimon-oss</artifactId>
+			<version>0.8.1</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.paimon/paimon-s3-impl -->
+		<dependency>
+			<groupId>org.apache.paimon</groupId>
+			<artifactId>paimon-s3-impl</artifactId>
+			<version>0.8.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.hadoop</groupId>
+			<artifactId>hadoop-common</artifactId>
+			<version>3.4.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.hadoop</groupId>
+			<artifactId>hadoop-client</artifactId>
+			<version>3.4.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.hadoop</groupId>
+			<artifactId>hadoop-hdfs</artifactId>
+			<version>3.4.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-dist</artifactId>
+			<version>${flink.version}</version>
+			<scope>provided</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>com.squareup.okhttp3</groupId>
+					<artifactId>okhttp</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
 		<!-- These dependencies are provided, because they should not be packaged into the JAR file. -->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-streaming-java</artifactId>
 			<version>${flink.version}</version>
-			<scope>provided</scope>
+			<!--			<scope>provided</scope>-->
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
@@ -71,13 +245,13 @@ under the License.
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-table-api-java</artifactId>
 			<version>${flink.version}</version>
-			<scope>provided</scope>
+			<!--			<scope>provided</scope>-->
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-table-api-java-bridge</artifactId>
 			<version>${flink.version}</version>
-			<scope>provided</scope>
+			<!--			<scope>provided</scope>-->
 		</dependency>
 		<dependency>
 			<groupId>org.yaml</groupId>
@@ -115,11 +289,11 @@ under the License.
 			<version>${log4j.version}</version>
 			<scope>runtime</scope>
 		</dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.36</version>
-        </dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.7.36</version>
+		</dependency>
 		<dependency>
 			<groupId>com.esaulpaugh</groupId>
 			<artifactId>headlong</artifactId>
@@ -156,23 +330,20 @@ under the License.
 			<artifactId>lombok</artifactId>
 			<version>1.18.30</version>
 		</dependency>
-		<!--		render transform sql-->
 		<dependency>
 			<groupId>org.freemarker</groupId>
 			<artifactId>freemarker</artifactId>
-			<version>2.3.31</version> <!-- 选择最新版本 -->
+			<version>2.3.31</version>
 		</dependency>
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter</artifactId>
 			<version>RELEASE</version>
-			<scope>test</scope>
 		</dependency>
 	</dependencies>
 
 	<build>
 		<plugins>
-
 			<!-- Java Compiler -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
