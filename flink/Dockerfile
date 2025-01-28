@@ -5,4 +5,5 @@
 FROM repository.chainbase.com/manuscript-node/manuscript-node:latest
 
 # Copy the built JAR from the build stage
+RUN rm -f /opt/flink/lib/flink-shaded-hadoop-2-uber-2.8.3-10.0.jar
 ADD runner/target/runner-1.0-SNAPSHOT.jar /opt/flink/lib/runner-1.0-SNAPSHOT.jar

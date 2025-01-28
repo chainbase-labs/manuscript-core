@@ -34,7 +34,7 @@ const (
 
 func executeInitManuscript(ms pkg.Manuscript) {
 	manuscriptName := strings.ToLower(strings.ReplaceAll(ms.Name, " ", "_"))
-	manuscriptDir := filepath.Join(ms.BaseDir, manuscriptBaseName, manuscriptName)
+	manuscriptDir := filepath.Join(ms.BaseDir, manuscriptName)
 
 	steps := []struct {
 		name string
@@ -210,6 +210,7 @@ func createDockerComposeFile(dir string, ms *pkg.Manuscript) error {
 		dockComposeTemplate = static.DockerComposeWithPostgresqlContent
 	default:
 	}
+
 	return createTemplateFile(composeFilePath, dockComposeTemplate, ms)
 }
 
@@ -308,6 +309,7 @@ func startDockerContainers(dir string) error {
 
 	// Check if 'docker' exists first and prefer 'docker compose' if available
 	if _, err := exec.LookPath("docker"); err == nil {
+		cmd = exec.Command("docker", "compose", "-f", filepath.Join(dir, "docker-compose.yml"), "up", "-d")
 		cmd = exec.Command("docker", "compose", "-f", filepath.Join(dir, "docker-compose.yml"), "up", "-d")
 		err = runCommand(cmd)
 		if err == nil {

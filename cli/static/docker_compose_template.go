@@ -40,10 +40,14 @@ name: {{.Name}}
 services:
   jobmanager:
     image: repository.chainbase.com/manuscript-node/manuscript-node:latest
+    pull_policy: always
     user: "flink"
     command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
     ports:
       - "{{.Port}}:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       - ./data/statuspoint/checkpoint:/opt/flink/checkpoint
       - ./data/statuspoint/savepoint:/opt/flink/savepoint
@@ -80,13 +84,18 @@ services:
     networks:
       - ms_network_{{ .Name }}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   hasura:
     image: {{.GraphQLImage}}
     ports:
       - "{{.GraphQLPort}}:8080"
     depends_on:
-      - postgres
+      - taskmanager
     environment:
       HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/{{.Database}}
       HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
