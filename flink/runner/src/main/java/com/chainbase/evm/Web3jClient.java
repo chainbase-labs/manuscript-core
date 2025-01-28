@@ -134,7 +134,7 @@ public class Web3jClient {
   private static final int BATCH_CALL_LIMIT = 100;
 
   private final Web3j web3j;
-  private final Web3jService web3Serivce;
+  private final Web3jService web3Service;
 
   private final int retryNumber;
 
@@ -152,8 +152,8 @@ public class Web3jClient {
 
   public Web3jClient(
           String nodeURL, int retryNumber, int retryIntervalMs, boolean ignoreWeb3jIOException) {
-    this.web3Serivce = new HttpService(nodeURL);
-    this.web3j = Web3j.build(web3Serivce);
+    this.web3Service = new HttpService(nodeURL);
+    this.web3j = Web3j.build(web3Service);
     this.retryNumber = retryNumber;
     this.retryIntervalMs = retryIntervalMs;
     this.ignoreWeb3jIOException = ignoreWeb3jIOException;
@@ -590,7 +590,7 @@ public class Web3jClient {
 
   public Request<?, ? extends Response<?>> rpcRequest(String functionName, Object... params) {
     return new Request<>(
-            functionName, Arrays.asList(params), this.web3Serivce, DynamicResponse.class);
+            functionName, Arrays.asList(params), this.web3Service, DynamicResponse.class);
   }
 
   public Optional<TraceBlockResponse> debugTraceBlockByNumber(
@@ -602,7 +602,7 @@ public class Web3jClient {
             new Request<>(
                     "debug_traceBlockByNumber",
                     Arrays.asList(blockParameter.getValue(), params),
-                    this.web3Serivce,
+                    this.web3Service,
                     TraceBlockResponse.class);
     return tryRequest(request::send);
   }
@@ -613,7 +613,7 @@ public class Web3jClient {
             new Request<>(
                     "erigon_getBalanceChangesInBlock",
                     Collections.singletonList(blockParameter.getValue()),
-                    this.web3Serivce,
+                    this.web3Service,
                     BlockBalanceChangeResponse.class);
     return this.sendWithLimitedRetry(request);
   }
