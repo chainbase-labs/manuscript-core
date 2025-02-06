@@ -1,0 +1,87 @@
+name: ethereum_token_metas_to_postgres
+specVersion: v0.1.0
+parallelism: 1
+#state_checkpoints_dir: file:///$home/manuscript-core/flink/checkpoint
+#state_savepoints_dir: file:///$home/manuscript-core/flink/savepoint
+
+sources:
+  - name: ethereum_contracts
+    type: dataset
+    dataset: ethereum.contracts
+
+transforms:
+  - name: ethereum_token_metas
+    sql: >
+      SELECT block_timestamp,
+          block_number,
+          transaction_hash,
+          transaction_index,
+          from_address,
+          address as contract_address,
+          JSON_VALUE(token_meta, '$.symbol') AS `symbol`,
+          JSON_VALUE(token_meta, '$.total_supply') AS `total_supply`,
+          JSON_VALUE(token_meta, '$.name') AS `name`,
+          JSON_VALUE(
+              token_meta,
+              '$.decimals'
+              RETURNING INTEGER
+          ) AS `decimals`,
+          CASE
+              WHEN JSON_VALUE(
+                  token_meta,
+                  '$.is_erc20'
+                  RETURNING BOOLEAN
+              ) THEN 1
+              ELSE 0
+          END AS `is_erc20`,
+          CASE
+              WHEN JSON_VALUE(
+                  token_meta,
+                  '$.is_erc721'
+                  RETURNING BOOLEAN
+              ) THEN 1
+              ELSE 0
+          END AS `is_erc721`,
+          CASE
+              WHEN JSON_VALUE(
+                  token_meta,
+                  '$.is_erc1155'
+                  RETURNING BOOLEAN
+              ) THEN 1
+              ELSE 0
+          END AS `is_erc1155`,
+          CASE
+              WHEN JSON_VALUE(
+                  token_meta,
+                  '$.is_proxy'
+                  RETURNING BOOLEAN
+              ) THEN 1
+              ELSE 0
+          END AS `is_proxy`,
+          cast(null as string) AS extra_info
+      FROM (
+              SELECT block_timestamp,
+                  block_number,
+                  transaction_hash,
+                  transaction_index,
+                  from_address,
+                  address,
+                  GET_TOKEN_META('${node}', address, bytecode) AS token_meta
+              FROM ethereum_contracts
+          ) o;
+    params:
+      node: https://rpc.ankr.com/eth
+
+sinks:
+  - name: ethereum_token_metas_sink_pg
+    type: postgres
+    from: ethereum_token_metas
+    database: ethereum
+    schema: public
+    table: token_metas
+    primary_key: contract_address
+    config:
+      host: postgres
+      port: 5432
+      username: postgres
+      password: postgres

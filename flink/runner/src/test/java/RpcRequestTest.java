@@ -14,14 +14,14 @@ public class RpcRequestTest {
     @Test
     public void testLatestBlockNumber_whenReturnString() {
         Object result = rpcRequest.eval(
-                "https://ethereum-mainnet.s.chainbase.online/v1",
+                "https://rpc.ankr.com/eth",
                 "eth_blockNumber");
         System.out.println(result);
     }
 
     @Test
     void getTransactionByBlockHashAndIndex_whenReturnJson() throws IOException {
-        Object result = rpcRequest.eval("https://ethereum-mainnet.s.chainbase.online/v1",
+        Object result = rpcRequest.eval("https://rpc.ankr.com/eth",
                 "eth_getTransactionByBlockHashAndIndex",
                 "0x829df9bb801fc0494abf2f443423a49ffa32964554db71b098d332d87b70a48b", "0x0");
 
@@ -30,7 +30,7 @@ public class RpcRequestTest {
 
     @Test
     void getBlockByNumberWithLatest_whenReturnJson() throws IOException {
-        Object result = rpcRequest.eval("https://ethereum-mainnet.s.chainbase.online/v1",
+        Object result = rpcRequest.eval("https://rpc.ankr.com/eth",
                 "eth_getBlockByNumber",
                 "8418440", false);
 
@@ -39,7 +39,7 @@ public class RpcRequestTest {
 
     @Test
     void getBlockByNumberWithBlockNumber_whenReturnJson() throws IOException {
-        Object result = rpcRequest.eval("https://ethereum-mainnet.s.chainbase.online/v1",
+        Object result = rpcRequest.eval("https://rpc.ankr.com/eth",
                 "eth_getBlockByNumber",
                 "0x11dbbfb", false);
 
@@ -48,7 +48,7 @@ public class RpcRequestTest {
 
     @Test
     void getEthCode_whenReturnJson() throws IOException {
-        Object result = rpcRequest.eval("https://ethereum-mainnet.s.chainbase.online/v1",
+        Object result = rpcRequest.eval("https://rpc.ankr.com/eth",
                 "eth_getCode",
                 "0xdeaddeaddeaddeaddeaddeaddeaddeaddead0000", "latest");
 
