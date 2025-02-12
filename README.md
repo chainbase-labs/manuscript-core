@@ -154,8 +154,8 @@ Here are some of the planned improvements:
                 </a>
             </td>
             <td align="center">
-                <a href="https://github.com/youngpriince">
-                    <img src="https://avatars.githubusercontent.com/u/110453347?v=4" width="100;" alt="youngpriince"/>
+                <a href="https://github.com/ypszn">
+                    <img src="https://avatars.githubusercontent.com/u/110453347?v=4" width="100;" alt="ypszn"/>
                     <br />
                     <sub><b>ypszn</b></sub>
                 </a>
