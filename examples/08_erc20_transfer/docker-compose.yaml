@@ -1,16 +1,15 @@
 version: '3.2'
-name: manuscript-flink-demo
+name: erc20_transfer
 services:
   jobmanager:
     image: ${MS_FLINK_IMAGE:-ms_flink}
     user: "flink"
-    command: "standalone-job -Dclassloader.resolve-order=child-first --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
-    ports:
-      - "8081:8081"
+    command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
     volumes:
       - ${MANUSCRIPT_DATA_PATH:-./data}/statuspoint/checkpoint:/opt/flink/checkpoint
       - ${MANUSCRIPT_DATA_PATH:-./data}/statuspoint/savepoint:/opt/flink/savepoint
       - ${MANUSCRIPT_DATA_PATH:-./data}/log:/opt/flink/log
+      - ${MANUSCRIPT_DATA_PATH:-./data}/slink_files:/opt/flink/sink_file_path
       - ${MANUSCRIPT_PATH:-./manuscript.yaml}:/opt/flink/manuscript.yaml
     networks:
       - ms_network
@@ -26,6 +25,7 @@ services:
       - ${MANUSCRIPT_DATA_PATH:-./data}/statuspoint/checkpoint:/opt/flink/checkpoint
       - ${MANUSCRIPT_DATA_PATH:-./data}/statuspoint/savepoint:/opt/flink/savepoint
       - ${MANUSCRIPT_DATA_PATH:-./data}/log:/opt/flink/log
+      - ${MANUSCRIPT_DATA_PATH:-./data}/slink_files:/opt/flink/sink_file_path
       - ${MANUSCRIPT_PATH:-./manuscript.yaml}:/opt/flink/manuscript.yaml
     networks:
       - ms_network
@@ -40,6 +40,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-public}
     networks:
       - ms_network
+    restart: unless-stopped
     restart: unless-stopped
 
 networks:

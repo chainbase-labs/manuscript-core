@@ -37,6 +37,22 @@ func LoadConfig(filePath string) (*Config, error) {
 		return nil, err
 	}
 
+	//Restore default settings.
+	if len(cfg.Sections()) == 1 && cfg.Section("") != nil {
+		err := os.Remove(filePath)
+		if err != nil {
+			return nil, err
+		}
+		_, err = os.Create(filePath)
+		if err != nil {
+			return nil, err
+		}
+		cfg, err = ini.Load(filePath)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	config := &Config{
 		BaseDir:     cfg.Section("").Key("baseDir").String(),
 		Manuscripts: []Manuscript{},

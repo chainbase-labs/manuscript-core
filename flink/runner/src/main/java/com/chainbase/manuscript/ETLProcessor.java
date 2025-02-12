@@ -3,7 +3,9 @@ package com.chainbase.manuscript;
 import com.chainbase.udf.*;
 import freemarker.template.Template;
 import freemarker.template.TemplateExceptionHandler;
+
 import java.io.StringWriter;
+
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
@@ -46,8 +48,10 @@ public class ETLProcessor {
     this.env.setParallelism((Integer) config.get("parallelism"));
     EnvironmentSettings settings = EnvironmentSettings.newInstance().inStreamingMode().build();
     this.tEnv = StreamTableEnvironment.create(env, settings);
+    String ck_dir = (String) config.computeIfAbsent("state_checkpoints_dir", k -> "file:///opt/flink/checkpoint");
+    String sv_dir = (String) config.computeIfAbsent("state_savepoints_dir", k -> "file:///opt/flink/savepoint");
 
-    configureFlink();
+    configureFlink(ck_dir, sv_dir);
     createPaimonCatalog();
   }
 
@@ -105,17 +109,17 @@ public class ETLProcessor {
     }
   }
 
-  private void configureFlink() {
+  private void configureFlink(String ck_dir, String sv_dir) {
     Configuration conf = tEnv.getConfig().getConfiguration();
     conf.setString("table.local-time-zone", "UTC");
     conf.setString("table.exec.sink.upsert-materialize", "NONE");
     conf.setString("state.backend.type", "rocksdb");
-    conf.setString("state.checkpoints.dir", "file:///opt/flink/checkpoint");
-    conf.setString("state.savepoints.dir", "file:///opt/flink/savepoint");
+    conf.setString("state.checkpoints.dir", ck_dir);
+    conf.setString("state.savepoints.dir", sv_dir);
     conf.setString("execution.checkpointing.interval", "60s");
     conf.setString("execution.checkpointing.min-pause", "1s");
     conf.setString("execution.checkpointing.externalized-checkpoint-retention",
-        "RETAIN_ON_CANCELLATION");
+            "RETAIN_ON_CANCELLATION");
     conf.setString("execution.checkpointing.timeout", "30 min");
     conf.setString("execution.checkpointing.max-concurrent-checkpoints", "1");
     conf.setString("state.backend.incremental", "true");
@@ -127,29 +131,29 @@ public class ETLProcessor {
 
   private void createPaimonCatalog() {
     String createCatalogSQL = String.format(
-        "CREATE CATALOG paimon WITH (" +
-            "  'type' = 'paimon'," +
-            "  'warehouse' = 'oss://network-testnet/warehouse'," +
-            "  'fs.oss.endpoint' = 'network-testnet.chainbasehq.com'," +
-            "  'fs.oss.accessKeyId' = '%s'," +
-            "  'fs.oss.accessKeySecret' = '%s'," +
-            "  'table-default.merge-engine' = 'deduplicate'," +
-            "  'table-default.changelog-producer' = 'input'," +
-            "  'table-default.metastore.partitioned-table' = 'false'," +
-            "  'table-default.lookup.cache-file-retention' = '1 h'," +
-            "  'table-default.lookup.cache-max-memory-size' = '256 mb'," +
-            "  'table-default.lookup.cache-max-disk-size' = '10 gb'," +
-            "  'table-default.log.scan.remove-normalize' = 'true'," +
-            "  'table-default.changelog-producer.row-deduplicate' = 'false'," +
-            "  'table-default.consumer.expiration-time' = '24 h'," +
-            "  'table-default.streaming-read-mode' = 'file'," +
-            "  'table-default.orc.bloom.filter.fpp' = '0.00001'," +
-            "  'table-default.scan.plan-sort-partition' = 'true'," +
-            "  'table-default.snapshot.expire.limit' = '10000'," +
-            "  'table-default.snapshot.num-retained.max' = '2000'" +
-            ")",
-        System.getenv("OSS_ACCESS_KEY_ID"),
-        System.getenv("OSS_ACCESS_KEY_SECRET")
+            "CREATE CATALOG paimon WITH (" +
+                    "  'type' = 'paimon'," +
+                    "  'warehouse' = 'oss://network-testnet/warehouse'," +
+                    "  'fs.oss.endpoint' = 'network-testnet.chainbasehq.com'," +
+                    "  'fs.oss.accessKeyId' = '%s'," +
+                    "  'fs.oss.accessKeySecret' = '%s'," +
+                    "  'table-default.merge-engine' = 'deduplicate'," +
+                    "  'table-default.changelog-producer' = 'input'," +
+                    "  'table-default.metastore.partitioned-table' = 'false'," +
+                    "  'table-default.lookup.cache-file-retention' = '1 h'," +
+                    "  'table-default.lookup.cache-max-memory-size' = '256 mb'," +
+                    "  'table-default.lookup.cache-max-disk-size' = '10 gb'," +
+                    "  'table-default.log.scan.remove-normalize' = 'true'," +
+                    "  'table-default.changelog-producer.row-deduplicate' = 'false'," +
+                    "  'table-default.consumer.expiration-time' = '24 h'," +
+                    "  'table-default.streaming-read-mode' = 'file'," +
+                    "  'table-default.orc.bloom.filter.fpp' = '0.00001'," +
+                    "  'table-default.scan.plan-sort-partition' = 'true'," +
+                    "  'table-default.snapshot.expire.limit' = '10000'," +
+                    "  'table-default.snapshot.num-retained.max' = '2000'" +
+                    ")",
+            System.getenv("OSS_ACCESS_KEY_ID"),
+            System.getenv("OSS_ACCESS_KEY_SECRET")
     );
     tEnv.executeSql(createCatalogSQL);
   }
@@ -171,16 +175,16 @@ public class ETLProcessor {
       if ("dataset".equals(source.get("type"))) {
         String filterClause = source.containsKey("filter") ? "WHERE " + source.get("filter") : "";
         String sql = String.format(
-            "CREATE TEMPORARY VIEW %s AS " +
-                "SELECT * FROM paimon.%s %s",
-            source.get("name"), source.get("dataset"), filterClause
+                "CREATE TEMPORARY VIEW %s AS " +
+                        "SELECT * FROM paimon.%s %s",
+                source.get("name"), source.get("dataset"), filterClause
         );
         tEnv.executeSql(sql);
       }
     }
   }
 
-  private void createTransforms() throws Exception  {
+  private void createTransforms() throws Exception {
     tEnv.useCatalog("default_catalog");
     List<Map<String, Object>> transforms = (List<Map<String, Object>>) config.get("transforms");
     logger.info("Creating transforms:");
@@ -189,9 +193,9 @@ public class ETLProcessor {
       String sql = transform.get("sql").toString();
       logger.info("  Creating transform: {}", name);
       Map<String, Object> params = (Map<String, Object>) transform.getOrDefault(
-          "params", null);
-      if (params!=null) {
-        sql=render(name,sql,params);
+              "params", null);
+      if (params != null) {
+        sql = render(name, sql, params);
       }
       logger.info("  SQL: {}", sql);
       tEnv.createTemporaryView(name, tEnv.sqlQuery(sql));
@@ -202,7 +206,7 @@ public class ETLProcessor {
 
   private String render(String name, String sql, Map<String, Object> params) throws Exception {
     freemarker.template.Configuration freemarkerConfig = new freemarker.template.Configuration(
-        freemarker.template.Configuration.VERSION_2_3_31);
+            freemarker.template.Configuration.VERSION_2_3_31);
     freemarkerConfig.setDefaultEncoding("UTF-8");
     freemarkerConfig.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
     Template template = new Template(name, sql, freemarkerConfig);
@@ -258,12 +262,12 @@ public class ETLProcessor {
     Table table = tEnv.from(transformName);
     List<TableColumn> columns = table.getSchema().getTableColumns();
     return columns.stream()
-        .map(col -> {
-          String flinkType = col.getType().toString();
-          String postgresType = mapFlinkTypeToPostgresType(flinkType);
-          return col.getName() + " " + postgresType;
-        })
-        .collect(Collectors.joining(", "));
+            .map(col -> {
+              String flinkType = col.getType().toString();
+              String postgresType = mapFlinkTypeToPostgresType(flinkType);
+              return col.getName() + " " + postgresType;
+            })
+            .collect(Collectors.joining(", "));
   }
 
   private String mapFlinkTypeToPostgresType(String flinkType) {
@@ -369,12 +373,12 @@ public class ETLProcessor {
 
     logger.info("Connecting to PostgreSQL and creating database/table if not exists...");
     try (Connection conn = DriverManager.getConnection(
-        "jdbc:postgresql://" + host + ":" + port + "/postgres", username, password);
-        Statement stmt = conn.createStatement()) {
+            "jdbc:postgresql://" + host + ":" + port + "/postgres", username, password);
+         Statement stmt = conn.createStatement()) {
 
       // Check if database exists
       ResultSet rs = stmt.executeQuery(
-          "SELECT 1 FROM pg_database WHERE datname = '" + database + "'");
+              "SELECT 1 FROM pg_database WHERE datname = '" + database + "'");
       if (!rs.next()) {
         // Create database if it doesn't exist
         stmt.execute("CREATE DATABASE " + database);
@@ -385,8 +389,8 @@ public class ETLProcessor {
 
       // Connect to the new database
       try (Connection dbConn = DriverManager.getConnection(
-          "jdbc:postgresql://" + host + ":" + port + "/" + database, username, password);
-          Statement dbStmt = dbConn.createStatement()) {
+              "jdbc:postgresql://" + host + ":" + port + "/" + database, username, password);
+           Statement dbStmt = dbConn.createStatement()) {
 
         // Create schema if it doesn't exist
         dbStmt.execute("CREATE SCHEMA IF NOT EXISTS " + schemaName);
@@ -394,8 +398,8 @@ public class ETLProcessor {
 
         // Create table if it doesn't exist
         String createTableSQL =
-            "CREATE TABLE IF NOT EXISTS " + schemaName + "." + tableName + " (" + postgresSchema
-                + ", PRIMARY KEY (" + primaryKey + "))";
+                "CREATE TABLE IF NOT EXISTS " + schemaName + "." + tableName + " (" + postgresSchema
+                        + ", PRIMARY KEY (" + primaryKey + "))";
         logger.info("Creating table: {}", createTableSQL);
         dbStmt.execute(createTableSQL);
         logger.info("Table created or already exists: {}.{}", schemaName, tableName);
@@ -407,15 +411,15 @@ public class ETLProcessor {
 
     logger.info("Creating Flink SQL table for PostgreSQL sink...");
     String sql = String.format(
-        "CREATE TABLE %s (%s, PRIMARY KEY (%s) NOT ENFORCED) WITH (" +
-            "  'connector' = 'jdbc'," +
-            "  'url' = 'jdbc:postgresql://%s:%s/%s'," +
-            "  'table-name' = '%s.%s'," +
-            "  'username' = '%s'," +
-            "  'password' = '%s'" +
-            ")",
-        sink.get("name"), flinkSchema, primaryKey, host, port, database,
-        schemaName, tableName, username, password
+            "CREATE TABLE %s (%s, PRIMARY KEY (%s) NOT ENFORCED) WITH (" +
+                    "  'connector' = 'jdbc'," +
+                    "  'url' = 'jdbc:postgresql://%s:%s/%s'," +
+                    "  'table-name' = '%s.%s'," +
+                    "  'username' = '%s'," +
+                    "  'password' = '%s'" +
+                    ")",
+            sink.get("name"), flinkSchema, primaryKey, host, port, database,
+            schemaName, tableName, username, password
     );
     logger.info("Executing SQL for PostgreSQL sink: {}", sql);
     tEnv.executeSql(sql);
@@ -426,19 +430,19 @@ public class ETLProcessor {
     logger.info("Creating StarRocks sink...");
     String schema = getSchemaFromTransform(sink.get("from").toString());
     String sql = String.format(
-        "CREATE TABLE %s (%s) WITH (" +
-            "  'connector' = 'starrocks'," +
-            "  'jdbc-url' = 'jdbc:mysql://localhost:9030/%s'," +
-            "  'load-url' = 'localhost:8030'," +
-            "  'database-name' = '%s'," +
-            "  'table-name' = '%s'," +
-            "  'username' = '%s'," +
-            "  'password' = '%s'" +
-            ")",
-        sink.get("name"), schema, sink.get("database"),
-        sink.get("database"), sink.get("table"),
-        ((Map<String, Object>) sink.get("config")).get("username"),
-        ((Map<String, Object>) sink.get("config")).get("password")
+            "CREATE TABLE %s (%s) WITH (" +
+                    "  'connector' = 'starrocks'," +
+                    "  'jdbc-url' = 'jdbc:mysql://localhost:9030/%s'," +
+                    "  'load-url' = 'localhost:8030'," +
+                    "  'database-name' = '%s'," +
+                    "  'table-name' = '%s'," +
+                    "  'username' = '%s'," +
+                    "  'password' = '%s'" +
+                    ")",
+            sink.get("name"), schema, sink.get("database"),
+            sink.get("database"), sink.get("table"),
+            ((Map<String, Object>) sink.get("config")).get("username"),
+            ((Map<String, Object>) sink.get("config")).get("password")
     );
     logger.info("Executing SQL for StarRocks sink: {}", sql);
     tEnv.executeSql(sql);
@@ -449,8 +453,8 @@ public class ETLProcessor {
     logger.info("Creating print sink...");
     String schema = getSchemaFromTransform(sink.get("from").toString());
     String sql = String.format(
-        "CREATE TABLE %s (%s) WITH ('connector' = 'print', 'standard-error' = 'true')",
-        sink.get("name"), schema
+            "CREATE TABLE %s (%s) WITH ('connector' = 'print', 'standard-error' = 'true')",
+            sink.get("name"), schema
     );
     logger.info("Executing SQL for print sink: {}", sql);
     tEnv.executeSql(sql);
@@ -464,12 +468,12 @@ public class ETLProcessor {
     String path = "/opt/flink/sink_file_path/" + fileName;
 
     String sql = String.format(
-        "CREATE TABLE %s (%s) WITH (" +
-            "  'connector' = 'filesystem'," +
-            "  'path' = '%s'," +
-            "  'format' = 'debezium-json'" +
-            ")",
-        sink.get("name"), schema, path
+            "CREATE TABLE %s (%s) WITH (" +
+                    "  'connector' = 'filesystem'," +
+                    "  'path' = '%s'," +
+                    "  'format' = 'debezium-json'" +
+                    ")",
+            sink.get("name"), schema, path
     );
     logger.info("Executing SQL for filesystem sink: {}", sql);
     tEnv.executeSql(sql);

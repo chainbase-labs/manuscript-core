@@ -28,11 +28,13 @@ const (
 	defaultSink          = "postgres"
 	graphQLImage         = "repository.chainbase.com/manuscript-node/graphql-engine:latest"
 	graphQLARMImage      = "repository.chainbase.com/manuscript-node/graphql-engine-arm64:latest"
+	defaultPrimaryKey    = "block_number"
+	icpPrimaryKey        = "block_idx"
 )
 
 func executeInitManuscript(ms pkg.Manuscript) {
 	manuscriptName := strings.ToLower(strings.ReplaceAll(ms.Name, " ", "_"))
-	manuscriptDir := filepath.Join(ms.BaseDir, manuscriptBaseName, manuscriptName)
+	manuscriptDir := filepath.Join(ms.BaseDir, manuscriptName)
 
 	steps := []struct {
 		name string
@@ -71,6 +73,7 @@ func executeInitManuscript(ms pkg.Manuscript) {
 func InitManuscriptInteractive() {
 	// Check if manuscript config exists
 	baseDir := getHomeDir()
+	// if manuscriptConfig's name <> 'DEFAULT' <> '' return at least 1 manuscript
 	msConfig, err := pkg.LoadConfig(manuscriptConfig)
 	if err != nil {
 		logErrorAndReturn("Failed to load manuscript config", err)
@@ -150,6 +153,12 @@ func createManuscriptFile(dir string, ms pkg.Manuscript) error {
 		manuscriptTemplate = static.ManuscriptWithPostgresqlTemplate
 	default:
 	}
+	if ms.Database == "icp" {
+		ms.Sinks = []pkg.Sink{{PrimaryKey: icpPrimaryKey}}
+	} else {
+		ms.Sinks = []pkg.Sink{{PrimaryKey: defaultPrimaryKey}}
+	}
+
 	return createTemplateFile(manuscriptFilePath, manuscriptTemplate, ms)
 }
 
@@ -201,6 +210,7 @@ func createDockerComposeFile(dir string, ms *pkg.Manuscript) error {
 		dockComposeTemplate = static.DockerComposeWithPostgresqlContent
 	default:
 	}
+
 	return createTemplateFile(composeFilePath, dockComposeTemplate, ms)
 }
 
@@ -300,6 +310,7 @@ func startDockerContainers(dir string) error {
 	// Check if 'docker' exists first and prefer 'docker compose' if available
 	if _, err := exec.LookPath("docker"); err == nil {
 		cmd = exec.Command("docker", "compose", "-f", filepath.Join(dir, "docker-compose.yml"), "up", "-d")
+		cmd = exec.Command("docker", "compose", "-f", filepath.Join(dir, "docker-compose.yml"), "up", "-d")
 		err = runCommand(cmd)
 		if err == nil {
 			return nil
@@ -393,6 +404,7 @@ func promptInput(prompt, defaultVal string) string {
 	return input
 }
 
+// check if a docker container's name == manuscript name
 func checkDockerContainerExists(manuscriptName string) bool {
 	dockers, err := pkg.RunDockerPs()
 	if err != nil {
@@ -406,6 +418,12 @@ func checkDockerContainerExists(manuscriptName string) bool {
 	return false
 }
 
+/*
+*
+1. check if the working directory exists.
+2. check if a Docker container with the same name exists.
+3. check if manuscriptConfig file exist same name config
+*/
 func checkExistingManuscript(name string) error {
 	// Check if manuscript directory exists
 	msConfig, err := pkg.LoadConfig(manuscriptConfig)
@@ -469,18 +487,20 @@ func selectChain(chains []*client.ChainBaseDatasetListItem, prompt, defaultChain
 		chain := chains[i]
 		fmt.Printf("%d: %s (Database: %s)\n", i+1, chain.Name, chain.DatabaseName)
 	}
-	chainChoice := promptInput("🏂 3. Enter your chain choice (default is zkevm)\u001B[0m: ", "")
+
+	chainChoice := promptInput(fmt.Sprintf("🏂 3. Enter your chain choice [1-%d] (default is zkevm)\u001B[0m: ", len(chains)), "")
 	if chainChoice == "" {
 		fmt.Printf("\u001B[32m✓ Defaulting to chain: %s\u001B[0m\n\n", defaultChain)
 		return defaultChain, defaultChain
 	}
 	index, err := strconv.Atoi(chainChoice)
 	if err != nil || index < 1 || index > len(chains) {
-		fmt.Printf("Invalid choice. Defaulting to chain: %s\n", defaultChain)
+		fmt.Printf("Invalid, only numbers between 1 and %d are allowed. Defaulting to chain: %s\n", len(chains), defaultChain)
 		return defaultChain, defaultChain
 	}
 	fmt.Printf("\u001B[32m✓ Selected chain: %s\n\n", chains[index-1].Name)
 	return chains[index-1].Name, chains[index-1].DatabaseName
+
 }
 
 func selectTable(chains []*client.ChainBaseDatasetListItem, selectedChain, defaultChain, prompt, defaultTable string) string {

@@ -1,0 +1,47 @@
+name: erc20_transfers
+specVersion: v0.1.0
+parallelism: 1
+
+sources:
+  - name: ethereum_transaction_logs
+    type: dataset
+    dataset: ethereum.transaction_logs
+
+transforms:
+  - name: ethereum_erc20_transfers_decoded
+    sql: >
+      SELECT `block_number`,
+             `block_timestamp`,
+             `transaction_index`,
+             `transaction_hash`,
+             `log_index`,
+             address                     AS `contract_address`,
+             JSON_VALUE(evt, '$._from')  AS `_from`,
+             JSON_VALUE(evt, '$._to')    AS `_to`,
+             JSON_VALUE(evt, '$._value') AS `_value`,
+      FROM (SELECT block_number,
+                   block_timestamp,
+                   transaction_hash,
+                   transaction_index,
+                   log_index,
+                   address,
+                   Decode_Event(
+                           '{"anonymous": false, "inputs": [{"indexed": true, "internalType": "address", "name": "_from", "type": "address"}, {"indexed": true, "internalType": "address", "name": "_to", "type": "address"}, {"indexed": false, "internalType": "uint256", "name": "_value", "type": "uint256"}], "name": "Transfer", "type": "event"}',
+                           topic0, topic1, topic2, topic3, data) AS evt
+            FROM ethereum_transaction_logs WHERE
+              AND topic0 = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef') t
+      WHERE evt is not null;
+
+sinks:
+  - name: ethereum_erc20_transfers_sink_pg
+    type: postgres
+    from: ethereum_erc20_transfers_decoded
+    database: ethereum
+    schema: public
+    table: erc20_transfers
+    primary_key: transaction_hash,log_index
+    config:
+      host: localhost
+      port: 5432
+      username: postgres
+      password: 123456
