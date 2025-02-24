@@ -208,10 +208,17 @@ func JobStop(jobName string) {
 			log.Fatalf("Error: Failed to load manuscript config: %v", err)
 			return err
 		}
-		err = pkg.StopDockerCompose(fmt.Sprintf("%s/%s/%s/docker-compose.yml", msConfig.BaseDir, manuscriptBaseName, jobName))
-		if err != nil {
-			log.Fatalf("Error: Failed to stop job: %v", err)
+		for _, manuscript := range msConfig.Manuscripts {
+			if manuscript.Name == jobName {
+				fmt.Printf("%s/%s/docker-compose.yml", manuscript.BaseDir, jobName)
+				err = pkg.StopDockerCompose(fmt.Sprintf("%s/%s/docker-compose.yml", manuscript.BaseDir, jobName))
+				if err != nil {
+					log.Fatalf("Error: Failed to stop job: %v", err)
+				}
+				return nil
+			}
 		}
+		log.Fatalf("Error: There is no job name = : %s", jobName)
 		return nil
 	})
 	fmt.Printf("\rJob \033[33m%s\033[0m stopped successfully.\n", jobName)
