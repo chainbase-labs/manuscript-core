@@ -114,12 +114,14 @@ func InitManuscriptInteractive() {
 	selectedTable := selectTable(chains, selectedChain, defaultDatabase, "🧲 4. Please select a table from the list below: ", defaultTable)
 
 	outputChoice := promptOutputTarget()
+	ip := confirmIP()
 	fmt.Printf("\n\033[33m🏄🏄 Summary of your selections:\033[0m\n")
 	fmt.Printf("Selected manuscript base directory: \033[32m%s\033[0m\n", manuscriptDir)
 	fmt.Printf("Selected manuscript name: \033[32m%s\033[0m\n", manuscriptName)
 	fmt.Printf("Selected chain: \033[32m%s\033[0m\n", selectedChain)
 	fmt.Printf("Selected table: \u001B[32m%s\u001B[0m\n", selectedTable)
-	fmt.Printf("Data output target: \u001B[32m%s\u001B[0m\n\n", outputChoice)
+	fmt.Printf("Data output target: \u001B[32m%s\u001B[0m\n", outputChoice)
+	fmt.Printf("Will register an IP asset when deploy: \u001B[32m%v\u001B[0m\n\n", ip)
 
 	// Confirm user selections
 	if confirmProceed() {
@@ -552,10 +554,20 @@ func promptOutputTarget() string {
 	outputChoice := promptInput("Enter your choice(default is Postgresql)\u001B[0m: ", "1")
 	output := defaultSink
 	if outputChoice == "2" {
-		output = "Print"
+		output = "print"
 	}
 	fmt.Printf("\u001B[32m✓ Selected output target: %s\u001B[0m\n", output)
 	return output
+}
+
+func confirmIP() bool {
+	proceed := promptInput("\n\u001B[33m📖 Do you want to register IP on story? (yes/no):\u001B[0m ", "no")
+	if !(proceed == "no" || proceed == "n" || proceed == "") {
+		fmt.Printf("\u001B[32m✓ Will register an IP asset when deploy\u001B[0m\n")
+	} else {
+		fmt.Printf("\u001B[32m✓ Defaulting won't register an IP asset when deploy\u001B[0m\n")
+	}
+	return !(proceed == "no" || proceed == "n" || proceed == "")
 }
 
 func confirmProceed() bool {
