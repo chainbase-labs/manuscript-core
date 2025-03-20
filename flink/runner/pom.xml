@@ -203,11 +203,39 @@ under the License.
 			<groupId>org.apache.hadoop</groupId>
 			<artifactId>hadoop-common</artifactId>
 			<version>3.4.0</version>
+			<exclusions>
+				<exclusion>
+					<groupId>com.fasterxml.jackson.core</groupId>
+					<artifactId>jackson-core</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.fasterxml.jackson.core</groupId>
+					<artifactId>jackson-databind</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.fasterxml.jackson.core</groupId>
+					<artifactId>jackson-annotations</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.hadoop</groupId>
 			<artifactId>hadoop-client</artifactId>
 			<version>3.4.0</version>
+			<exclusions>
+				<exclusion>
+					<groupId>com.fasterxml.jackson.core</groupId>
+					<artifactId>jackson-core</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.fasterxml.jackson.core</groupId>
+					<artifactId>jackson-databind</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.fasterxml.jackson.core</groupId>
+					<artifactId>jackson-annotations</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<dependency>
@@ -215,6 +243,62 @@ under the License.
 			<artifactId>hadoop-hdfs</artifactId>
 			<version>3.4.0</version>
 		</dependency>
+<!--		&lt;!&ndash; Jakarta Activation API &ndash;&gt;-->
+<!--		<dependency>-->
+<!--			<groupId>jakarta.activation</groupId>-->
+<!--			<artifactId>jakarta.activation-api</artifactId>-->
+<!--			<version>1.2.1</version>-->
+<!--		</dependency>-->
+
+<!--		&lt;!&ndash; Javax Servlet API (升级到 4.0.1) &ndash;&gt;-->
+<!--		<dependency>-->
+<!--			<groupId>javax.servlet</groupId>-->
+<!--			<artifactId>javax.servlet-api</artifactId>-->
+<!--			<version>4.0.1</version>-->
+<!--			<scope>provided</scope>-->
+<!--		</dependency>-->
+
+<!--		&lt;!&ndash; JAXB API (升级到 2.3.1) &ndash;&gt;-->
+<!--		<dependency>-->
+<!--			<groupId>javax.xml.bind</groupId>-->
+<!--			<artifactId>jaxb-api</artifactId>-->
+<!--			<version>2.3.1</version>-->
+<!--		</dependency>-->
+
+<!--		&lt;!&ndash; Jackson Core &ndash;&gt;-->
+<!--		<dependency>-->
+<!--			<groupId>com.fasterxml.jackson.core</groupId>-->
+<!--			<artifactId>jackson-core</artifactId>-->
+<!--			<version>${jackson.version}</version>-->
+<!--		</dependency>-->
+
+<!--		&lt;!&ndash; Jackson Core (Old ASL Version) &ndash;&gt;-->
+<!--		<dependency>-->
+<!--			<groupId>org.codehaus.jackson</groupId>-->
+<!--			<artifactId>jackson-core-asl</artifactId>-->
+<!--			<version>1.9.13</version>-->
+<!--		</dependency>-->
+
+<!--		&lt;!&ndash; Jersey Server &ndash;&gt;-->
+<!--		<dependency>-->
+<!--			<groupId>com.sun.jersey</groupId>-->
+<!--			<artifactId>jersey-server</artifactId>-->
+<!--			<version>1.19.4</version>-->
+<!--		</dependency>-->
+
+<!--		&lt;!&ndash; Jersey Core &ndash;&gt;-->
+<!--		<dependency>-->
+<!--			<groupId>com.sun.jersey</groupId>-->
+<!--			<artifactId>jersey-core</artifactId>-->
+<!--			<version>1.19.4</version>-->
+<!--		</dependency>-->
+
+<!--		&lt;!&ndash; Javax WS RS API &ndash;&gt;-->
+<!--		<dependency>-->
+<!--			<groupId>javax.ws.rs</groupId>-->
+<!--			<artifactId>javax.ws.rs-api</artifactId>-->
+<!--			<version>2.1.1</version>-->
+<!--		</dependency>-->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-dist</artifactId>
@@ -303,12 +387,18 @@ under the License.
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>2.14.2</version>
+			<version>${jackson.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-shaded-jackson</artifactId>
 			<version>2.14.2-17.0</version>
+			<exclusions>
+				<exclusion>
+					<groupId>com.fasterxml.jackson.core</groupId>
+					<artifactId>jackson-databind</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.web3j</groupId>
