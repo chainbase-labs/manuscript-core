@@ -4,7 +4,8 @@ var DockerComposeTemplate = `
 name: {{.Name}}
 services:
   jobmanager:
-    image: repository.chainbase.com/manuscript-node/manuscript-node:latest
+    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.1.4
+	pull_policy: always
     user: "flink"
     command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
     ports:
@@ -18,7 +19,8 @@ services:
       - ms_network_{{ .Name }}
 
   taskmanager:
-    image: repository.chainbase.com/manuscript-node/manuscript-node:latest
+    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.1.4
+	pull_policy: always
     user: "flink"
     depends_on:
       - jobmanager
@@ -39,7 +41,7 @@ var DockerComposeWithPostgresqlContent = `
 name: {{.Name}}
 services:
   jobmanager:
-    image: repository.chainbase.com/manuscript-node/manuscript-node:latest
+    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.1.4
     pull_policy: always
     user: "flink"
     command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
@@ -57,7 +59,7 @@ services:
       - ms_network_{{ .Name }}
 
   taskmanager:
-    image: repository.chainbase.com/manuscript-node/manuscript-node:latest
+    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.1.4
     user: "flink"
     depends_on:
       - jobmanager

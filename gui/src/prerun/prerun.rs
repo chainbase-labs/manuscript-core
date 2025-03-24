@@ -24,7 +24,7 @@ impl PreRun {
             api_endpoint: "https://testnet-debug.chainbasehq.com".to_string(),
             catalog_statement: r#"CREATE CATALOG paimon WITH ( 
                 'type' = 'paimon',
-                'warehouse' = 'oss://network-testnet/warehouse',
+                'warehouse' = 'webhdfs://hdfs-proxy.chainbasehq.com:80/warehouse',
                 'table-default.merge-engine' = 'deduplicate',
                 'table-default.changelog-producer' = 'input',
                 'table-default.metastore.partitioned-table' = 'false',

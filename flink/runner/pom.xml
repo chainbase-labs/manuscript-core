@@ -59,34 +59,35 @@ under the License.
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-connector-jdbc</artifactId>
 			<version>3.1.2-1.18</version>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-cep -->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-cep</artifactId>
 			<version>${flink.version}</version>
-			<scope>provided</scope>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-json -->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-json</artifactId>
 			<version>${flink.version}</version>
-			<scope>provided</scope>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/com.ververica/flink-sql-connector-postgres-cdc -->
 		<dependency>
 			<groupId>com.ververica</groupId>
 			<artifactId>flink-sql-connector-postgres-cdc</artifactId>
 			<version>2.4.1</version>
-			<!--			<scope>provided</scope>-->
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-table-runtime -->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-table-runtime</artifactId>
 			<version>${flink.version}</version>
-			<scope>provided</scope>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
 		<dependency>
@@ -100,98 +101,99 @@ under the License.
 			<groupId>org.apache.paimon</groupId>
 			<artifactId>paimon-codegen</artifactId>
 			<version>0.8.1</version>
+<!--			<scope>provided</scope>-->
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.apache.paimon/paimon-oss-impl -->
-		<dependency>
-			<groupId>org.apache.paimon</groupId>
-			<artifactId>paimon-oss-impl</artifactId>
-			<version>0.8.1</version>
-		</dependency>
+
 		<!-- https://mvnrepository.com/artifact/org.postgresql/postgresql -->
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 			<version>42.6.0</version>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-connector-files -->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-connector-files</artifactId>
 			<version>${flink.version}</version>
-			<scope>provided</scope>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-csv -->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-csv</artifactId>
 			<version>${flink.version}</version>
-			<scope>provided</scope>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-scala -->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-scala_2.12</artifactId>
 			<version>${flink.version}</version>
-			<scope>provided</scope>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-table-api-java-uber -->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-table-api-java-uber</artifactId>
 			<version>${flink.version}</version>
-			<scope>provided</scope>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-1.2-api -->
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-1.2-api</artifactId>
 			<version>${log4j.version}</version>
-			<scope>provided</scope>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-slf4j-impl -->
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-slf4j-impl</artifactId>
 			<version>${log4j.version}</version>
-			<scope>provided</scope>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.paimon/paimon-flink-1.18 -->
 		<dependency>
 			<groupId>org.apache.paimon</groupId>
 			<artifactId>paimon-flink-1.18</artifactId>
 			<version>0.8.1</version>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.paimon/paimon-s3 -->
 		<dependency>
 			<groupId>org.apache.paimon</groupId>
 			<artifactId>paimon-s3</artifactId>
 			<version>0.8.1</version>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-table-planner-loader -->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-table-planner-loader</artifactId>
 			<version>${flink.version}</version>
-			<scope>provided</scope>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-api -->
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-api</artifactId>
 			<version>${log4j.version}</version>
-			<scope>provided</scope>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.paimon/paimon-bundle -->
 		<dependency>
 			<groupId>org.apache.paimon</groupId>
 			<artifactId>paimon-bundle</artifactId>
 			<version>0.8.1</version>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.paimon/paimon-oss -->
 		<dependency>
 			<groupId>org.apache.paimon</groupId>
 			<artifactId>paimon-oss</artifactId>
 			<version>0.8.1</version>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.paimon/paimon-s3-impl -->
 		<dependency>
@@ -203,39 +205,23 @@ under the License.
 			<groupId>org.apache.hadoop</groupId>
 			<artifactId>hadoop-common</artifactId>
 			<version>3.4.0</version>
-			<exclusions>
-				<exclusion>
-					<groupId>com.fasterxml.jackson.core</groupId>
-					<artifactId>jackson-core</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>com.fasterxml.jackson.core</groupId>
-					<artifactId>jackson-databind</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>com.fasterxml.jackson.core</groupId>
-					<artifactId>jackson-annotations</artifactId>
-				</exclusion>
-			</exclusions>
+<!--			<scope>provided</scope>-->
+<!--			<exclusions>-->
+<!--				<exclusion>-->
+<!--					<groupId>com.fasterxml.jackson.core</groupId>-->
+<!--					<artifactId>jackson-core</artifactId>-->
+<!--				</exclusion>-->
+<!--				<exclusion>-->
+<!--					<groupId>com.fasterxml.jackson.core</groupId>-->
+<!--					<artifactId>jackson-databind</artifactId>-->
+<!--				</exclusion>-->
+<!--			</exclusions>-->
 		</dependency>
 		<dependency>
 			<groupId>org.apache.hadoop</groupId>
 			<artifactId>hadoop-client</artifactId>
 			<version>3.4.0</version>
-			<exclusions>
-				<exclusion>
-					<groupId>com.fasterxml.jackson.core</groupId>
-					<artifactId>jackson-core</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>com.fasterxml.jackson.core</groupId>
-					<artifactId>jackson-databind</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>com.fasterxml.jackson.core</groupId>
-					<artifactId>jackson-annotations</artifactId>
-				</exclusion>
-			</exclusions>
+<!--			<scope>provided</scope>-->
 		</dependency>
 
 		<dependency>
@@ -303,7 +289,7 @@ under the License.
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-dist</artifactId>
 			<version>${flink.version}</version>
-			<scope>provided</scope>
+<!--			<scope>provided</scope>-->
 			<exclusions>
 				<exclusion>
 					<groupId>com.squareup.okhttp3</groupId>
@@ -323,7 +309,7 @@ under the License.
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-clients</artifactId>
 			<version>${flink.version}</version>
-			<scope>provided</scope>
+<!--			<scope>provided</scope>-->
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
@@ -384,21 +370,15 @@ under the License.
 			<version>9.2.0</version>
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
-		<dependency>
-			<groupId>com.fasterxml.jackson.core</groupId>
-			<artifactId>jackson-databind</artifactId>
-			<version>${jackson.version}</version>
-		</dependency>
+<!--		<dependency>-->
+<!--			<groupId>com.fasterxml.jackson.core</groupId>-->
+<!--			<artifactId>jackson-databind</artifactId>-->
+<!--			<version>${jackson.version}</version>-->
+<!--		</dependency>-->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-shaded-jackson</artifactId>
 			<version>2.14.2-17.0</version>
-			<exclusions>
-				<exclusion>
-					<groupId>com.fasterxml.jackson.core</groupId>
-					<artifactId>jackson-databind</artifactId>
-				</exclusion>
-			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.web3j</groupId>
@@ -450,7 +430,7 @@ under the License.
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
-				<version>3.1.1</version>
+				<version>3.4.1</version>
 				<executions>
 					<!-- Run shade goal on package phase -->
 					<execution>
@@ -468,6 +448,13 @@ under the License.
 									<exclude>org.apache.logging.log4j:*</exclude>
 								</excludes>
 							</artifactSet>
+							<relocations>
+								<!-- 重新定位 Jackson 以避免和 Hadoop/Flink 冲突 -->
+								<relocation>
+									<pattern>com.fasterxml.jackson</pattern>
+									<shadedPattern>com.myshade.fasterxml.jackson</shadedPattern>
+								</relocation>
+							</relocations>
 							<filters>
 								<filter>
 									<!-- Do not copy the signatures in the META-INF folder.
