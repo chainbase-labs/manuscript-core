@@ -4,8 +4,13 @@ var DockerComposeTemplate = `
 name: {{.Name}}
 services:
   jobmanager:
-    image: repository.chainbase.com/manuscript-node/manuscript-node:latest
-    user: "flink"
+    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.1.4
+	pull_policy: always
+    user: "manuscript"
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: {{.Name}}-jobmanager-1
     command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
     ports:
       - "{{.Port}}:8081"
@@ -18,8 +23,13 @@ services:
       - ms_network_{{ .Name }}
 
   taskmanager:
-    image: repository.chainbase.com/manuscript-node/manuscript-node:latest
-    user: "flink"
+    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.1.4
+	pull_policy: always
+    user: "manuscript"
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: {{.Name}}-jobmanager-1
     depends_on:
       - jobmanager
     command: "taskmanager"
@@ -39,9 +49,13 @@ var DockerComposeWithPostgresqlContent = `
 name: {{.Name}}
 services:
   jobmanager:
-    image: repository.chainbase.com/manuscript-node/manuscript-node:latest
+    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.1.4
     pull_policy: always
-    user: "flink"
+    user: "manuscript"
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: {{.Name}}-jobmanager-1
     command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
     ports:
       - "{{.Port}}:8081"
@@ -57,8 +71,12 @@ services:
       - ms_network_{{ .Name }}
 
   taskmanager:
-    image: repository.chainbase.com/manuscript-node/manuscript-node:latest
-    user: "flink"
+    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.1.4
+    user: "manuscript"
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: {{.Name}}-jobmanager-1
     depends_on:
       - jobmanager
     command: "taskmanager"
@@ -98,6 +116,7 @@ services:
       - taskmanager
     environment:
       HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/{{.Database}}
+      HASURA_GRAPHQL_METADATA_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/{{.Database}}
       HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
     networks:
       - ms_network_{{ .Name }}

@@ -47,10 +47,7 @@ public class PluginLoadHandler {
             String createCatalogSQL = String.format(
                     "CREATE CATALOG paimon WITH (" +
                             "  'type' = 'paimon'," +
-                            "  'warehouse' = 'oss://network-testnet/warehouse'," +
-                            "  'fs.oss.endpoint' = 'network-testnet.chainbasehq.com'," +
-                            "  'fs.oss.accessKeyId' = '%s'," +
-                            "  'fs.oss.accessKeySecret' = '%s'," +
+                            "  'warehouse' = 'webhdfs://hdfs-proxy.chainbasehq.com/warehouse'," +
                             "  'table-default.merge-engine' = 'deduplicate'," +
                             "  'table-default.changelog-producer' = 'input'," +
                             "  'table-default.metastore.partitioned-table' = 'false'," +
@@ -65,9 +62,7 @@ public class PluginLoadHandler {
                             "  'table-default.scan.plan-sort-partition' = 'true'," +
                             "  'table-default.snapshot.expire.limit' = '10000'," +
                             "  'table-default.snapshot.num-retained.max' = '2000'" +
-                            ")",
-                    System.getenv("OSS_ACCESS_KEY_ID"),
-                    System.getenv("OSS_ACCESS_KEY_SECRET")
+                            ")"
             );
             tEnv.executeSql(createCatalogSQL);
 
@@ -77,6 +72,7 @@ public class PluginLoadHandler {
 
         private PluginLoadBuilder setUpFlinkConfig(ETL etl) {
             Configuration conf = tEnv.getConfig().getConfiguration();
+            conf.setString("fs.hdfs.impl","org.apache.hadoop.hdfs.web.WebHdfsFileSystem");
             conf.setString("table.local-time-zone", "UTC");
             conf.setString("table.exec.sink.upsert-materialize", "NONE");
             conf.setString("state.backend.type", "rocksdb");
