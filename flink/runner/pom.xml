@@ -155,12 +155,6 @@ under the License.
 			<version>0.8.1</version>
 			<scope>provided</scope>
 		</dependency>
-<!--		<dependency>-->
-<!--			<groupId>org.apache.paimon</groupId>-->
-<!--			<artifactId>paimon-oss-impl</artifactId>-->
-<!--			<version>0.8.1</version>-->
-<!--			<scope>provided</scope>-->
-<!--		</dependency>-->
 		<!-- https://mvnrepository.com/artifact/org.apache.paimon/paimon-s3 -->
 		<dependency>
 			<groupId>org.apache.paimon</groupId>

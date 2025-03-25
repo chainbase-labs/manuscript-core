@@ -48,9 +48,6 @@ public class PluginLoadHandler {
                     "CREATE CATALOG paimon WITH (" +
                             "  'type' = 'paimon'," +
                             "  'warehouse' = 'webhdfs://hdfs-proxy.chainbasehq.com/warehouse'," +
-//                            "  'fs.oss.endpoint' = 'network-testnet.chainbasehq.com'," +
-//                            "  'fs.oss.accessKeyId' = '%s'," +
-//                            "  'fs.oss.accessKeySecret' = '%s'," +
                             "  'table-default.merge-engine' = 'deduplicate'," +
                             "  'table-default.changelog-producer' = 'input'," +
                             "  'table-default.metastore.partitioned-table' = 'false'," +
@@ -66,8 +63,6 @@ public class PluginLoadHandler {
                             "  'table-default.snapshot.expire.limit' = '10000'," +
                             "  'table-default.snapshot.num-retained.max' = '2000'" +
                             ")"
-//                    System.getenv("OSS_ACCESS_KEY_ID"),
-//                    System.getenv("OSS_ACCESS_KEY_SECRET")
             );
             tEnv.executeSql(createCatalogSQL);
 
