@@ -103,7 +103,7 @@ public class ETLProcessor {
     }
 
     public static void main(String[] args) {
-         String configPath = args.length > 0 ? args[0] : "eth_blocks_pg_manuscript.yaml";
+         String configPath = args.length > 0 ? args[0] : "manuscript.yaml";
          ETLProcessor processor = new ETLProcessor(configPath);
          processor.execute();
     }
