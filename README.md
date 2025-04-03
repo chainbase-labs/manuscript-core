@@ -140,17 +140,17 @@ Here are some of the planned improvements:
                 </a>
             </td>
             <td align="center">
-                <a href="https://github.com/XdpCs">
-                    <img src="https://avatars.githubusercontent.com/u/72180730?v=4" width="100;" alt="XdpCs"/>
-                    <br />
-                    <sub><b>Alan Xu</b></sub>
-                </a>
-            </td>
-            <td align="center">
                 <a href="https://github.com/fishTsai20">
                     <img src="https://avatars.githubusercontent.com/u/123794723?v=4" width="100;" alt="fishTsai20"/>
                     <br />
                     <sub><b>fishTsai20</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/XdpCs">
+                    <img src="https://avatars.githubusercontent.com/u/72180730?v=4" width="100;" alt="XdpCs"/>
+                    <br />
+                    <sub><b>Alan Xu</b></sub>
                 </a>
             </td>
             <td align="center">
