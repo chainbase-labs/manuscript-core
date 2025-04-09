@@ -259,7 +259,7 @@ impl IntoIterator for DataDictionary {
 
 #[derive(Clone, Debug)]
 pub enum AppUpdate {
-    SteupResult(String),
+    SetupResult(String),
     SetupProgress(SetupStep, SetupStepStatus),
     SetupComplete,
     SetupFailed(String, SetupStep),
@@ -464,6 +464,25 @@ impl App {
         }
     }
 
+    /// Runs the main application loop, handling UI rendering, keyboard input,
+    /// asynchronous updates, and timed tasks.
+    ///
+    /// This method continuously runs until the `exit` flag is set to `true`.
+    /// It performs the following tasks in each iteration:
+    /// - Renders the current UI using the provided terminal
+    /// - Updates the setup timer and triggers updates if Docker setup is in progress
+    /// - Polls for and handles keyboard input events
+    /// - Listens to messages from `update_receiver` for setup progress, results, or errors
+    /// - Handles user actions like editing SQL or viewing logs from `action_receiver`
+    /// - Triggers periodic tick updates based on a fixed interval
+    ///
+    /// # Arguments
+    ///
+    /// * `terminal` - A mutable reference to the terminal used for rendering the UI
+    ///
+    /// # Returns
+    ///
+    /// * `io::Result<()>` - Returns `Ok(())` if the loop exits without error, or an `io::Error` if a terminal operation fails
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
         let tick_rate = Duration::from_millis(150);
         let mut last_tick = Instant::now();
@@ -489,7 +508,7 @@ impl App {
             if let Some(receiver) = &mut self.update_receiver {
                 match receiver.try_recv() {
                     Ok(update) => match update {
-                        AppUpdate::SteupResult(msg) => {
+                        AppUpdate::SetupResult(msg) => {
                             self.debug_result = Some(msg);
                         },
                         AppUpdate::SetupProgress(step, status) => {
@@ -960,8 +979,14 @@ impl App {
                                             let action = action.to_string();
                                             let sender = action_sender.clone();
                                             async move {
-                                                if let Ok(Some(content)) = job_manager.handle_action(&job_name, &action).await {
-                                                    let _ = sender.send((action, content)).await;
+                                                match job_manager.handle_action(&job_name, &action).await {
+                                                    Ok(Some(content)) => {
+                                                        let _ = sender.send((action, content)).await;
+                                                    }
+                                                    Err(e) => {
+                                                        eprintln!("Error handling action '{}': {}", action, e);
+                                                    }
+                                                    _ => {}
                                                 }
                                             }
                                         });
@@ -1148,7 +1173,7 @@ impl App {
         self.docker_setup_timer = 0;
         
         if let Some(sender) = &self.update_sender {
-            let _ = sender.send(AppUpdate::SteupResult(
+            let _ = sender.send(AppUpdate::SetupResult(
                 "Executing in the debug environment...".to_string()
             )).await;
         }
@@ -1161,7 +1186,7 @@ impl App {
                 if !self.should_cancel_setup {
                     if let Some(sender) = &self.update_sender {
                         let _ = sender.send(AppUpdate::SetupComplete).await;
-                        let _ = sender.send(AppUpdate::SteupResult(msg)).await;
+                        let _ = sender.send(AppUpdate::SetupResult(msg)).await;
                     }
                 }
             },

@@ -1,6 +1,7 @@
 package com.chainbase.manuscript;
 
 import com.chainbase.udf.*;
+import com.chainbase.udf.math.*;
 import freemarker.template.Template;
 import freemarker.template.TemplateExceptionHandler;
 
@@ -22,11 +23,18 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -56,11 +64,35 @@ public class ETLProcessor {
     }
 
     private Map<String, Object> loadConfig(String configPath) {
-        try (InputStream input = new FileInputStream(configPath)) {
+        try (InputStream input = openStream(configPath)) {
             Yaml yaml = new Yaml();
             return yaml.load(input);
         } catch (Exception e) {
             throw new RuntimeException("Error loading configuration", e);
+        }
+    }
+
+    private InputStream openStream(String configPath) throws Exception {
+        URI uri = new URI(configPath);
+        String scheme = uri.getScheme();
+
+        if (scheme == null || scheme.equals("file")) {
+            // 本地文件（file:// 或无 scheme）
+            if (scheme == null) {
+                return new FileInputStream(configPath);  // 纯路径
+            } else {
+                return new FileInputStream(Paths.get(uri).toFile());
+            }
+        } else if (scheme.equals("http") || scheme.equals("https")) {
+            // 远程 HTTP 资源
+            URL url = uri.toURL();
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
+            return connection.getInputStream();
+        } else {
+            throw new IllegalArgumentException("Unsupported URI scheme: " + scheme);
         }
     }
 
@@ -81,6 +113,45 @@ public class ETLProcessor {
                         throw new IllegalArgumentException("Missing required field in source: " + field);
                     }
                 }
+                String sourceType = (String) source.get("type");
+                switch (sourceType) {
+                    case "dataset":
+                        break;
+
+                    case "cumulative_window_dataset":
+                        List<String> cumulativeRequiredSourceFields = List.of("timecol", "step", "size");
+                        for (String field : cumulativeRequiredSourceFields) {
+                            if (!source.containsKey(field)) {
+                                throw new IllegalArgumentException("Missing required field in source: " + field);
+                            }
+                        }
+                        break;
+                    case "hop_window_dataset":
+                        List<String> hopRequiredSourceFields = List.of("timecol", "slide", "size");
+                        for (String field : hopRequiredSourceFields) {
+                            if (!source.containsKey(field)) {
+                                throw new IllegalArgumentException("Missing required field in source: " + field);
+                            }
+                        }
+                        break;
+
+                    case "tumble_window_dataset":
+                        List<String> tumbleRequiredSourceFields = List.of("timecol", "size");
+                        for (String field : tumbleRequiredSourceFields) {
+                            if (!source.containsKey(field)) {
+                                throw new IllegalArgumentException("Missing required field in source: " + field);
+                            }
+                        }
+                        break;
+
+                    case "lookup_dataset":
+                        break;
+
+                    default:
+                        throw new IllegalArgumentException("Unsupported source: " + sourceType);
+
+                }
+
             }
         }
 
@@ -124,7 +195,6 @@ public class ETLProcessor {
         conf.setString("execution.checkpointing.timeout", "30 min");
         conf.setString("execution.checkpointing.max-concurrent-checkpoints", "1");
         conf.setString("state.backend.incremental", "true");
-        conf.setString("restart-strategy.fixed-delay.delay", "10 s");
         conf.setString("execution.checkpointing.tolerable-failed-checkpoints", "2147483647");
         conf.setString("sql-client.execution.result-mode", "tableau");
         conf.setString("table.exec.sink.not-null-enforcer", "ERROR");
@@ -149,6 +219,7 @@ public class ETLProcessor {
                         "  'table-default.orc.bloom.filter.fpp' = '0.00001'," +
                         "  'table-default.scan.plan-sort-partition' = 'true'," +
                         "  'table-default.snapshot.expire.limit' = '10000'," +
+                        "  'table.exec.state.ttl' = '2h'," +
                         "  'table-default.snapshot.num-retained.max' = '2000'" +
                         ")"
         );
@@ -163,21 +234,63 @@ public class ETLProcessor {
         tEnv.createTemporarySystemFunction("ROW_TO_JSON", RowToJsonFunction.class);
         tEnv.createTemporarySystemFunction("ARRAY_TO_JSON", ArrayToJsonFunction.class);
         tEnv.createTemporarySystemFunction("GET_TOKEN_META", GetTokenMeta.class);
+        tEnv.createTemporarySystemFunction("Abs", Abs.class);
+        tEnv.createTemporarySystemFunction("Add", Add.class);
+        tEnv.createTemporarySystemFunction("CountDistinct", CountDistinct.class);
+        tEnv.createTemporarySystemFunction("Divide", Divide.class);
+        tEnv.createTemporarySystemFunction("Multiply", Multiply.class);
+        tEnv.createTemporarySystemFunction("Negate", Negate.class);
+        tEnv.createTemporarySystemFunction("Pow", Pow.class);
+        tEnv.createTemporarySystemFunction("Subtract", Subtract.class);
+        tEnv.createTemporarySystemFunction("SumStringNum", SumStringNum.class);
     }
 
     private void createSources() {
         tEnv.useCatalog("default_catalog");
         List<Map<String, Object>> sources = (List<Map<String, Object>>) config.get("sources");
         for (Map<String, Object> source : sources) {
-            if ("dataset".equals(source.get("type"))) {
-                String filterClause = source.containsKey("filter") ? "WHERE " + source.get("filter") : "";
-                String sql = String.format(
-                        "CREATE TEMPORARY VIEW %s AS " +
-                                "SELECT * FROM paimon.%s %s",
-                        source.get("name"), source.get("dataset"), filterClause
-                );
-                tEnv.executeSql(sql);
+            String sourceType = source.get("type").toString();
+            String sql = "";
+            String filterClause = source.containsKey("filter") ? "WHERE " + source.get("filter") : "";
+            switch (sourceType) {
+                case "dataset":
+                    sql = String.format(
+                            "CREATE TEMPORARY VIEW %s AS " +
+                                    "SELECT * FROM paimon.%s /*+ OPTIONS( 'scan.mode' = 'latest', 'continuous.discovery-interval' = '500ms', 'scan.infer-parallelism' = 'false', 'scan.parallelism' = '%s') */ %s",
+                            source.get("name"), source.get("dataset"), source.getOrDefault("parallelism", 1), filterClause
+                    );
+                    break;
+                case "tumble_window_dataset":
+
+                    if (source.containsKey("offset")) {
+                        sql = String.format(" CREATE TEMPORARY VIEW %s AS SELECT * FROM TABLE( TUMBLE( (SELECT * FROM paimon.%s/*+ OPTIONS( 'scan.mode' = 'latest', 'continuous.discovery-interval' = '500ms', 'scan.infer-parallelism' = 'false', 'scan.parallelism' = '%s') */ %s), DESCRIPTOR(`%s`), %s, %s))", source.get("name"), source.get("dataset"), source.getOrDefault("parallelism", 1), filterClause, source.get("timecol"), source.get("size"), source.get("offset"));
+                    } else {
+                        sql = String.format(" CREATE TEMPORARY VIEW %s AS SELECT * FROM TABLE( TUMBLE( (SELECT * FROM paimon.%s/*+ OPTIONS( 'scan.mode'='from-timestamp','scan.timestamp-millis' = '%s', 'continuous.discovery-interval' = '500ms', 'scan.infer-parallelism' = 'false', 'scan.parallelism' = '%s') */ %s), DESCRIPTOR(`%s`), %s))", source.get("name"), source.get("dataset"), Instant.now().minus(1, ChronoUnit.MINUTES).toEpochMilli(), source.getOrDefault("parallelism", 1), filterClause, source.get("timecol"), source.get("size"));
+                    }
+
+                    break;
+                case "hop_window_dataset":
+                    if (source.containsKey("offset")) {
+                        sql = String.format("CREATE TEMPORARY VIEW %s AS SELECT * FROM TABLE( HOP( (SELECT * FROM paimon.%s/*+ OPTIONS( 'scan.mode' = 'latest', 'continuous.discovery-interval' = '500ms', 'scan.infer-parallelism' = 'false', 'scan.parallelism' = '%s') */ %s), DESCRIPTOR(`%s`), %s, %s, %s))", source.get("name"), source.get("dataset"), source.getOrDefault("parallelism", 1), filterClause, source.get("timecol"), source.get("slide"), source.get("size"), source.get("offset"));
+                    } else {
+                        sql = String.format("CREATE TEMPORARY VIEW %s AS SELECT * FROM TABLE( HOP( (SELECT * FROM paimon.%s/*+ OPTIONS( 'scan.mode' = 'latest', 'continuous.discovery-interval' = '500ms', 'scan.infer-parallelism' = 'false', 'scan.parallelism' = '%s') */ %s), DESCRIPTOR(`%s`), %s, %s))", source.get("name"), source.get("dataset"), source.getOrDefault("parallelism", 1), filterClause, source.get("timecol"), source.get("slide"), source.get("size"));
+                    }
+                    break;
+                case "cumulative_window_dataset":
+                    sql = String.format("CREATE TEMPORARY VIEW %s AS SELECT * FROM TABLE( CUMULATE( (SELECT * FROM paimon.%s/*+ OPTIONS( 'scan.mode' = 'latest', 'continuous.discovery-interval' = '500ms', 'scan.infer-parallelism' = 'false', 'scan.parallelism' = '%s') */ %s), DESCRIPTOR(`%s`), %s, %s ))", source.get("name"), source.get("dataset"), source.getOrDefault("parallelism", 1), filterClause, source.get("timecol"), source.get("step"), source.get("size"));
+                    break;
+
+                case "lookup_dataset":
+                    Map<String, Object> lookupOptions = (Map<String, Object>) source.getOrDefault("lookup", new HashMap<>());
+                    sql = String.format(
+                            "CREATE TEMPORARY VIEW %s AS " +
+                                    "SELECT * FROM paimon.%s /*+ OPTIONS('scan.infer-parallelism' = 'false', 'scan.parallelism' = '%s','lookup.cache-rows'='%s','lookup.cache-ttl'='%s') */ %s",
+                            source.get("name"), source.get("dataset"), source.getOrDefault("parallelism", 1), lookupOptions.getOrDefault("cache-rows", "5000"), lookupOptions.getOrDefault("cache-ttl", "240s"), filterClause
+                    );
+                    break;
             }
+            logger.info(sql);
+            tEnv.executeSql(sql);
         }
     }
 
@@ -195,7 +308,7 @@ public class ETLProcessor {
                 sql = render(name, sql, params);
             }
             logger.info("  SQL: {}", sql);
-            String tmpName=name+"_tmp";
+            String tmpName = name + "_tmp";
             tEnv.createTemporaryView(tmpName, tEnv.sqlQuery(sql));
             Table table = tEnv.from(tmpName);
             List<TableColumn> columns = table.getSchema().getTableColumns();
@@ -381,6 +494,7 @@ public class ETLProcessor {
         String port = ((Map<String, Object>) sink.get("config")).get("port").toString();
 
         logger.info("Connecting to PostgreSQL and creating database/table if not exists...");
+        logger.info(String.format("Connnect to pg, user: %s, password: %s, host: %s, port: %s", username, password, host, port));
         try (Connection conn = DriverManager.getConnection(
                 "jdbc:postgresql://" + host + ":" + port + "/postgres", username, password);
              Statement stmt = conn.createStatement()) {

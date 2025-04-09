@@ -72,6 +72,19 @@ impl Settings {
         builder.build()?.try_deserialize()
     }
 
+    /// Returns the full API URL for fetching blockchain network chains.
+    ///
+    /// This function attempts to construct the URL from application settings.
+    /// If the settings fail to load, it returns a default hardcoded URL instead.
+    ///
+    /// # Returns
+    /// A `String` containing the full API endpoint for chain metadata.
+    ///
+    /// # Example
+    /// ```
+    /// let url = get_chains_url();
+    /// println!("{}", url); // e.g. "https://api.chainbase.com/api/v1/metadata/network_chains"
+    /// ```
     pub fn get_chains_url() -> String {
         match &*SETTINGS {
             Ok(settings) => format!("{}{}", settings.api.base_url, settings.api.endpoints.chains),

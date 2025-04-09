@@ -732,6 +732,9 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
             JobState::Failed => Style::default().fg(Color::Red),
             JobState::NotStarted => Style::default().fg(Color::Yellow),
             JobState::Creating => Style::default().fg(Color::Yellow),
+            JobState::Exited => Style::default().fg(Color::Reset),
+            JobState::Dead => Style::default().fg(Color::Red),
+            JobState::Paused => Style::default().fg(Color::Yellow),
         };
 
         let is_selected = index == app.selected_job_index;
@@ -759,6 +762,9 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
                         JobState::Failed => "Failed",
                         JobState::NotStarted => "Not Started (pull images while take few minutes..)",
                         JobState::Creating => "Creating (pull images while take few minutes..)",
+                        JobState::Exited => "Exited",
+                        JobState::Dead => "Dead",
+                        JobState::Paused => "Paused"
                     }
                 ),
                 style
