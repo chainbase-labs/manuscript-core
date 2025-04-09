@@ -133,17 +133,17 @@ Here are some of the planned improvements:
                 </a>
             </td>
             <td align="center">
-                <a href="https://github.com/lxcong">
-                    <img src="https://avatars.githubusercontent.com/u/8024426?v=4" width="100;" alt="lxcong"/>
-                    <br />
-                    <sub><b>lxcong</b></sub>
-                </a>
-            </td>
-            <td align="center">
                 <a href="https://github.com/fishTsai20">
                     <img src="https://avatars.githubusercontent.com/u/123794723?v=4" width="100;" alt="fishTsai20"/>
                     <br />
                     <sub><b>fishTsai20</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/lxcong">
+                    <img src="https://avatars.githubusercontent.com/u/8024426?v=4" width="100;" alt="lxcong"/>
+                    <br />
+                    <sub><b>lxcong</b></sub>
                 </a>
             </td>
             <td align="center">
