@@ -3,7 +3,12 @@ name: {name}
 services:
   jobmanager:
     image: {job_manager_image}
-    user: "flink"
+    pull_policy: always
+    user: "manuscript"
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: {name}-jobmanager-1
     command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
     ports:
       - "{job_port}:8081"
@@ -17,7 +22,12 @@ services:
 
   taskmanager:
     image: {job_manager_image}
-    user: "flink"
+    pull_policy: always
+    user: "manuscript"
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: {name}-jobmanager-1
     depends_on:
       - jobmanager
     command: "taskmanager"
@@ -43,13 +53,18 @@ services:
     networks:
       - ms_network_{name}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   hasura:
     image: {hasura_image}
     ports:
       - "{graphql_port}:8080"
     depends_on:
-      - postgres
+      - taskmanager
     environment:
       HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/{database}
       HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
@@ -128,14 +143,14 @@ sources:
     dataset: {dataset_name}.{table_name}
 
 transforms:
-  - name: {dataset_name}_{dataset_name}_{table_name}_transform
+  - name: {dataset_name}_{table_name}_transform
     sql: >
       Select * From {dataset_name}_{table_name}
 
 sinks:
-  - name: {dataset_name}_{dataset_name}_{table_name}_sink
+  - name: {dataset_name}_{table_name}_sink
     type: postgres
-    from: {dataset_name}_{dataset_name}_{table_name}_transform
+    from: {dataset_name}_{table_name}_transform
     database: {dataset_name}
     schema: public
     table: {table_name}
