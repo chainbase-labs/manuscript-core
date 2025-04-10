@@ -166,8 +166,14 @@ func displayManuscriptStates(manuscripts []pkg.Manuscript, dockers []pkg.Contain
 func displayJobStatus(jobNumber int, m *pkg.Manuscript, state pkg.ManuscriptState) {
 	switch state {
 	case pkg.StateRunning:
-		fmt.Printf("\r🟢 %d: Manuscript: \033[32m%s\033[0m | State: \033[32m%s\033[0m | GraphQL: http://127.0.0.1:%d\n",
-			jobNumber, m.Name, state, m.GraphQLPort)
+		if m.GraphQLPort == 0 {
+			fmt.Printf("\r🟢 %d: Manuscript: \033[32m%s\033[0m | State: \033[32m%s\033[0m\n",
+				jobNumber, m.Name, state)
+		} else {
+			fmt.Printf("\r🟢 %d: Manuscript: \033[32m%s\033[0m | State: \033[32m%s\033[0m | GraphQL: http://127.0.0.1:%d\n",
+				jobNumber, m.Name, state, m.GraphQLPort)
+		}
+
 	case pkg.StateInitializing:
 		fmt.Printf("\r🟡 %d: Manuscript: \033[34m%s\033[0m | State: \033[33m%s\033[0m\n",
 			jobNumber, m.Name, state)

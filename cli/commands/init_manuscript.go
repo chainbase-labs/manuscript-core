@@ -18,18 +18,20 @@ import (
 )
 
 const (
-	manuscriptBaseName   = "manuscripts"
-	manuscriptBaseDir    = "$HOME"
-	manuscriptConfig     = "$HOME/.manuscript_config.ini"
-	networkChainURL      = "https://api.chainbase.com"
-	networkChainEndpoint = "/api/v1/metadata/network_chains"
-	defaultDatabase      = "zkevm"
-	defaultTable         = "blocks"
-	defaultSink          = "postgres"
-	graphQLImage         = "repository.chainbase.com/manuscript-node/graphql-engine:latest"
-	graphQLARMImage      = "repository.chainbase.com/manuscript-node/graphql-engine-arm64:latest"
-	defaultPrimaryKey    = "block_number"
-	icpPrimaryKey        = "block_idx"
+	manuscriptBaseName    = "manuscripts"
+	manuscriptBaseDir     = "$HOME"
+	manuscriptConfig      = "$HOME/.manuscript_config.ini"
+	networkChainURL       = "https://api.chainbase.com"
+	platformChainURL      = "https://console.chainbase.com"
+	networkChainEndpoint  = "/api/v1/metadata/network_chains"
+	platformChainEndpoint = "/api/v2/datacloud/metadata"
+	defaultDatabase       = "zkevm"
+	defaultTable          = "blocks"
+	defaultSink           = "postgres"
+	graphQLImage          = "repository.chainbase.com/manuscript-node/graphql-engine:latest"
+	graphQLARMImage       = "repository.chainbase.com/manuscript-node/graphql-engine-arm64:latest"
+	defaultPrimaryKey     = "block_number"
+	icpPrimaryKey         = "block_idx"
 )
 
 func executeInitManuscript(ms pkg.Manuscript) {

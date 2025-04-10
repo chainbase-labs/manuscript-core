@@ -128,6 +128,9 @@ func GetContainerLogs(ctx context.Context, containerName string, lines int) ([]s
 }
 
 func (sd *StateDetector) checkGraphQLEndpoint() bool {
+	if sd.manuscript.GraphQLPort == 0 {
+		return true
+	}
 	url := fmt.Sprintf("http://127.0.0.1:%d/healthz", sd.manuscript.GraphQLPort)
 	client := &http.Client{
 		Timeout: 2 * time.Second, // Short timeout to avoid hanging
