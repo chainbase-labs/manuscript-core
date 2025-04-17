@@ -1,0 +1,139 @@
+state_checkpoints_dir: file:///Users/isachoi/Desktop/Chainbase/manuscript-core/flink/runner/src/main/resources/checkpoint
+state_savepoints_dir: file:///Users/isachoi/Desktop/Chainbase/manuscript-core/flink/runner/src/main/resources/savepoint
+name: demo
+specVersion: v0.1.0
+parallelism: 1
+
+sources:
+  - name: token_prices_window
+    type: tumble_window_dataset
+    dataset: token.token_prices_append
+    size: INTERVAL '1' HOUR
+    timecol: timestamp
+    filter: "blockchain='ethereum'"
+    parallelism: 10
+
+  - name: ethereum_token_transfers
+    type: dataset
+    dataset: ethereum.token_transfers
+    filter: erc_type = 'ERC20'
+    parallelism: 1
+
+  - name: ethereum_trace_calls
+    type: dataset
+    dataset: ethereum.trace_calls
+    filter: "`value` <> '0'"
+    parallelism: 1
+
+  - name: ethereum_token_metas
+    type: lookup_dataset
+    dataset: ethereum.token_metas
+    parallelism: 1
+    cache-rows: 5000
+    cache-ttl: 240s
+
+transforms:
+  - name: ethereum_onchain_trades_transform
+    sql: >
+      WITH TransfersWithValues AS ((SELECT block_timestamp
+                                           ,transaction_hash
+                                           ,contract_address AS token_address
+                                           ,from_address
+                                           ,to_address
+                                           ,`value`
+                                           ,'Transfer'       as `operation`
+                                           ,__proc_time
+                                          ,DATE_FORMAT(`block_timestamp`, 'yyyy-MM-dd HH') as `ts_key`
+                                    FROM ethereum_token_transfers
+                                    )
+                                   UNION ALL
+                                   (SELECT `block_timestamp`
+                                         , transaction_hash
+                                         , '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' AS token_address
+                                         , from_address
+                                         , to_address
+                                         , `value`
+                                         , 'NativeTransfer'                             as `operation`
+                                         , __proc_time
+                                         ,DATE_FORMAT(`block_timestamp`, 'yyyy-MM-dd HH') as `ts_key`
+                                    FROM ethereum_trace_calls
+                                    ))
+      SELECT block_timestamp
+             ,transaction_hash
+             ,token_address
+             ,from_address
+             ,to_address
+             ,`value`
+             ,`operation`
+             ,amount
+             ,`symbol`
+             ,`name`
+             ,CASE
+                 WHEN decimals <> 0 THEN CAST(Multiply(`amount`, `price`) AS DECIMAL(38, 18))
+                 ELSE CAST(0 as DECIMAL(38, 18)) END as `usd_value`
+             ,`usd_value_timestamp`
+      FROM (SELECT block_timestamp
+                               ,transaction_hash
+                               ,token_address
+                               ,from_address
+                               ,to_address
+                               ,`value`
+                               ,Divide(`value`, Pow(cast(10 AS STRING), CAST(`decimals` AS STRING))) AS amount
+                               ,decimals
+                               ,`symbol`
+                               ,`name`
+                               ,`price`
+                               ,`usd_value_timestamp`
+                               ,`operation`
+                        FROM (SELECT t.block_timestamp
+                                     ,t.transaction_hash
+                                     ,t.token_address
+                                     ,t.from_address
+                                     ,t.to_address
+                                     ,t.`value`
+                                     ,t.__proc_time
+                                     ,t.`operation`
+                                     ,CASE
+                                         WHEN t.token_address = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' THEN 'ETH'
+                                         WHEN tm.`symbol` is not null THEN tm.`symbol`
+                                         ELSE '' END                                                           AS `symbol`
+                                     ,CASE
+                                         WHEN t.token_address = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' THEN 'ETH'
+                                         WHEN tm.`name` is not null THEN tm.`name`
+                                         ELSE '' END                                                           as `name`
+                                     ,CASE
+                                         WHEN t.token_address = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' THEN CAST(18 AS DECIMAL(38, 18))
+                                         WHEN tm.decimals is not null THEN tm.`decimals`
+                                         ELSE 0 END                                                            as `decimals`
+                                     ,CASE WHEN tp.price is not null THEN CASt(tp.price AS STRING) ELSE '0' END as `price`
+                                     ,tp.`timestamp`                                                            as `usd_value_timestamp`
+                              FROM TransfersWithValues as t
+                                       LEFT JOIN ethereum_token_metas for system_time as of t.__proc_time as tm
+                                                 ON t.token_address = tm.contract_address
+                                       JOIN (SELECT
+                                                 address
+                                                 ,FIRST_VALUE(cast(price AS FLOAT)) AS price
+                                                 ,window_start AS `timestamp`
+                                                 ,DATE_FORMAT(`window_start`, 'yyyy-MM-dd HH') as `ts_key`
+                                             FROM token_prices_window
+                                             GROUP BY blockchain, address, window_start, window_end
+                                            ) tp
+                                            ON t.token_address = tp.`address`
+                                                AND
+                                                   tp.`ts_key` =t.`ts_key`
+                                              AND tp.`timestamp` >= t.block_timestamp - INTERVAL '2' HOUR
+                        )as tt) as ttt
+
+sinks:
+  - name: ethereum_onchain_trades_sink
+    type: postgres
+    from: ethereum_onchain_trades_transform
+    database: ethereum
+    schema: public
+    table: onchain_trades
+    primary_key: block_timestamp,transaction_hash,from_address,to_address,token_address,usd_value
+    config:
+      host: localhost
+      port: 5432
+      username: postgres
+      password: 123456

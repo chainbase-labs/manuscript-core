@@ -1,0 +1,87 @@
+state_checkpoints_dir: file:///Users/isachoi/Desktop/Chainbase/manuscript-core/flink/runner/src/main/resources/checkpoint
+state_savepoints_dir: file:///Users/isachoi/Desktop/Chainbase/manuscript-core/flink/runner/src/main/resources/savepoint
+
+name: sui_move_call
+specVersion: v0.1.0
+parallelism: 1
+
+sources:
+  - name: sui_transactions
+    type: dataset
+    dataset: sui.sui_transactions
+    parallelism: 10
+
+transforms:
+  - name: sui_move_call_transform
+    sql: >
+      select 
+        checkpoint_timestamp, 
+        checkpoint, 
+        transaction_digest, 
+        transaction, 
+        CAST(
+          JSON_VALUE(
+            transaction, '$.MoveCall.function'
+          ) AS STRING
+        ) as `function`, 
+        CAST(
+          JSON_VALUE(
+            transaction, '$.MoveCall.module'
+          ) AS STRING
+        ) as `module`, 
+        CAST(
+          JSON_VALUE(
+            transaction, '$.MoveCall.package'
+          ) AS STRING
+        ) as `package`,
+      transactions
+      from 
+        (
+          select 
+            transaction_digest, 
+            checkpoint_timestamp, 
+            checkpoint, 
+            transaction,
+            transactions
+          from 
+            (
+              select 
+                transaction_digest, 
+                TO_TIMESTAMP(
+                  FROM_UNIXTIME(
+                    CAST(
+                      JSON_VALUE(raw_data, '$.timestampMs') as BIGINT
+                    ) / 1000
+                  )
+                ) as checkpoint_timestamp, 
+                CAST(
+                  JSON_VALUE(raw_data, '$.checkpoint') AS BIGINT
+                ) as checkpoint, 
+                FROM_JSON (
+                  JSON_QUERY(
+                    raw_data, '$.transaction.data.transaction.transactions'
+                  ), 
+                  'Array<String>'
+                ) as transactions_arr, 
+                raw_data AS transactions 
+              from 
+                sui_transactions 
+              where 
+                raw_data like '%MoveCall%'
+            ) as tt CROSS 
+            JOIN UNNEST (transactions_arr) as t (transaction)
+        ) as ttt
+
+sinks:
+  - name: sui_move_call_sink
+    type: postgres
+    from: sui_move_call_transform
+    database: sui
+    schema: public
+    table: move_calls
+    primary_key: checkpoint_timestamp,checkpoint,transaction_digest,module,package,function
+    config:
+      host: localhost
+      port: 5432
+      username: postgres
+      password: 123456

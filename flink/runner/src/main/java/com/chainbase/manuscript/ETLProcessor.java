@@ -1,6 +1,7 @@
 package com.chainbase.manuscript;
 
 import com.chainbase.udf.*;
+import com.chainbase.udf.json.FromJson;
 import com.chainbase.udf.math.*;
 import freemarker.template.Template;
 import freemarker.template.TemplateExceptionHandler;
@@ -33,10 +34,7 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.apache.flink.table.api.Expressions.$;
@@ -243,6 +241,7 @@ public class ETLProcessor {
         tEnv.createTemporarySystemFunction("Pow", Pow.class);
         tEnv.createTemporarySystemFunction("Subtract", Subtract.class);
         tEnv.createTemporarySystemFunction("SumStringNum", SumStringNum.class);
+        tEnv.createTemporarySystemFunction("FROM_JSON", FromJson.class);
     }
 
     private void createSources() {
@@ -541,7 +540,7 @@ public class ETLProcessor {
                         "  'username' = '%s'," +
                         "  'password' = '%s'" +
                         ")",
-                sink.get("name"), flinkSchema, primaryKey, host, port, database,
+                sink.get("name"), flinkSchema, String.join(",", Arrays.stream(primaryKey.split(",")).map(String::trim).map(s->"`"+s+"`").toArray(String[]::new)), host, port, database,
                 schemaName, tableName, username, password
         );
         logger.info("Executing SQL for PostgreSQL sink: {}", sql);
