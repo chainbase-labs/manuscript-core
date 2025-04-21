@@ -17,7 +17,9 @@ pub struct ApiServer {
 
 impl ApiServer {
     pub async fn start() -> Result<Self, String> {
-        let mut child = Command::new("../common/api_server")
+        let path = env!("API_SERVER_PATH");
+
+        let mut child = Command::new(path)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
@@ -30,7 +32,10 @@ impl ApiServer {
             if let Some(port_str) = line.strip_prefix("API server started on port ") {
                 let port = port_str.parse().expect("Invalid port number");
 
-                let client = reqwest::Client::new();
+                let client = reqwest::Client::builder()
+                    .no_proxy()
+                    .build()
+                    .map_err(|e| format!("Failed to build client: {}", e))?;
                 let url = format!("http://127.0.0.1:{}/health", port);
 
                 for _ in 0..10 {
@@ -71,7 +76,10 @@ pub async fn load_config(path: &str) -> Result<Value, String> {
         .expect("API server not started yet");
 
     let url = format!("http://127.0.0.1:{}/load_config?path={}", port, path);
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .map_err(|e| format!("Failed to build client: {}", e))?;
     let resp = client
         .get(&url)
         .send()
@@ -93,7 +101,10 @@ pub async fn list_job_statuses(path: &str) -> Result<Value, String> {
         .expect("API server not started yet");
 
     let url = format!("http://127.0.0.1:{}/list_job_statuses?path={}", port, path);
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .map_err(|e| format!("Failed to build client: {}", e))?;
 
     let resp = client
         .get(&url)

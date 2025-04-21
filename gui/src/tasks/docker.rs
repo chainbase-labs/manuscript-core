@@ -9,7 +9,7 @@ services:
       - |
         FLINK_PROPERTIES=
         jobmanager.rpc.address: {name}-jobmanager-1
-    command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
+    command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor file:///opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
     ports:
       - "{job_port}:8081"
     volumes:
