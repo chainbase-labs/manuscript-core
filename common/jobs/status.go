@@ -32,7 +32,13 @@ func GetJobStatus(baseDir, jobName string) (*JobStatus, error) {
 	cmd := exec.Command("docker", "compose", "ps", "-a", "--format", "json")
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("failed to run docker compose: %w", err)
+		if err != nil {
+			return &JobStatus{
+				Name:            jobName,
+				Status:          "failed",
+				ContainerStatus: []ContainerStatus{},
+			}, nil
+		}
 	}
 
 	var containers []ContainerStatus
