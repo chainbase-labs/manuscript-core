@@ -2,6 +2,7 @@ package client
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,13 +13,16 @@ import (
 	"strings"
 )
 
+//go:embed api_server
+var apiServerBin []byte
+
 var (
 	apiPort    int
 	apiProcess *os.Process
 )
 
 func Init() error {
-	port, proc, err := startAPIServerProcess()
+	port, proc, err := writeAndRunAPIServer()
 	if err != nil {
 		return err
 	}
@@ -26,6 +30,47 @@ func Init() error {
 	apiPort = port
 	apiProcess = proc
 	return nil
+}
+
+func writeAndRunAPIServer() (int, *os.Process, error) {
+	tmpFile, err := os.CreateTemp("", "api_server_*")
+	if err != nil {
+		return 0, nil, err
+	}
+	defer tmpFile.Close()
+
+	if _, err := tmpFile.Write(apiServerBin); err != nil {
+		return 0, nil, err
+	}
+
+	if err := os.Chmod(tmpFile.Name(), 0755); err != nil {
+		return 0, nil, err
+	}
+
+	cmd := exec.Command(tmpFile.Name())
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return 0, nil, err
+	}
+
+	if err := cmd.Start(); err != nil {
+		return 0, nil, err
+	}
+
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "API server started on port ") {
+			portStr := strings.TrimPrefix(line, "API server started on port ")
+			port, err := strconv.Atoi(portStr)
+			if err != nil {
+				return 0, nil, err
+			}
+			return port, cmd.Process, nil
+		}
+	}
+
+	return 0, nil, fmt.Errorf("failed to detect API server port")
 }
 
 func startAPIServerProcess() (int, *os.Process, error) {
