@@ -15,13 +15,19 @@ package main
 
 import (
 	"log"
+	"manuscript-core/client"
 	"manuscript-core/commands"
 	"os"
 )
 
 func main() {
 	log.SetFlags(0)
-	err := commands.Execute(os.Args[1:])
+	err := client.Init()
+	if err != nil {
+		log.Fatalf("Error starting common API: %v", err)
+	}
+	defer client.Shutdown()
+	err = commands.Execute(os.Args[1:])
 	if err != nil {
 		log.Fatalf("Error: %s", err)
 	}

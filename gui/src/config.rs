@@ -2,6 +2,66 @@ use config::{Config, ConfigError, File, FileFormat};
 use serde::Deserialize;
 use lazy_static::lazy_static;
 use std::path::Path;
+// src/config.rs
+use std::collections::HashMap;
+
+#[derive(Debug, Deserialize)]
+pub struct ManuscriptConfigs {
+    pub base_dir: String,
+    pub system_info: String,
+    pub manuscripts: Vec<Manuscript>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Manuscript {
+    pub base_dir: String,
+    pub name: String,
+    pub spec_version: String,
+    pub parallelism: i32,
+    pub sources: Vec<Source>,
+    pub transforms: Vec<Transform>,
+    pub sinks: Vec<Sink>,
+    pub chain: String,
+    pub table: String,
+    pub database: String,
+    pub query: String,
+    pub sink: String,
+    pub port: i32,
+    pub db_port: i32,
+    pub db_user: String,
+    pub db_password: String,
+    pub graphql_image: String,
+    pub graphql_port: i32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Source {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub type_: String,
+    pub dataset: String,
+    pub filter: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Transform {
+    pub name: String,
+    pub sql: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Sink {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub type_: String,
+    pub from: String,
+    pub database: String,
+    pub schema: String,
+    pub table: String,
+    #[serde(rename = "primary_key")]
+    pub primary_key: String,
+    pub config: HashMap<String, String>,
+}
 
 #[derive(Debug, Deserialize)]
 pub struct ApiConfig {

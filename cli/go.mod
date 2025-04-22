@@ -1,6 +1,8 @@
 module manuscript-core
 
-go 1.22.5
+go 1.23.3
+
+replace manuscript-core/common => ../common
 
 require (
 	github.com/jackc/pgx/v4 v4.18.3
@@ -8,6 +10,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	gopkg.in/ini.v1 v1.67.0
 	gopkg.in/yaml.v3 v3.0.1
+	manuscript-core/common v0.0.0
 )
 
 require (

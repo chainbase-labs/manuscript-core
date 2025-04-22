@@ -727,14 +727,15 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
 
         let style = match job.status {
             JobState::Running => Style::default().fg(Color::Green),
-            JobState::Pending => Style::default().fg(Color::Yellow),
+            JobState::Pending => Style::default().fg(Color::Rgb(255, 165, 0)),
             JobState::PullingImage => Style::default().fg(Color::Yellow),
             JobState::Failed => Style::default().fg(Color::Red),
             JobState::NotStarted => Style::default().fg(Color::Yellow),
             JobState::Creating => Style::default().fg(Color::Yellow),
-            JobState::Exited => Style::default().fg(Color::Reset),
+            JobState::Exited => Style::default().fg(Color::Black),
             JobState::Dead => Style::default().fg(Color::Red),
-            JobState::Paused => Style::default().fg(Color::Yellow),
+            JobState::Paused => Style::default().fg(Color::Blue),
+            JobState::PartiallyRunning => Style::default().fg(Color::Red),
         };
 
         let is_selected = index == app.selected_job_index;
@@ -760,11 +761,12 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
                         JobState::Pending => "Pulling Image...",
                         JobState::PullingImage => "Pulling Image...",
                         JobState::Failed => "Failed",
-                        JobState::NotStarted => "Not Started (pull images while take few minutes..)",
-                        JobState::Creating => "Creating (pull images while take few minutes..)",
+                        JobState::NotStarted => "Not Started (pull images will take a few minutes..)",
+                        JobState::Creating => "Creating (pull images will take a few minutes..)",
                         JobState::Exited => "Exited",
                         JobState::Dead => "Dead",
-                        JobState::Paused => "Paused"
+                        JobState::Paused => "Paused",
+                        JobState::PartiallyRunning => "PARTIALLY RUNNING"
                     }
                 ),
                 style

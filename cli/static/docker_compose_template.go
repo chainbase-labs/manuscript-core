@@ -4,13 +4,13 @@ var DockerComposeTemplate = `
 name: {{.Name}}
 services:
   jobmanager:
-    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.1.4
+    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.3.0
     user: "manuscript"
     environment:
       - |
         FLINK_PROPERTIES=
         jobmanager.rpc.address: jobmanager
-    command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
+    command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor file:///opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
     ports:
       - "{{.Port}}:8081"
     volumes:
@@ -22,7 +22,7 @@ services:
       - ms_network_{{ .Name }}
 
   taskmanager:
-    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.1.4
+    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.3.0
     user: "manuscript"
     environment:
       - |
@@ -47,13 +47,13 @@ var DockerComposeWithPostgresqlContent = `
 name: {{.Name}}
 services:
   jobmanager:
-    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.1.4
+    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.3.0
     user: "manuscript"
     environment:
       - |
         FLINK_PROPERTIES=
         jobmanager.rpc.address: jobmanager
-    command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor /opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
+    command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor file:///opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
     ports:
       - "{{.Port}}:8081"
     depends_on:
@@ -68,7 +68,7 @@ services:
       - ms_network_{{ .Name }}
 
   taskmanager:
-    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.1.4
+    image: repository.chainbase.com/manuscript-node/manuscript-node:v1.3.0
     user: "manuscript"
     environment:
       - |

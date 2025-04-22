@@ -5,10 +5,10 @@ api:
 
 app:
   network: "TestNet"
-  version: "v1.1.4"
+  version: "v1.3.0"
 
 node:
-  job_manager_image_arm64: "repository.chainbase.com/manuscript-node/manuscript-node:v1.1.4"
+  job_manager_image_arm64: "repository.chainbase.com/manuscript-node/manuscript-node:v1.3.0"
   hasura_image_arm64: "repository.chainbase.com/manuscript-node/graphql-engine-arm64:latest"
-  job_manager_image_amd64: "repository.chainbase.com/manuscript-node/manuscript-node:v1.1.4"
+  job_manager_image_amd64: "repository.chainbase.com/manuscript-node/manuscript-node:v1.3.0"
   hasura_image_amd64: "repository.chainbase.com/manuscript-node/graphql-engine-amd64:latest"

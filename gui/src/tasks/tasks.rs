@@ -2,12 +2,32 @@ use super::docker::{
     DOCKER_COMPOSE_TEMPLATE, DOCKER_COMPOSE_TEMPLATE_SOLANA, JOB_CONFIG_TEMPLATE,
     MANUSCRIPT_TEMPLATE, MANUSCRIPT_TEMPLATE_SOLANA,
 };
-use crate::config::Settings;
+use crate::api;
+use crate::config::{Manuscript, ManuscriptConfigs, Settings};
+use serde::Deserialize;
+use serde_json::Value;
 use std::collections::HashSet;
 use std::{io, process::Command};
 use tokio::sync::mpsc;
 use tokio::time::Duration;
 use webbrowser;
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct JobStatusRaw {
+    #[serde(rename = "Name")]
+    pub name: String,
+    #[serde(rename = "Status")]
+    pub status: String,
+    #[serde(rename = "ContainerStatus")]
+    pub container_status: Vec<ContainerStatus>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct JobsStatuses {
+    #[serde(rename = "jobs")]
+    pub jobs: Vec<JobStatusRaw>,
+}
+
 #[derive(Debug, Clone)]
 pub struct JobManager;
 
@@ -18,10 +38,13 @@ pub struct JobStatus {
     pub containers: Vec<ContainerStatus>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct ContainerStatus {
+    #[serde(rename = "Name")]
     pub name: String,
+    #[serde(rename = "State")]
     pub state: String,
+    #[serde(rename = "Status")]
     pub status: String,
 }
 
@@ -36,6 +59,7 @@ pub enum JobState {
     Exited,
     Dead,
     Paused,
+    PartiallyRunning,
 }
 
 #[derive(Debug)]
@@ -671,6 +695,21 @@ impl JobManager {
 
         Ok(sql)
     }
+    fn map_status_to_state(status: &str) -> JobState {
+        match status.to_lowercase().as_str() {
+            "running" => JobState::Running,
+            "created" => JobState::NotStarted,
+            "pending" => JobState::Pending,
+            "failed" => JobState::Failed,
+            "pulling" | "pullingimage" => JobState::PullingImage,
+            "creating" => JobState::Creating,
+            "exited" => JobState::Exited,
+            "dead" => JobState::Dead,
+            "paused" => JobState::Paused,
+            ""=>JobState::PartiallyRunning,
+            _ => JobState::Pending, // 默认未知状态为 pending
+        }
+    }
 
     async fn check_jobs_status() -> Result<Vec<JobStatus>, std::io::Error> {
         let home_dir = dirs::home_dir().ok_or_else(|| {
@@ -682,162 +721,44 @@ impl JobManager {
             return Ok(Vec::new());
         }
 
-        let config_content = std::fs::read_to_string(config_path)?;
-        let mut jobs = Vec::new();
-        let mut current_section = String::new();
-        let mut current_job_base_dir = String::new();
-        let mut current_job_name = String::new();
-
-        // Parse INI file to get all jobs in order
-        for line in config_content.lines() {
-            let line = line.trim();
-
-            if line.starts_with('[') && line.ends_with(']') {
-                // New section
-                current_section = line[1..line.len() - 1].to_string();
-                continue;
+        let json_val: Value = api::list_job_statuses(config_path.to_str().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid config path")
+        })?)
+        .await
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        let jobs_statuses: JobsStatuses = match serde_json::from_value(json_val.clone()) {
+            Ok(parsed) => parsed,
+            Err(e) => {
+                eprintln!("[ERROR] Failed to parse jobs_statuses: {}", e);
+                eprintln!("[DEBUG] Raw JSON value:\n{}", json_val);
+                return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, e));
             }
-
-            if !current_section.is_empty() {
-                if line.starts_with("baseDir") {
-                    if let Some(dir) = line.split('=').nth(1) {
-                        current_job_base_dir = dir.trim().to_string();
-                    }
-                } else if line.starts_with("name") {
-                    if let Some(name) = line.split('=').nth(1) {
-                        current_job_name = name.trim().to_string();
-                    }
-                }
-
-                // If we have both baseDir and name, we can check the job status
-                if !current_job_base_dir.is_empty() && !current_job_name.is_empty() {
-                    let job_dir =
-                        std::path::Path::new(&current_job_base_dir).join(&current_job_name);
-
-                    // Change into the job's directory
-                    if let Ok(_) = std::env::set_current_dir(&job_dir) {
-                        // Check docker compose status
-                        if let Ok(output) = Command::new("docker")
-                            .args(["compose", "ps", "-a", "--format", "json"])
-                            .output()
-                        {
-                            if output.status.success() {
-                                let output_str = String::from_utf8_lossy(&output.stdout);
-
-                                let mut containers = Vec::new();
-                                let mut has_created = false;
-                                let mut has_paused = false;
-                                let mut has_dead = false;
-                                let mut all_running = true;
-                                let mut all_exited = true;
-                                let mut has_containers = false;
-                                let mut has_restart = false;
-
-                                if let Ok(json_array) =
-                                    serde_json::from_str::<Vec<serde_json::Value>>(&output_str)
-                                {
-                                    // 遍历 JSON 数组中的每个容器对象
-                                    for container in json_array {
-                                        // println!("Container JSON: {:#?}", container);
-                                        has_containers = true;
-
-                                        // 安全地提取容器的字段
-                                        let name = container
-                                            .get("Name")
-                                            .and_then(|v| v.as_str())
-                                            .unwrap_or("")
-                                            .to_string();
-                                        let state = container
-                                            .get("State")
-                                            .and_then(|v| v.as_str())
-                                            .unwrap_or("")
-                                            .to_string();
-                                        match state.as_str() {
-                                            "created" => {
-                                                has_created = true;
-                                                all_running = false;
-                                                all_exited = false;
-                                            }
-                                            "paused" => {
-                                                has_paused = true;
-                                                all_running = false;
-                                                all_exited = false;
-                                            }
-                                            "dead" => {
-                                                has_dead = true;
-                                                all_running = false;
-                                                all_exited = false;
-                                            }
-                                            "restarting" => {
-                                                has_restart = true;
-                                                all_running = false;
-                                                all_exited = false;
-                                            }
-                                            "running" => {
-                                                all_exited = false;
-                                            }
-                                            "exited" => {
-                                                all_running = false;
-                                            }
-                                            _ => {
-                                                all_running = false;
-                                                all_exited = false;
-                                            }
-                                        }
-                                        let status = container
-                                            .get("RunningFor")
-                                            .and_then(|v| v.as_str())
-                                            .unwrap_or("")
-                                            .to_string();
-
-                                        let status = if !status.is_empty() {
-                                            format!("({})", status)
-                                        } else {
-                                            status
-                                        };
-
-                                        // 添加容器状态到容器列表
-                                        containers.push(ContainerStatus {
-                                            name,
-                                            state,
-                                            status,
-                                        });
-                                    }
-                                } else {
-                                    // eprintln!("Failed to parse JSON output.");
-                                }
-
-                                let status = if !has_containers {
-                                    JobState::NotStarted
-                                } else if has_dead {
-                                    JobState::Dead
-                                } else if has_created {
-                                    JobState::Creating
-                                } else if has_paused {
-                                    JobState::Paused
-                                } else if all_exited {
-                                    JobState::Exited
-                                } else if all_running {
-                                    JobState::Running
-                                } else {
-                                    JobState::Pending
-                                };
-
-                                jobs.push(JobStatus {
-                                    name: current_job_name.clone(),
-                                    status,
-                                    containers,
-                                });
-                            }
-                        }
-                    }
-
-                    // Reset for next job
-                    current_job_base_dir.clear();
-                    current_job_name.clear();
-                }
+        };
+        let map_status_to_state = |status: &str| -> JobState {
+            match status.to_lowercase().as_str() {
+                "not_started"=>JobState::NotStarted,
+                "running" => JobState::Running,
+                "created" => JobState::Creating,
+                "pending" => JobState::Pending,
+                "failed" => JobState::Failed,
+                "pulling" | "pullingimage" => JobState::PullingImage,
+                "exited" => JobState::Exited,
+                "dead" => JobState::Dead,
+                "paused" => JobState::Paused,
+                "partially_running" => JobState::PartiallyRunning,
+                _ => JobState::Pending,
             }
-        }
+        };
+
+        let jobs = jobs_statuses
+            .jobs
+            .into_iter()
+            .map(|raw_job| JobStatus {
+                name: raw_job.name,
+                status: map_status_to_state(&raw_job.status),
+                containers: raw_job.container_status,
+            })
+            .collect();
 
         Ok(jobs)
     }

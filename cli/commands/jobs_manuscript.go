@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"manuscript-core/client"
 	"manuscript-core/pkg"
 	"net/http"
 	"os"
@@ -119,19 +120,40 @@ func getManuscriptsFromDirectory(dir string) ([]pkg.Manuscript, error) {
 	return manuscripts, nil
 }
 
+type ContainerStatus struct {
+	Name   string `json:"Name"`
+	State  string `json:"State"`
+	Status string `json:"Status"`
+}
+
+type JobStatus struct {
+	Name            string            `json:"Name"`
+	Status          string            `json:"Status"`
+	ContainerStatus []ContainerStatus `json:"ContainerStatus"`
+}
+
+type JobStatusResponse struct {
+	Jobs []JobStatus `json:"jobs"`
+}
+
 // displayManuscriptStates checks and displays the state of each manuscript
 func displayManuscriptStates(manuscripts []pkg.Manuscript, dockers []pkg.ContainerInfo) {
 	for i, m := range manuscripts {
-		detector := pkg.NewStateDetector(&m, dockers)
-		state, err := detector.DetectState()
+		var jobStatus JobStatus
+		resp, err := client.GetJobStatus(m.BaseDir, m.Name)
 		if err != nil {
-			log.Printf("Warning: Failed to detect state for %s: %v", m.Name, err)
-			state = pkg.StateUnknown
+			log.Printf("ERROR:failed to get job status: %w", err)
+		}
+		err = json.Unmarshal([]byte(resp), &jobStatus)
+		if err != nil {
+			log.Printf("ERROR:failed to decode job status: %w", err)
 		}
 
+		state := pkg.MapStatusToState(jobStatus.Status)
 		displayJobStatus(i+1, &m, state)
 
-		if state == pkg.StateRunning {
+		//track tables
+		if state == pkg.StateRunning && m.GraphQLPort != 0 {
 			// hasura metadata endpoint tracks tables
 			url := fmt.Sprintf("http://127.0.0.1:%d/v1/metadata", m.GraphQLPort)
 
@@ -174,13 +196,25 @@ func displayJobStatus(jobNumber int, m *pkg.Manuscript, state pkg.ManuscriptStat
 				jobNumber, m.Name, state, m.GraphQLPort)
 		}
 
-	case pkg.StateInitializing:
-		fmt.Printf("\r🟡 %d: Manuscript: \033[34m%s\033[0m | State: \033[33m%s\033[0m\n",
+	case pkg.StateCreating:
+		fmt.Printf("\r🟡 %d: Manuscript: \033[33m%s\033[0m | State: \033[33m%s\033[0m\n",
+			jobNumber, m.Name, state)
+	case pkg.StateNotStarted:
+		fmt.Printf("\r🟡 %d: Manuscript: \033[33m%s\033[0m | State: \033[33m%s\033[0m\n",
+			jobNumber, m.Name, state)
+	case pkg.StatePaused:
+		fmt.Printf("\r🔵 %d: Manuscript: \033[34m%s\033[0m | State: \033[34m%s\033[0m\n",
+			jobNumber, m.Name, state)
+	case pkg.StatePending:
+		fmt.Printf("\r🟠 %d: Manuscript: \033[38;5;208m%s\033[0m | State: \033[38;5;208m%s\033[0m\n",
 			jobNumber, m.Name, state)
 	case pkg.StateFailed:
 		fmt.Printf("\r🔴 %d: Manuscript: %s | State: \033[31m%s\033[0m\n",
 			jobNumber, m.Name, state)
-	case pkg.StateStopped:
+	case pkg.StatePartiallyRunning:
+		fmt.Printf("\r🔴 %d: Manuscript: %s | State: \033[31m%s\033[0m\n",
+			jobNumber, m.Name, state)
+	case pkg.StateExited:
 		fmt.Printf("\r⚫ %d: Manuscript: %s | State: \033[90m%s\033[0m\n",
 			jobNumber, m.Name, state)
 	default:
