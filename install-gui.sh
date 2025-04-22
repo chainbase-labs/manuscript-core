@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 # Fetch the latest version tag from GitHub API
 REPO="chainbase-labs/manuscript-core"
@@ -10,40 +9,35 @@ if [[ -z "$LATEST_VERSION" ]]; then
     exit 1
 fi
 
-echo "📦 Latest version: $LATEST_VERSION"
+echo "Latest version: $LATEST_VERSION"
 
-# Determine OS type and set the download file name
+cd "$HOME"
+# Define the base URL with the latest version
+BASE_URL="https://github.com/$REPO/releases/download/$LATEST_VERSION"
+
+# Determine OS type and set the download URL
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    TARBALL="manuscript-gui-linux.tar.gz"
+    BINARY_URL="$BASE_URL/manuscript-gui-linux"
 elif [[ "$OSTYPE" == "darwin"* ]]; then
-    TARBALL="manuscript-gui-mac.tar.gz"
+    BINARY_URL="$BASE_URL/manuscript-gui"
 else
     echo "❌ Unsupported OS type: $OSTYPE"
     exit 1
 fi
 
-# Download to $HOME
-cd "$HOME"
+# Download the binary
+echo "Downloading from $BINARY_URL..."
+curl -L -o manuscript-gui "$BINARY_URL"
 
-# Construct download URL
-BASE_URL="https://github.com/$REPO/releases/download/$LATEST_VERSION"
-DOWNLOAD_URL="$BASE_URL/$TARBALL"
+if [[ $? -ne 0 ]]; then
+    echo "Failed to download the binary. Please check the URL or your network connection."
+    exit 1
+fi
 
-echo "⬇️ Downloading $TARBALL to $HOME..."
-curl -L -o "$TARBALL" "$DOWNLOAD_URL"
+# Make the binary executable
+chmod +x manuscript-gui
 
-# Create extraction directory
-EXTRACT_DIR="$HOME/manuscript-gui"
-mkdir -p "$EXTRACT_DIR"
+# Run the binary
+echo -e "🚀 Success! The binary is locked, loaded, and ready to go. \n🏃 Start it with: $HOME/manuscript-gui"
 
-echo "📂 Extracting $TARBALL into $EXTRACT_DIR..."
-tar -xzf "$TARBALL" -C "$EXTRACT_DIR"
 
-# Remove the tarball
-rm "$TARBALL"
-
-# Make binary executable
-chmod +x "$EXTRACT_DIR/manuscript-gui"
-
-# Final success message
-echo -e "\n🚀 Success! You can now run the app with:\n\n  $EXTRACT_DIR/manuscript-gui\n"
