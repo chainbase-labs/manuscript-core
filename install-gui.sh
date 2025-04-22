@@ -19,7 +19,7 @@ BASE_URL="https://github.com/$REPO/releases/download/$LATEST_VERSION"
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     BINARY_URL="$BASE_URL/manuscript-gui-linux"
 elif [[ "$OSTYPE" == "darwin"* ]]; then
-    BINARY_URL="$BASE_URL/manuscript-gui"
+    BINARY_URL="$BASE_URL/manuscript-gui-mac"
 else
     echo "❌ Unsupported OS type: $OSTYPE"
     exit 1
