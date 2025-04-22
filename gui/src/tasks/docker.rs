@@ -3,12 +3,11 @@ name: {name}
 services:
   jobmanager:
     image: {job_manager_image}
-    pull_policy: always
     user: "manuscript"
     environment:
       - |
         FLINK_PROPERTIES=
-        jobmanager.rpc.address: {name}-jobmanager-1
+        jobmanager.rpc.address: jobmanager
     command: "standalone-job --job-classname com.chainbase.manuscript.ETLProcessor file:///opt/flink/manuscript.yaml --fromSavepoint /opt/flink/savepoint"
     ports:
       - "{job_port}:8081"
@@ -22,12 +21,11 @@ services:
 
   taskmanager:
     image: {job_manager_image}
-    pull_policy: always
     user: "manuscript"
     environment:
       - |
         FLINK_PROPERTIES=
-        jobmanager.rpc.address: {name}-jobmanager-1
+        jobmanager.rpc.address: jobmanager
     depends_on:
       - jobmanager
     command: "taskmanager"
