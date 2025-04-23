@@ -55,6 +55,9 @@ func DeployManuscript(args []string) {
 			if strings.HasSuffix(manuscriptDir, "/") {
 				manuscriptDir = strings.TrimSuffix(manuscriptDir, "/")
 			}
+			if ms.BaseDir == "" {
+				ms.BaseDir = fmt.Sprintf("%s/%s", manuscriptDir, manuscriptBaseName)
+			}
 			manuscriptDir = fmt.Sprintf("%s/%s/%s", manuscriptDir, manuscriptBaseName, ms.Name)
 
 			if len(ms.Sinks) != 0 {

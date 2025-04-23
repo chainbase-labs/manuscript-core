@@ -209,10 +209,10 @@ func displayJobStatus(jobNumber int, m *pkg.Manuscript, state pkg.ManuscriptStat
 		fmt.Printf("\r🟠 %d: Manuscript: \033[38;5;208m%s\033[0m | State: \033[38;5;208m%s\033[0m\n",
 			jobNumber, m.Name, state)
 	case pkg.StateFailed:
-		fmt.Printf("\r🔴 %d: Manuscript: %s | State: \033[31m%s\033[0m\n",
+		fmt.Printf("\r🔴 %d: Manuscript: \u001B[31m%s\u001B[0m | State: \033[31m%s\033[0m\n",
 			jobNumber, m.Name, state)
 	case pkg.StatePartiallyRunning:
-		fmt.Printf("\r🔴 %d: Manuscript: %s | State: \033[31m%s\033[0m\n",
+		fmt.Printf("\r🔴 %d: Manuscript: \u001B[31m%s\u001B[0m | State: \033[31m%s\033[0m\n",
 			jobNumber, m.Name, state)
 	case pkg.StateExited:
 		fmt.Printf("\r⚫ %d: Manuscript: %s | State: \033[90m%s\033[0m\n",
