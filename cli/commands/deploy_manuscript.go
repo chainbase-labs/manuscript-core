@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"manuscript-core/client"
 	"manuscript-core/pkg"
 	"os"
 	"path/filepath"
@@ -104,6 +105,103 @@ func DeployManuscript(args []string) {
 	}
 }
 
+func DeployManuscriptOnChainbase(args []string, apiKey, hash, version string) {
+	if len(args) < 1 {
+		log.Fatalf("Error: Manuscript path is required as the first argument.")
+	}
+	manuscriptPath := args[0]
+	var ms pkg.Manuscript
+
+	if _, err := os.Stat(manuscriptPath); os.IsNotExist(err) {
+		log.Fatalf("Error: Manuscript file does not exist: %s", manuscriptPath)
+	}
+
+	steps := []struct {
+		name string
+		fn   func() error
+	}{
+		{"Step 1: Parsing manuscript.yaml", func() error {
+			var err error
+			ms, err = ParseManuscriptYaml(manuscriptPath)
+			if err != nil {
+				return err
+			}
+			var pgSink *pkg.Sink
+			for _, s := range ms.Sinks {
+				if s.Type == "postgres" {
+					pgSink = &pkg.Sink{
+						Name:       s.Name,
+						Type:       s.Type,
+						From:       s.From,
+						Database:   s.Database,
+						Schema:     s.Schema,
+						Table:      s.Table,
+						PrimaryKey: s.PrimaryKey,
+						Config: map[string]string{
+							"host":     "${DB_HOST}",
+							"port":     "${DB_PORT}",
+							"username": "${DB_USER}",
+							"password": "${DB_PASS}",
+						},
+					}
+					break
+				}
+			}
+
+			if len(ms.Sources) != 0 {
+				ms.Chain = ms.Sources[0].Dataset
+			}
+			if len(ms.Transforms) != 0 {
+				ms.Query = ms.Transforms[0].SQL
+			}
+			if pgSink != nil {
+				ms.Sink = "postgres"
+				ms.Sinks = []pkg.Sink{*pgSink}
+				ms.Table = ms.Sinks[0].Table
+				ms.Database = ms.Sinks[0].Database
+			} else {
+				return fmt.Errorf("no postgres sink found")
+			}
+
+			return nil
+		}},
+		{"Step 2: Checking manuscript is already deployed locally", func() error {
+			existMs, deployed := CheckManuscriptDeployedLocally(ms)
+			if !deployed {
+				return fmt.Errorf("Manuscript hasn't been deployed locally, have to deploy and running locally first\n You can use: manuscript-cli  deploy %s --env=local", manuscriptPath)
+			}
+			ms.GraphQLPort = existMs.GraphQLPort
+			ms.BaseDir = existMs.BaseDir
+			ms.Port = existMs.Port
+			ms.Schema = existMs.Schema
+			ms.GraphQLImage = existMs.GraphQLImage
+			return nil
+		}},
+		{"Step 3: Deploy Manuscript to chainbase network", func() error {
+			msYaml, err := pkg.ParseDeployManuscript(manuscriptPath)
+			if err != nil {
+				return err
+			}
+			if ms.Schema == "" {
+				ms.Schema, err = client.GetTableSchema(ms.GraphQLPort, ms.Table)
+				if err != nil {
+					return err
+				}
+			}
+			return client.Deploy(msYaml, ms.Schema, hash, apiKey, version)
+		}},
+	}
+
+	for _, step := range steps {
+		err := pkg.ExecuteStepWithLoading(step.name, true, step.fn)
+		if err != nil {
+			log.Fatalf("\033[31m✗ %s failed: %v\n", step.name, err)
+		}
+	}
+	fmt.Println("\033[32m✓ Manuscript deployment to chainbase network completed successfully!")
+	log.Printf("\033[32mYou can now view your manuscript at %s/manuscript-studio?id=%s\n", msStudioURL, hash)
+}
+
 func copyManuscriptFile(manuscriptDir, manuscriptPath string) error {
 	_, fileName := filepath.Split(manuscriptPath)
 	destinationPath := filepath.Join(manuscriptDir, fileName)
@@ -156,4 +254,40 @@ func CheckManuscriptExist(ms pkg.Manuscript) error {
 		}
 	}
 	return nil
+}
+
+func CheckManuscriptDeployedLocally(ms pkg.Manuscript) (*pkg.Manuscript, bool) {
+	existMs, exist := checkManuscriptConfigExist(ms)
+	if exist && checkManuscriptJobRunning(*existMs) {
+		return existMs, true
+	}
+	return nil, false
+}
+
+func checkManuscriptConfigExist(manuscript pkg.Manuscript) (*pkg.Manuscript, bool) {
+	msConfig, err := pkg.LoadConfig(manuscriptConfig)
+	if err != nil {
+		logErrorAndReturn("Failed to load manuscript config", err)
+		return nil, false
+	}
+
+	for _, ms := range msConfig.Manuscripts {
+		if manuscript.Name == ms.Name && manuscript.Table == ms.Table && manuscript.Database == ms.Database {
+			return &ms, true
+		}
+	}
+	return nil, false
+}
+
+func checkManuscriptJobRunning(ms pkg.Manuscript) bool {
+	state, err := pkg.GetJobStatus(ms)
+	if err != nil {
+		logErrorAndReturn("Failed to load manuscript config", err)
+		return false
+	}
+	if *state == pkg.StateRunning {
+		return true
+	}
+
+	return false
 }

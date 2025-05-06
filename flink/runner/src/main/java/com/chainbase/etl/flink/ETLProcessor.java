@@ -17,9 +17,13 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.apache.flink.table.api.Expressions.$;
@@ -44,11 +48,28 @@ public class ETLProcessor {
         this.env = StreamExecutionEnvironment.getExecutionEnvironment();
         this.tEnv = StreamTableEnvironment.create(env,settings);
     }
+    private String replaceEnvVariables(String yamlContent) {
+        Pattern pattern = Pattern.compile("\\$\\{(\\w+)}");
+        Matcher matcher = pattern.matcher(yamlContent);
+        StringBuffer result = new StringBuffer();
+        while (matcher.find()) {
+            String envVar = matcher.group(1);
+            String value = System.getenv(envVar);
+            if (value == null) {
+                throw new IllegalArgumentException("Environment variable not found: " + envVar);
+            }
+            matcher.appendReplacement(result, Matcher.quoteReplacement(value));
+        }
+        matcher.appendTail(result);
+        return result.toString();
+    }
 
     private ETL loadConfig(String configPath) {
         try (InputStream input = new FileInputStream(configPath)) {
+            String rawYaml = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+            String substitutedYaml = replaceEnvVariables(rawYaml);
             Yaml yaml = new Yaml();
-            return yaml.loadAs(input, ETL.class);
+            return yaml.loadAs(new StringReader(substitutedYaml), ETL.class);
         } catch (Exception e) {
             throw new RuntimeException("Error loading configuration", e);
         }

@@ -37,4 +37,13 @@ func registerAPIHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/load_config", loadConfigHandler)
 	mux.HandleFunc("/get_job_status", getJobStatusHandler)
 	mux.HandleFunc("/list_job_statuses", listJobStatusesHandler)
+	mux.HandleFunc("/deploy", deployHandler)
+	mux.HandleFunc("/get_table_schema", getTableSchemaHandler)
+	mux.HandleFunc("/track_table", trackTableHandler)
+	mux.HandleFunc("/manuscript_base_name", getManuscriptBaseNameHandler)
+	mux.HandleFunc("/chainbase_api_url", getChainbaseAPIURLHandler)
+	mux.HandleFunc("/platform_chain_url", getPlatformChainURLHandler)
+	mux.HandleFunc("/network_chain_endpoint", getNetworkChainEndpointHandler)
+	mux.HandleFunc("/platform_chain_endpoint", getPlatformChainEndpointHandler)
+	mux.HandleFunc("/ms_studio_url", getMsStudioURLHandler)
 }

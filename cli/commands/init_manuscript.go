@@ -22,6 +22,7 @@ const (
 	manuscriptBaseDir     = "$HOME"
 	manuscriptConfig      = "$HOME/.manuscript_config.ini"
 	networkChainURL       = "https://api.chainbase.com"
+	msStudioURL           = "https://net-static-dev.chainbasehq.com"
 	platformChainURL      = "https://console.chainbase.com"
 	networkChainEndpoint  = "/api/v1/metadata/network_chains"
 	platformChainEndpoint = "/api/v2/datacloud/metadata"

@@ -24,15 +24,18 @@ func ExecuteStepWithLoading(stepName string, stdOut bool, stepFunc func() error)
 	}()
 
 	err := stepFunc()
-
 	close(done)
+
+	// clear loading line
+	fmt.Printf("\r%-50s\r", "") // 用空格清除整行
+
 	if err != nil {
-		fmt.Printf("\r\033[31m✗\033[0m %s failed!\n", stepName)
-		fmt.Printf("\033[31mError: %v\n", err)
-	}
-	if stdOut {
-		fmt.Printf("\r\033[32m✓\033[0m %s completed successfully!\n", stepName)
+		return err
 	}
 
-	return err
+	if stdOut {
+		fmt.Printf("\033[32m✓ %s completed successfully!\033[0m\n", stepName)
+	}
+
+	return nil
 }

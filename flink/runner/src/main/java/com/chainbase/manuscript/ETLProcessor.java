@@ -1,11 +1,13 @@
 package com.chainbase.manuscript;
 
+import com.chainbase.etl.model.ETL;
 import com.chainbase.udf.*;
 import com.chainbase.udf.json.FromJson;
 import com.chainbase.udf.math.*;
 import freemarker.template.Template;
 import freemarker.template.TemplateExceptionHandler;
 
+import java.io.StringReader;
 import java.io.StringWriter;
 
 import org.apache.flink.configuration.Configuration;
@@ -27,6 +29,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -35,6 +38,8 @@ import java.sql.Statement;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.apache.flink.table.api.Expressions.$;
@@ -60,11 +65,27 @@ public class ETLProcessor {
         configureFlink(ck_dir, sv_dir);
         createPaimonCatalog();
     }
-
+    private String replaceEnvVariables(String yamlContent) {
+        Pattern pattern = Pattern.compile("<<<(\\w+)>>>");
+        Matcher matcher = pattern.matcher(yamlContent);
+        StringBuffer result = new StringBuffer();
+        while (matcher.find()) {
+            String envVar = matcher.group(1);
+            String value = System.getenv(envVar);
+            if (value == null) {
+                throw new IllegalArgumentException("Environment variable not found: " + envVar);
+            }
+            matcher.appendReplacement(result, Matcher.quoteReplacement(value));
+        }
+        matcher.appendTail(result);
+        return result.toString();
+    }
     private Map<String, Object> loadConfig(String configPath) {
         try (InputStream input = openStream(configPath)) {
+            String rawYaml = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+            String substitutedYaml = replaceEnvVariables(rawYaml);
             Yaml yaml = new Yaml();
-            return yaml.load(input);
+            return yaml.load(new StringReader(substitutedYaml));
         } catch (Exception e) {
             throw new RuntimeException("Error loading configuration", e);
         }
