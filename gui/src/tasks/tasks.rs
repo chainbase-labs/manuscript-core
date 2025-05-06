@@ -481,7 +481,7 @@ impl JobManager {
             .replace("{graphql_port}", &config.graphql_port.to_string())
             .replace("{table}", &config.source.table)
             .replace("{database}", &config.sink.database)
-            .replace("{query}", &config.transform.sql)
+            .replace("{query}", &config.transform.sql.replace('\n', " ").replace('\r', " "))
             .replace("{sink_type}", &config.sink.sink_type)
             .replace("{db_port}", &config.db_port.to_string())
             .replace("{db_user}", &config.sink.config.username)

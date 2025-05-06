@@ -14,7 +14,25 @@ pub struct ApiServer {
     _child: Child,
     pub port: u16,
 }
-const EMBEDDED_API: &[u8] = include_bytes!("../api/api_server");
+#[cfg(target_os = "macos")]
+#[cfg(target_arch = "x86_64")]
+const EMBEDDED_API: &[u8] = include_bytes!("../api/api_server_darwin_amd64");
+
+#[cfg(target_os = "macos")]
+#[cfg(target_arch = "aarch64")]
+const EMBEDDED_API: &[u8] = include_bytes!("../api/api_server_darwin_arm64");
+
+#[cfg(target_os = "linux")]
+#[cfg(target_arch = "x86_64")]
+const EMBEDDED_API: &[u8] = include_bytes!("../api/api_server_linux_amd64");
+
+// fallback for unsupported platforms
+#[cfg(not(any(
+    all(target_os = "macos", target_arch = "x86_64"),
+    all(target_os = "macos", target_arch = "aarch64"),
+    all(target_os = "linux",  target_arch = "x86_64")
+)))]
+compile_error!("Unsupported platform for embedded API binary");
 
 impl ApiServer {
     pub async fn start() -> Result<Self, String> {
@@ -156,6 +174,49 @@ pub async fn list_job_statuses(path: &str) -> Result<Value, String> {
 
     let resp = client
         .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Request error: {}", e))?;
+    let status = resp.status();
+
+    let body = resp
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response body: {}", e))?;
+
+    // eprintln!("[DEBUG] API Response Status: {:?}", status);
+    // eprintln!("[DEBUG] API Response Body: {:?}", body);
+
+    if status.is_success() {
+        serde_json::from_str(&body).map_err(|e| format!("Invalid JSON: {}", e))
+    } else {
+        Err(format!("API returned error: {}", status))
+    }
+}
+
+pub async fn deploy(content: &[u8], schema: &str, hash: &str, api_key: &str, version: &str, api_port: u16) -> Result<Value, String> {
+    let port = API_PORT
+        .get()
+        .copied()
+        .expect("API server not started yet");
+
+    let url = format!("http://127.0.0.1:{}/deploy?hash={}", port, hash);
+    let payload = serde_json::json!({
+        "api_key": api_key,
+        "content": String::from_utf8_lossy(content),
+        "schema": schema,
+        "version": version,
+    });
+
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .map_err(|e| format!("Failed to build client: {}", e))?;
+
+    let resp = client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .body(payload.to_string())
         .send()
         .await
         .map_err(|e| format!("Request error: {}", e))?;
