@@ -43,7 +43,12 @@ func GetJobStatus(baseDir, jobName string) (*JobStatus, error) {
 
 	var containers []ContainerStatus
 	if err := json.Unmarshal(output, &containers); err != nil {
-		return nil, fmt.Errorf("failed to parse docker json: %w", err)
+		fmt.Printf("failed to parse docker json: %s; %s in %s", output, err, jobDir)
+		return &JobStatus{
+			Name:            jobName,
+			Status:          "unknown",
+			ContainerStatus: []ContainerStatus{},
+		}, nil
 	}
 
 	status := "pending"
