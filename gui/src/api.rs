@@ -161,35 +161,45 @@ pub async fn load_config(path: &str) -> Result<Value, String> {
 
 
 pub async fn list_job_statuses(path: &str) -> Result<Value, String> {
-    eprintln!("[api_server] call list_job_status: {:?}", path);
     let port = API_PORT
         .get()
         .copied()
-        .expect("API server not started yet");
+        .ok_or_else(|| {
+            eprintln!("[ERROR] API_PORT is not set. API server may not be started.");
+            "API server not started yet".to_string()
+        })?;
 
     let url = format!("http://127.0.0.1:{}/list_job_statuses?path={}", port, path);
+    eprintln!("[DEBUG] Sending request to URL: {}", url);
+
     let client = reqwest::Client::builder()
         .no_proxy()
         .build()
-        .map_err(|e| format!("Failed to build client: {}", e))?;
+        .map_err(|e| {
+            eprintln!("[ERROR] Failed to build reqwest client: {}", e);
+            format!("Failed to build client: {}", e)
+        })?;
 
-    let resp = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|e| format!("Request error: {}", e))?;
+    let resp = client.get(&url).send().await.map_err(|e| {
+        eprintln!("[ERROR] Failed to send request: {}", e);
+        format!("Request error: {}", e)
+    })?;
+
     let status = resp.status();
 
-    let body = resp
-        .text()
-        .await
-        .map_err(|e| format!("Failed to read response body: {}", e))?;
+    let body = resp.text().await.map_err(|e| {
+        eprintln!("[ERROR] Failed to read response body: {}", e);
+        format!("Failed to read response body: {}", e)
+    })?;
 
     eprintln!("[DEBUG] API Response Status: {:?}", status);
     eprintln!("[DEBUG] API Response Body: {:?}", body);
 
     if status.is_success() {
-        serde_json::from_str(&body).map_err(|e| format!("Invalid JSON: {}", e))
+        serde_json::from_str(&body).map_err(|e| {
+            eprintln!("[ERROR] Invalid JSON response: {}", e);
+            format!("Invalid JSON: {}", e)
+        })
     } else {
         Err(format!("API returned error: {}", status))
     }

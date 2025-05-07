@@ -725,8 +725,11 @@ impl JobManager {
         let json_val: Value = api::list_job_statuses(config_path.to_str().ok_or_else(|| {
             std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid config path")
         })?)
-        .await
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+            .await
+            .map_err(|e| {
+                eprintln!("[ERROR] list_job_statuses failed: {}", e);
+                std::io::Error::new(std::io::ErrorKind::Other, e)
+            })?;
         let jobs_statuses: JobsStatuses = match serde_json::from_value(json_val.clone()) {
             Ok(parsed) => parsed,
             Err(e) => {
