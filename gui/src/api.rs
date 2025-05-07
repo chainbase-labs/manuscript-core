@@ -49,7 +49,6 @@ impl ApiServer {
 
         let mut api_path: Option<std::path::PathBuf> = None;
         for candidate in candidates {
-            eprintln!("{:?}",candidate);
             let candidate_path = std::path::Path::new(&candidate).to_path_buf();
             if candidate_path.exists() {
                 api_path = Some(candidate_path);
@@ -62,7 +61,7 @@ impl ApiServer {
             None => {
                 println!("The size of the embedded API is: {} bytes", EMBEDDED_API.len());
                 let temp_path = std::env::temp_dir().join("embedded_api_server");
-                eprintln!("Temp file will be written to: {}", temp_path.display());
+                eprintln!("[api_server] No binary found in search paths, writing embedded binary to {}", temp_path.display());
                 std::fs::write(&temp_path, EMBEDDED_API).expect("Failed to write embedded API binary");
 
                 #[cfg(unix)]
@@ -87,6 +86,7 @@ impl ApiServer {
         let reader = BufReader::new(stdout);
 
         for line in reader.lines().flatten() {
+            eprintln!("[api_server stdout] {}", line);
             if let Some(port_str) = line.strip_prefix("API server started on port ") {
                 let port = port_str.parse().expect("Invalid port number");
 
