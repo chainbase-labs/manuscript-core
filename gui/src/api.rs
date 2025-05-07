@@ -161,6 +161,7 @@ pub async fn load_config(path: &str) -> Result<Value, String> {
 
 
 pub async fn list_job_statuses(path: &str) -> Result<Value, String> {
+    eprintln!("[api_server] call list_job_status: {:?}", path);
     let port = API_PORT
         .get()
         .copied()
