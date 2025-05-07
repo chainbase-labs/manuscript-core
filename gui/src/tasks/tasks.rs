@@ -60,6 +60,7 @@ pub enum JobState {
     Dead,
     Paused,
     PartiallyRunning,
+    Unknown,
 }
 
 #[derive(Debug)]
@@ -746,6 +747,7 @@ impl JobManager {
                 "dead" => JobState::Dead,
                 "paused" => JobState::Paused,
                 "partially_running" => JobState::PartiallyRunning,
+                "unknown" => JobState::Unknown,
                 _ => JobState::Pending,
             }
         };

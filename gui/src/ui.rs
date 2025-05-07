@@ -736,6 +736,7 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
             JobState::Dead => Style::default().fg(Color::Red),
             JobState::Paused => Style::default().fg(Color::Blue),
             JobState::PartiallyRunning => Style::default().fg(Color::Red),
+            JobState::Unknown => Style::default().fg(Color::Red),
         };
 
         let is_selected = index == app.selected_job_index;
@@ -766,7 +767,8 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
                         JobState::Exited => "Exited",
                         JobState::Dead => "Dead",
                         JobState::Paused => "Paused",
-                        JobState::PartiallyRunning => "PARTIALLY RUNNING"
+                        JobState::PartiallyRunning => "PARTIALLY RUNNING",
+                        JobState::Unknown => "UNKNOWN"
                     }
                 ),
                 style

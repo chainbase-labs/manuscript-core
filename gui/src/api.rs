@@ -184,8 +184,8 @@ pub async fn list_job_statuses(path: &str) -> Result<Value, String> {
         .await
         .map_err(|e| format!("Failed to read response body: {}", e))?;
 
-    // eprintln!("[DEBUG] API Response Status: {:?}", status);
-    // eprintln!("[DEBUG] API Response Body: {:?}", body);
+    eprintln!("[DEBUG] API Response Status: {:?}", status);
+    eprintln!("[DEBUG] API Response Body: {:?}", body);
 
     if status.is_success() {
         serde_json::from_str(&body).map_err(|e| format!("Invalid JSON: {}", e))
