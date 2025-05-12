@@ -203,7 +203,6 @@ func DeployManuscriptOnChainbase(args []string, apiKey, hash, version string) {
 }
 
 func copyManuscriptFile(manuscriptDir, manuscriptPath string) error {
-	//_, fileName := filepath.Split(manuscriptPath)
 	fileName := "manuscript.yaml"
 	destinationPath := filepath.Join(manuscriptDir, fileName)
 

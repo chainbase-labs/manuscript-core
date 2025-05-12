@@ -54,41 +54,32 @@ func Init() error {
 
 func writeAndRunAPIServer() (int, *os.Process, error) {
 	tmpDir := "/tmp"
-	tmpFile, err := os.CreateTemp(tmpDir, "api_server_*")
+	tmpFile, err := os.CreateTemp(tmpDir, "api_server_exec_*")
 	if err != nil {
 		return 0, nil, err
 	}
-	defer tmpFile.Close()
+	tmpFilePath := tmpFile.Name()
+
 	apiServerBin, err := getEmbeddedBinary()
 	if err != nil {
 		return 0, nil, err
 	}
+
 	if _, err := tmpFile.Write(apiServerBin); err != nil {
+		tmpFile.Close()
 		return 0, nil, err
 	}
 
-	if err := os.Chmod(tmpFile.Name(), 0755); err != nil {
+	if err := tmpFile.Chmod(0755); err != nil {
+		tmpFile.Close()
 		return 0, nil, err
 	}
 
-	dstPath := tmpFile.Name() + "_exec"
-	dstFile, err := os.Create(dstPath)
-	if err != nil {
-		return 0, nil, err
-	}
-	if _, err := tmpFile.Seek(0, 0); err != nil {
-		return 0, nil, err
-	}
-	if _, err := io.Copy(dstFile, tmpFile); err != nil {
-		return 0, nil, err
-	}
-	dstFile.Close()
-	defer os.Remove(dstPath)
-	if err := os.Chmod(dstPath, 0755); err != nil {
+	if err := tmpFile.Close(); err != nil {
 		return 0, nil, err
 	}
 
-	cmd := exec.Command(dstPath)
+	cmd := exec.Command(tmpFilePath)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return 0, nil, err

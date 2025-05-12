@@ -78,7 +78,7 @@ sinks:
     table: move_calls
     primary_key: checkpoint_timestamp,checkpoint,transaction_digest,module,package,function
     config:
-      host: pgm-gs5r55853kqkek3e.pgsql.singapore.rds.aliyuncs.com
+      host: postgres
       port: 5432
       username: postgres
-      password: LJD4KGMvgqc3qrVFy4L
+      password: postgres

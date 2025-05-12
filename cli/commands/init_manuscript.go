@@ -191,6 +191,7 @@ func createDockerComposeFile(dir string, ms *pkg.Manuscript) error {
 		var existingMs *pkg.Manuscript
 		for _, manuscript := range m.Manuscripts {
 			if manuscript.Name == ms.Name {
+				fmt.Printf("INFO: Manuscript: %s config exist:\n", manuscript.Name)
 				existingMs = &manuscript
 				break
 			}
