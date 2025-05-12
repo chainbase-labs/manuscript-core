@@ -48,6 +48,9 @@ type Manuscript struct {
 	GraphQLImage string      `json:"GraphQLImage" yaml:"-"`
 	GraphQLPort  int         `json:"GraphQLPort" yaml:"-"`
 	Schema       string      `json:"Schema" yaml:"-"`
+	CkDir        string      `json:"ckDir" yaml:"-"`
+	SpDir        string      `json:"spDir" yaml:"-"`
+	LogDir       string      `json:"logDir" yaml:"-"`
 }
 
 func ParseYAML(filename string) (*Manuscript, error) {
