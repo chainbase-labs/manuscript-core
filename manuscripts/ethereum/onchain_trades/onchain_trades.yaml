@@ -100,7 +100,7 @@ transforms:
                                          WHEN tm.`name` is not null THEN tm.`name`
                                          ELSE '' END                                                           as `name`
                                      ,CASE
-                                         WHEN t.token_address = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' THEN CAST(18 AS BIGINT)
+                                         WHEN t.token_address = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' THEN CAST(18 AS DECIMAL(38, 18))
                                          WHEN tm.decimals is not null THEN tm.`decimals`
                                          ELSE 0 END                                                            as `decimals`
                                      ,CASE WHEN tp.price is not null THEN CASt(tp.price AS STRING) ELSE '0' END as `price`
@@ -131,7 +131,7 @@ sinks:
     table: onchain_trades
     primary_key: block_timestamp,transaction_hash,from_address,to_address,token_address,usd_value
     config:
-      host: pgm-gs5r55853kqkek3e.pgsql.singapore.rds.aliyuncs.com
+      host: postgres
       port: 5432
       username: postgres
-      password: LJD4KGMvgqc3qrVFy4L
+      password: postgres

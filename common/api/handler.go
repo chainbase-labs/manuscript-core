@@ -6,7 +6,7 @@ import (
 	"io"
 	"manuscript-core/common/config"
 	"manuscript-core/common/jobs"
-	"manuscript-core/common/manuscript"
+	"manuscript-core/common/operation"
 	"net/http"
 )
 
@@ -149,7 +149,7 @@ func deployHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	var req manuscript.DeployPayload
+	var req operation.DeployPayload
 	if err := json.Unmarshal(body, &req); err != nil {
 		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
 		return
@@ -160,7 +160,7 @@ func deployHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = manuscript.DeployManuscript(req.ApiKey, hash, req.Content, req.Schema, req.Version)
+	err = operation.DeployManuscript(req.ApiKey, hash, req.Content, req.Schema, req.Version)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Deployment failed: %v", err), http.StatusInternalServerError)
 		return

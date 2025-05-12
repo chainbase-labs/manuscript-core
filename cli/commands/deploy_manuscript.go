@@ -199,11 +199,12 @@ func DeployManuscriptOnChainbase(args []string, apiKey, hash, version string) {
 		}
 	}
 	fmt.Println("\033[32m✓ Manuscript deployment to chainbase network completed successfully!")
-	log.Printf("\033[32mYou can now view your manuscript at %s/manuscript-studio?id=%s\n", msStudioURL, hash)
+	log.Printf("\033[32mYou can now view your manuscript at %s/studio?id=%s\n", msStudioURL, hash)
 }
 
 func copyManuscriptFile(manuscriptDir, manuscriptPath string) error {
-	_, fileName := filepath.Split(manuscriptPath)
+	//_, fileName := filepath.Split(manuscriptPath)
+	fileName := "manuscript.yaml"
 	destinationPath := filepath.Join(manuscriptDir, fileName)
 
 	sourceFile, err := os.Open(manuscriptPath)

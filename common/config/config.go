@@ -15,7 +15,7 @@ const (
 	PlatformChainURL      = "https://console.chainbase.com"
 	NetworkChainEndpoint  = "/api/v1/metadata/network_chains"
 	PlatformChainEndpoint = "/api/v2/datacloud/metadata"
-	MsDeployEndpoint      = "/studio/v1/manuscripts"
+	MsDeployEndpoint      = "/studio-testnet/v1/manuscript/deploy"
 	DefaultDatabase       = "zkevm"
 	DefaultTable          = "blocks"
 	DefaultSink           = "postgres"
