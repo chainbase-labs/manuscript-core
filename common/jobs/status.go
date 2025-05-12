@@ -1,12 +1,15 @@
 package jobs
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"manuscript-core/common/config"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -26,7 +29,12 @@ func GetJobStatus(baseDir, jobName string) (*JobStatus, error) {
 	jobDir := filepath.Join(baseDir, jobName)
 
 	if err := os.Chdir(jobDir); err != nil {
-		return nil, fmt.Errorf("failed to change dir: %w", err)
+		log.Printf("failed to change dir: %v", err)
+		return &JobStatus{
+			Name:            jobName,
+			Status:          "unknown",
+			ContainerStatus: []ContainerStatus{},
+		}, nil
 	}
 
 	cmd := exec.Command("docker", "compose", "ps", "-a", "--format", "json")
@@ -42,8 +50,35 @@ func GetJobStatus(baseDir, jobName string) (*JobStatus, error) {
 	}
 
 	var containers []ContainerStatus
-	if err := json.Unmarshal(output, &containers); err != nil {
-		return nil, fmt.Errorf("failed to parse docker json: %w", err)
+	goos := runtime.GOOS
+	if goos == "darwin" {
+		// macOS: JSON array
+		if err := json.Unmarshal(output, &containers); err != nil {
+			fmt.Printf("failed to parse docker json array: %s; %s in %s", output, err, jobDir)
+			return &JobStatus{
+				Name:            jobName,
+				Status:          "unknown",
+				ContainerStatus: []ContainerStatus{},
+			}, nil
+		}
+	} else {
+		// Linux: each line is one JSON object
+		lines := bytes.Split(output, []byte{'\n'})
+		for _, line := range lines {
+			if len(bytes.TrimSpace(line)) == 0 {
+				continue
+			}
+			var c ContainerStatus
+			if err := json.Unmarshal(line, &c); err != nil {
+				fmt.Printf("failed to parse line json: %s; %s\n", line, err)
+				return &JobStatus{
+					Name:            jobName,
+					Status:          "unknown",
+					ContainerStatus: []ContainerStatus{},
+				}, nil
+			}
+			containers = append(containers, c)
+		}
 	}
 
 	status := "pending"

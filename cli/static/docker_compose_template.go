@@ -14,9 +14,9 @@ services:
     ports:
       - "{{.Port}}:8081"
     volumes:
-      - ./data/statuspoint/checkpoint:/opt/flink/checkpoint
-      - ./data/statuspoint/savepoint:/opt/flink/savepoint
-      - ./data/log:/opt/flink/log
+      - {{ .CkDir }}:/opt/flink/checkpoint
+      - {{ .SpDir }}:/opt/flink/savepoint
+      - {{ .LogDir }}:/opt/flink/log
       - ./manuscript.yaml:/opt/flink/manuscript.yaml
     networks:
       - ms_network_{{ .Name }}
@@ -33,9 +33,9 @@ services:
     command: "taskmanager"
     scale: 1
     volumes:
-      - ./data/statuspoint/checkpoint:/opt/flink/checkpoint
-      - ./data/statuspoint/savepoint:/opt/flink/savepoint
-      - ./data/log:/opt/flink/log
+      - {{ .CkDir }}:/opt/flink/checkpoint
+      - {{ .SpDir }}:/opt/flink/savepoint
+      - {{ .LogDir }}:/opt/flink/log
       - ./manuscript.yaml:/opt/flink/manuscript.yaml
     networks:
       - ms_network_{{ .Name }}
@@ -60,9 +60,9 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./data/statuspoint/checkpoint:/opt/flink/checkpoint
-      - ./data/statuspoint/savepoint:/opt/flink/savepoint
-      - ./data/log:/opt/flink/log
+      - {{ .CkDir }}:/opt/flink/checkpoint
+      - {{ .SpDir }}:/opt/flink/savepoint
+      - {{ .LogDir }}:/opt/flink/log
       - ./manuscript.yaml:/opt/flink/manuscript.yaml
     networks:
       - ms_network_{{ .Name }}
@@ -79,9 +79,9 @@ services:
     command: "taskmanager"
     scale: 1
     volumes:
-      - ./data/statuspoint/checkpoint:/opt/flink/checkpoint
-      - ./data/statuspoint/savepoint:/opt/flink/savepoint
-      - ./data/log:/opt/flink/log
+      - {{ .CkDir }}:/opt/flink/checkpoint
+      - {{ .SpDir }}:/opt/flink/savepoint
+      - {{ .LogDir }}:/opt/flink/log
       - ./manuscript.yaml:/opt/flink/manuscript.yaml
     networks:
       - ms_network_{{ .Name }}

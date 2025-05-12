@@ -60,6 +60,7 @@ pub enum JobState {
     Dead,
     Paused,
     PartiallyRunning,
+    Unknown,
 }
 
 #[derive(Debug)]
@@ -481,7 +482,7 @@ impl JobManager {
             .replace("{graphql_port}", &config.graphql_port.to_string())
             .replace("{table}", &config.source.table)
             .replace("{database}", &config.sink.database)
-            .replace("{query}", &config.transform.sql)
+            .replace("{query}", &config.transform.sql.replace('\n', " ").replace('\r', " "))
             .replace("{sink_type}", &config.sink.sink_type)
             .replace("{db_port}", &config.db_port.to_string())
             .replace("{db_user}", &config.sink.config.username)
@@ -724,8 +725,11 @@ impl JobManager {
         let json_val: Value = api::list_job_statuses(config_path.to_str().ok_or_else(|| {
             std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid config path")
         })?)
-        .await
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+            .await
+            .map_err(|e| {
+                eprintln!("[ERROR] list_job_statuses failed: {}", e);
+                std::io::Error::new(std::io::ErrorKind::Other, e)
+            })?;
         let jobs_statuses: JobsStatuses = match serde_json::from_value(json_val.clone()) {
             Ok(parsed) => parsed,
             Err(e) => {
@@ -746,6 +750,7 @@ impl JobManager {
                 "dead" => JobState::Dead,
                 "paused" => JobState::Paused,
                 "partially_running" => JobState::PartiallyRunning,
+                "unknown" => JobState::Unknown,
                 _ => JobState::Pending,
             }
         };

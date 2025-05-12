@@ -2,19 +2,39 @@ package client
 
 import (
 	"bufio"
+	"bytes"
+	"embed"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 )
 
-//go:embed api_server
-var apiServerBin []byte
+//go:embed api_server_darwin_amd64
+//go:embed api_server_darwin_arm64
+//go:embed api_server_linux_amd64
+var apiServerFS embed.FS
+
+func getEmbeddedBinary() ([]byte, error) {
+	osArch := runtime.GOOS + "_" + runtime.GOARCH
+	switch osArch {
+	case "darwin_amd64":
+		return apiServerFS.ReadFile("api_server_darwin_amd64")
+	case "darwin_arm64":
+		return apiServerFS.ReadFile("api_server_darwin_arm64")
+	case "linux_amd64":
+		return apiServerFS.ReadFile("api_server_linux_amd64")
+	default:
+		return nil, fmt.Errorf("unsupported platform: %s", osArch)
+	}
+}
 
 var (
 	apiPort    int
@@ -33,21 +53,33 @@ func Init() error {
 }
 
 func writeAndRunAPIServer() (int, *os.Process, error) {
-	tmpFile, err := os.CreateTemp("", "api_server_*")
+	tmpDir := "/tmp"
+	tmpFile, err := os.CreateTemp(tmpDir, "api_server_exec_*")
 	if err != nil {
 		return 0, nil, err
 	}
-	defer tmpFile.Close()
+	tmpFilePath := tmpFile.Name()
+
+	apiServerBin, err := getEmbeddedBinary()
+	if err != nil {
+		return 0, nil, err
+	}
 
 	if _, err := tmpFile.Write(apiServerBin); err != nil {
+		tmpFile.Close()
 		return 0, nil, err
 	}
 
-	if err := os.Chmod(tmpFile.Name(), 0755); err != nil {
+	if err := tmpFile.Chmod(0755); err != nil {
+		tmpFile.Close()
 		return 0, nil, err
 	}
 
-	cmd := exec.Command(tmpFile.Name())
+	if err := tmpFile.Close(); err != nil {
+		return 0, nil, err
+	}
+
+	cmd := exec.Command(tmpFilePath)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return 0, nil, err
@@ -189,6 +221,106 @@ func GetJobStatus(baseDir, jobName string) (string, error) {
 	}
 
 	return string(bodyBytes), nil
+}
+
+func GetTableSchema(port int, table string) (string, error) {
+	if apiPort == 0 {
+		return "", fmt.Errorf("API server port is not initialized")
+	}
+
+	endpoint := fmt.Sprintf("http://localhost:%d/get_table_schema", apiPort)
+	params := url.Values{}
+	params.Set("port", strconv.Itoa(port))
+	params.Set("table", table)
+	fullURL := fmt.Sprintf("%s?%s", endpoint, params.Encode())
+
+	resp, err := http.Get(fullURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request to %s: %w", fullURL, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	return string(bodyBytes), nil
+}
+
+func TrackTable(port, table string) error {
+	if apiPort == 0 {
+		return fmt.Errorf("API server port is not initialized")
+	}
+
+	endpoint := fmt.Sprintf("http://localhost:%d/track_table", apiPort)
+	params := url.Values{}
+	params.Set("port", port)
+	params.Set("table", table)
+	fullURL := fmt.Sprintf("%s?%s", endpoint, params.Encode())
+
+	resp, err := http.Get(fullURL)
+	if err != nil {
+		return fmt.Errorf("failed to send request to %s: %w", fullURL, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	return nil
+}
+
+func Deploy(content []byte, schema, hash, apiKey, version string) error {
+	if apiPort == 0 {
+		return fmt.Errorf("API server port is not initialized")
+	}
+
+	endpoint := fmt.Sprintf("http://localhost:%d/deploy", apiPort)
+	params := url.Values{}
+	params.Set("hash", hash)
+	fullURL := fmt.Sprintf("%s?%s", endpoint, params.Encode())
+
+	payload := map[string]interface{}{
+		"api_key": apiKey,
+		"content": string(content),
+		"schema":  schema,
+		"version": version,
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to encode payload: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", fullURL, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyr, err := io.ReadAll(resp.Body)
+		if err != nil {
+			print("xx")
+		}
+		return fmt.Errorf("deployment failed with status: %s, %s", resp.Status, string(bodyr))
+	}
+
+	return nil
 }
 
 func Shutdown() {

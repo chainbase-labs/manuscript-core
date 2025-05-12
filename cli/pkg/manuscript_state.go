@@ -3,7 +3,9 @@ package pkg
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
+	"manuscript-core/client"
 	"net/http"
 	"os/exec"
 	"strings"
@@ -25,6 +27,7 @@ const (
 	StateDead             ManuscriptState = "DEAD"
 	StatePaused           ManuscriptState = "PAUSED"
 	StatePartiallyRunning ManuscriptState = "PARTIALLY RUNNING"
+	StateUnknown          ManuscriptState = "UNKNOWN"
 )
 
 // StateDetector is responsible for detecting the current state of a Manuscript job
@@ -92,6 +95,8 @@ func (sd *StateDetector) checkGraphQLEndpoint() bool {
 
 func MapStatusToState(status string) ManuscriptState {
 	switch strings.ToLower(status) {
+	case "unknown":
+		return StateUnknown
 	case "not_started":
 		return StateNotStarted
 	case "running":
@@ -115,4 +120,30 @@ func MapStatusToState(status string) ManuscriptState {
 	default:
 		return StatePending
 	}
+}
+
+type ContainerStatus struct {
+	Name   string `json:"Name"`
+	State  string `json:"State"`
+	Status string `json:"Status"`
+}
+
+type JobStatus struct {
+	Name            string            `json:"Name"`
+	Status          string            `json:"Status"`
+	ContainerStatus []ContainerStatus `json:"ContainerStatus"`
+}
+
+func GetJobStatus(ms Manuscript) (*ManuscriptState, error) {
+	var jobStatus JobStatus
+	resp, err := client.GetJobStatus(ms.BaseDir, ms.Name)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal([]byte(resp), &jobStatus)
+	if err != nil {
+		return nil, err
+	}
+	state := MapStatusToState(jobStatus.Status)
+	return &state, err
 }

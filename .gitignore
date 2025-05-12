@@ -16,3 +16,6 @@ flink/flink-1.18.1
 gui/target
 out
 flink/data
+flink/runner/target
+go.sum
+

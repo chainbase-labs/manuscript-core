@@ -14,7 +14,25 @@ pub struct ApiServer {
     _child: Child,
     pub port: u16,
 }
-const EMBEDDED_API: &[u8] = include_bytes!("../api/api_server");
+#[cfg(target_os = "macos")]
+#[cfg(target_arch = "x86_64")]
+const EMBEDDED_API: &[u8] = include_bytes!("../api/api_server_darwin_amd64");
+
+#[cfg(target_os = "macos")]
+#[cfg(target_arch = "aarch64")]
+const EMBEDDED_API: &[u8] = include_bytes!("../api/api_server_darwin_arm64");
+
+#[cfg(target_os = "linux")]
+#[cfg(target_arch = "x86_64")]
+const EMBEDDED_API: &[u8] = include_bytes!("../api/api_server_linux_amd64");
+
+// fallback for unsupported platforms
+#[cfg(not(any(
+    all(target_os = "macos", target_arch = "x86_64"),
+    all(target_os = "macos", target_arch = "aarch64"),
+    all(target_os = "linux",  target_arch = "x86_64")
+)))]
+compile_error!("Unsupported platform for embedded API binary");
 
 impl ApiServer {
     pub async fn start() -> Result<Self, String> {
@@ -31,7 +49,6 @@ impl ApiServer {
 
         let mut api_path: Option<std::path::PathBuf> = None;
         for candidate in candidates {
-            eprintln!("{:?}",candidate);
             let candidate_path = std::path::Path::new(&candidate).to_path_buf();
             if candidate_path.exists() {
                 api_path = Some(candidate_path);
@@ -44,7 +61,7 @@ impl ApiServer {
             None => {
                 println!("The size of the embedded API is: {} bytes", EMBEDDED_API.len());
                 let temp_path = std::env::temp_dir().join("embedded_api_server");
-                eprintln!("Temp file will be written to: {}", temp_path.display());
+                eprintln!("[api_server] No binary found in search paths, writing embedded binary to {}", temp_path.display());
                 std::fs::write(&temp_path, EMBEDDED_API).expect("Failed to write embedded API binary");
 
                 #[cfg(unix)]
@@ -69,6 +86,7 @@ impl ApiServer {
         let reader = BufReader::new(stdout);
 
         for line in reader.lines().flatten() {
+            eprintln!("[api_server stdout] {}", line);
             if let Some(port_str) = line.strip_prefix("API server started on port ") {
                 let port = port_str.parse().expect("Invalid port number");
 
@@ -146,16 +164,70 @@ pub async fn list_job_statuses(path: &str) -> Result<Value, String> {
     let port = API_PORT
         .get()
         .copied()
-        .expect("API server not started yet");
+        .ok_or_else(|| {
+            eprintln!("[ERROR] API_PORT is not set. API server may not be started.");
+            "API server not started yet".to_string()
+        })?;
 
     let url = format!("http://127.0.0.1:{}/list_job_statuses?path={}", port, path);
+    eprintln!("[DEBUG] Sending request to URL: {}", url);
+
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .map_err(|e| {
+            eprintln!("[ERROR] Failed to build reqwest client: {}", e);
+            format!("Failed to build client: {}", e)
+        })?;
+
+    let resp = client.get(&url).send().await.map_err(|e| {
+        eprintln!("[ERROR] Failed to send request: {}", e);
+        format!("Request error: {}", e)
+    })?;
+
+    let status = resp.status();
+
+    let body = resp.text().await.map_err(|e| {
+        eprintln!("[ERROR] Failed to read response body: {}", e);
+        format!("Failed to read response body: {}", e)
+    })?;
+
+    eprintln!("[DEBUG] API Response Status: {:?}", status);
+    eprintln!("[DEBUG] API Response Body: {:?}", body);
+
+    if status.is_success() {
+        serde_json::from_str(&body).map_err(|e| {
+            eprintln!("[ERROR] Invalid JSON response: {}", e);
+            format!("Invalid JSON: {}", e)
+        })
+    } else {
+        Err(format!("API returned error: {}", status))
+    }
+}
+
+pub async fn deploy(content: &[u8], schema: &str, hash: &str, api_key: &str, version: &str, api_port: u16) -> Result<Value, String> {
+    let port = API_PORT
+        .get()
+        .copied()
+        .expect("API server not started yet");
+
+    let url = format!("http://127.0.0.1:{}/deploy?hash={}", port, hash);
+    let payload = serde_json::json!({
+        "api_key": api_key,
+        "content": String::from_utf8_lossy(content),
+        "schema": schema,
+        "version": version,
+    });
+
     let client = reqwest::Client::builder()
         .no_proxy()
         .build()
         .map_err(|e| format!("Failed to build client: {}", e))?;
 
     let resp = client
-        .get(&url)
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .body(payload.to_string())
         .send()
         .await
         .map_err(|e| format!("Request error: {}", e))?;

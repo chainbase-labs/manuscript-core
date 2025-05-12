@@ -90,6 +90,7 @@ func SaveConfig(filePath string, newConfig *Config) error {
 		section.Key("dbUser").SetValue(strings.TrimSpace(fmt.Sprintf("%s", manuscript.DbUser)))
 		section.Key("dbPassword").SetValue(strings.TrimSpace(fmt.Sprintf("%s", manuscript.DbPassword)))
 		section.Key("graphqlPort").SetValue(strings.TrimSpace(fmt.Sprintf("%d", manuscript.GraphQLPort)))
+		section.Key("schema").SetValue(strings.TrimSpace(fmt.Sprintf("%s", manuscript.Schema)))
 	}
 
 	err = cfg.SaveTo(filePath)

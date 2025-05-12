@@ -25,6 +25,8 @@ var (
 		}
 		return strings.Join(options, ", ")
 	}()
+	apiKey string
+	hash   string
 )
 
 // Execute runs the CLI commands
@@ -334,14 +336,18 @@ Requirements:
 🔑 Environment variables
 🐳 Running Docker (local only)`,
 	Example: `>> manuscript-cli deploy config.yaml --env=local
->> manuscript-cli d config.yaml --env=local`,
+>> manuscript-cli deploy config.yaml --env=chainbase --hash=abc123 --version=v1.0.0 --api-key=xxx`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		switch env {
 		case "local":
 			DeployManuscript(args)
 		case "chainbase":
-			fmt.Println("Deploying to Chainbase network...coming soon!")
+			if hash == "" || version == "" || apiKey == "" {
+				fmt.Println("For chainbase deployment, --hash, --version, and --api-key are required.")
+				os.Exit(1)
+			}
+			DeployManuscriptOnChainbase(args, apiKey, hash, version)
 		default:
 			fmt.Println("Unknown environment. Please specify --env=local or --env=chainbase")
 		}
@@ -422,6 +428,9 @@ func configureFlags() {
 
 	// Configure deployment flags
 	deployManuscript.Flags().StringVar(&env, "env", "", "Specify the environment to deploy (local or chainbase)")
+	deployManuscript.Flags().StringVar(&hash, "hash", "", "Manuscript hash (required for chainbase)")
+	deployManuscript.Flags().StringVar(&version, "version", "", "Deployment version (required for chainbase)")
+	deployManuscript.Flags().StringVar(&apiKey, "api-key", "", "API key (required for chainbase)")
 	deployManuscript.MarkFlagRequired("env")
 
 	// Configure version command flags

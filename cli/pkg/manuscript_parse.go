@@ -29,24 +29,28 @@ type Sink struct {
 }
 
 type Manuscript struct {
-	BaseDir      string      `yaml:"baseDir"`
-	Name         string      `yaml:"name"`
-	SpecVersion  string      `yaml:"specVersion"`
-	Parallelism  int         `yaml:"parallelism"`
-	Sources      []Source    `yaml:"sources"`
-	Transforms   []Transform `yaml:"transforms"`
-	Sinks        []Sink      `yaml:"sinks"`
-	Chain        string      `yaml:"chain"`
-	Table        string      `yaml:"table"`
-	Database     string      `yaml:"database"`
-	Query        string      `yaml:"query"`
-	Sink         string      `yaml:"sink"`
-	Port         int         `yaml:"port"`
-	DbPort       int         `yaml:"dbPort"`
-	DbUser       string      `yaml:"dbUser"`
-	DbPassword   string      `yaml:"dbPassword"`
-	GraphQLImage string      `yaml:"graphqlImage"`
-	GraphQLPort  int         `yaml:"graphqlPort"`
+	BaseDir      string      `json:"BaseDir" yaml:"-"`
+	Name         string      `json:"Name" yaml:"name"`
+	SpecVersion  string      `json:"SpecVersion" yaml:"specVersion"`
+	Parallelism  int         `json:"Parallelism" yaml:"parallelism"`
+	Sources      []Source    `json:"Sources" yaml:"sources,omitempty"`
+	Transforms   []Transform `json:"Transforms" yaml:"transforms,omitempty"`
+	Sinks        []Sink      `json:"Sinks" yaml:"sinks,omitempty"`
+	Chain        string      `json:"Chain" yaml:"-"`
+	Table        string      `json:"Table" yaml:"-"`
+	Database     string      `json:"Database" yaml:"-"`
+	Query        string      `json:"Query" yaml:"-"`
+	Sink         string      `json:"Sink" yaml:"-"`
+	Port         int         `json:"Port" yaml:"-"`
+	DbPort       int         `json:"DbPort" yaml:"-"`
+	DbUser       string      `json:"DbUser" yaml:"-"`
+	DbPassword   string      `json:"DbPassword" yaml:"-"`
+	GraphQLImage string      `json:"GraphQLImage" yaml:"-"`
+	GraphQLPort  int         `json:"GraphQLPort" yaml:"-"`
+	Schema       string      `json:"Schema" yaml:"-"`
+	CkDir        string      `json:"ckDir" yaml:"-"`
+	SpDir        string      `json:"spDir" yaml:"-"`
+	LogDir       string      `json:"logDir" yaml:"-"`
 }
 
 func ParseYAML(filename string) (*Manuscript, error) {
@@ -64,4 +68,85 @@ func ParseYAML(filename string) (*Manuscript, error) {
 	}
 
 	return &manuscript, nil
+}
+
+func ParseDeployManuscript(filename string) ([]byte, error) {
+	file, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	var rootNode yaml.Node
+	if err := yaml.Unmarshal(file, &rootNode); err != nil {
+		return nil, err
+	}
+
+	if err := retainOnlyPostgresSink(&rootNode); err != nil {
+		return nil, err
+	}
+
+	newYamlBytes, err := yaml.Marshal(&rootNode)
+	if err != nil {
+		return nil, err
+	}
+	return newYamlBytes, nil
+}
+
+func retainOnlyPostgresSink(node *yaml.Node) error {
+	if node.Kind == yaml.MappingNode {
+		for i := 0; i < len(node.Content); i += 2 {
+			keyNode := node.Content[i]
+			valueNode := node.Content[i+1]
+
+			// get sinks
+			if keyNode.Value == "sinks" && valueNode.Kind == yaml.SequenceNode {
+				var newSinks []*yaml.Node
+				for _, sinkNode := range valueNode.Content {
+					if sinkNode.Kind == yaml.MappingNode {
+						// check type = pg?
+						for j := 0; j < len(sinkNode.Content); j += 2 {
+							if sinkNode.Content[j].Value == "type" &&
+								sinkNode.Content[j+1].Value == "postgres" {
+								// modify config
+								for k := 0; k < len(sinkNode.Content); k += 2 {
+									if sinkNode.Content[k].Value == "config" {
+										configNode := sinkNode.Content[k+1]
+										if configNode.Kind == yaml.MappingNode {
+											// update config
+											newConfig := &yaml.Node{
+												Kind: yaml.MappingNode,
+												Content: []*yaml.Node{
+													{Kind: yaml.ScalarNode, Value: "host"},
+													{Kind: yaml.ScalarNode, Value: "<<<DB_HOST>>>"},
+													{Kind: yaml.ScalarNode, Value: "port"},
+													{Kind: yaml.ScalarNode, Value: "<<<DB_PORT>>>"},
+													{Kind: yaml.ScalarNode, Value: "username"},
+													{Kind: yaml.ScalarNode, Value: "<<<DB_USER>>>"},
+													{Kind: yaml.ScalarNode, Value: "password"},
+													{Kind: yaml.ScalarNode, Value: "<<<DB_PASS>>>"},
+												},
+											}
+											sinkNode.Content[k+1] = newConfig
+										}
+									}
+								}
+								newSinks = append(newSinks, sinkNode)
+								break
+							}
+						}
+					}
+				}
+				// edit sinks
+				valueNode.Content = newSinks
+			}
+		}
+	}
+
+	for _, child := range node.Content {
+		if err := retainOnlyPostgresSink(child); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
