@@ -45,19 +45,132 @@ The vision of Manuscript is to realize “data trade” within the Chainbase net
 - **Monetization**: Leveraging the data capabilities provided by Manuscript, combined with the dual-chain architecture CometBFT + DPoS high-performance instant transaction finality and proof-of-stake consensus features, Chainbase offers a fair and transparent data value exchange ecosystem. Creators can monetize their processed data through Manuscript, while data users can conveniently consume the data they need. This mechanism not only incentivizes the production of high-quality data but also promotes the positive development of the entire blockchain ecosystem.
 
 ## ✨ Videos
+<https://github.com/user-attachments/assets/80dfb1c2-3a4e-4e85-bd2b-12d5ca0b5639>
+
+<https://github.com/user-attachments/assets/7ac316a8-ffc1-4381-a268-7f07292ad200>
 
 ## Getting Started 🏄
-### Install Manuscript Client
-You may choose to run any client or compile from the source code:
-##### GUI
-```shell
-curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install-gui.sh | bash
-```
-#### CLI
+### Requirements
+[Docker Desktop 25.1+](https://www.docker.com/products/docker-desktop/)
+### CLI
+#### Install Manuscript Client
 ```shell
 curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install.sh | bash
 ```
-#### MAKE
+#### Example
+
+Here's an example of how to <b>process</b> data from chainbase with manuscript:
+
+##### 1. After installing `manuscript-cli`, you can initialize the Manuscript scripts and environment using the command
+```bash
+➜  manuscript-cli --help
+Chainbase Manuscript ™ Build The World\'s Largest Omnichain Data Network 🚀 🚀 🚀
+─────────────────────────────────────────────────────────────────────────────────
+Usage:
+  manuscript-cli [command] [flags]
+
+Available Commands:
+  init     Initialize and start local manuscript containers
+  list     List all manuscript jobs
+  logs     View logs of a manuscript job
+  stop     Stop a manuscript job
+  deploy   Deploy Manuscript to a local environment or the Chainbase network.
+```
+##### 2. **manuscript-cli init**: Use the client to initialize the `manuscript.yaml` file for a local standalone container environment
+```bash
+➜  manuscript-cli init
+🏂 1. Enter your manuscript name: (default is demo)
+7...
+6: Polygon_zkEVM (Database: zkevm)
+5: Avalanche (Database: avalanche)
+4: Base (Database: base)
+3: Arbitrum_One (Database: arb1)
+2: Bsc (Database: bsc)
+1: Ethereum (Database: ethereum)
+🏂 1.Enter your chain choice (default is zkevm):
+
+🧲 2.Please select a table from the list below:
+1: blocks
+2: transactionLogs
+3: transactions
+Enter your choice (default is blocks):
+✔ No input provided. Defaulting to table: blocks
+
+📍 3.Please select a data output target:
+1: Postgresql
+2: Print (output to console)
+Enter your choice (default is Postgresql):
+✔ No input provided. Defaulting to output target: postgres
+
+🏄🏄 Summary of your selections:
+Selected manuscript name: demo
+Selected chain: zkevm
+Selected table: blocks
+Data output target: postgres
+
+🚀 Do you want to proceed with the above selections? (yes/no): yes
+···
+✓ Step 5: Start Docker Containers, which was completed successfully!
+⠙ Step 6: Check Container Status Loading... ✓ Container demo is running
+✓ Step 6: Check Container Status completed successfully!
+🎉 Manuscript demo deployment completed successfully!
+You can now list your job with the command: 
+👉 manuscript-cli list
+
+If you need to manually edit the manuscript, you can edit the file '/Users/azroa/github/manuscript/demo/manuscript.yaml' and then manually execute the 'deploy' command:
+👉 vim /Users/azroa/github/manuscript/demo/manuscript.yaml
+👉 manuscript-cli deploy /Users/azroa/github/manuscript/demo/manuscript.yaml --env=local
+```
+##### 3. List the job to check the status of the job
+```bash
+manuscript-cli list
+🟢 1: Name: demo | State: RUNNING | Start Time: 2024-10-08 14:26 | Duration: 3 minutes | GraphQL: http://127.0.0.1:8082
+
+manuscript-cli logs demo
+···logs···
+```
+##### 4. Access the GraphQL endpoint to query the data(GraphQL: http://127.0.0.1:8082)
+![graphQL](./images/graphQL.jpg)
+
+##### 5. Deploy the Manuscript to the Local Environment or the Chainbase Network(the network is coming soon...)
+```bash
+# 1. cat the manuscript_config.ini file
+➜  ~ cat $HOME/.manuscript_config.ini
+baseDir = /Users/azroa/github
+
+[demo]
+name = demo
+···
+
+# 2. vim the manuscript.yaml file
+vim ~/github/manuscript/demo/manuscript.yaml
+
+# 3. Deploy the Manuscript to the Local Environment
+manuscript-cli deploy ~/github/manuscript/demo/manuscript.yaml --env=local
+or
+manuscript-cli deploy ~/github/manuscript/demo/manuscript.yaml --env=chainbase
+```
+
+### GUI
+![manuscript-gui](./images/manuscript_gui_1.jpg)
+#### Install Manuscript Client
+```shell
+curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install-gui.sh | bash
+```
+
+#### Example
+
+Here's an example of how to <b>process</b> data from chainbase with manuscript:
+
+##### 1. Selecting data and creating local tasks
+
+![manuscript-gui](./images/manuscript_gui_2.jpg)
+
+##### 2. Waiting for the task to run and use the data
+
+![manuscript-gui](./images/manuscript_gui_3.jpg)
+
+### MAKE
 ```shell
 ➜  manuscript-core git:(main) ✗ make
 Available targets:
@@ -70,24 +183,6 @@ Available targets:
   📦 install-cli   - Install only the CLI binary to /usr/local/bin
   📦 install-gui   - Install only the GUI binary to /usr/local/bin
 ```
-
-### GUI
-![manuscript-gui](./images/manuscript_gui_1.jpg)
-
-### Requirements
-[Docker Desktop 25.1+](https://www.docker.com/products/docker-desktop/)
-
-### Example
-
-Here's an example of how to <b>process</b> data from chainbase with manuscript:
-
-#### 1. Selecting data and creating local tasks
-
-![manuscript-gui](./images/manuscript_gui_2.jpg)
-
-#### 2. Waiting for the task to run and use the data
-
-![manuscript-gui](./images/manuscript_gui_3.jpg)
 
 😆😆 data has never been so simple...
 
@@ -112,7 +207,7 @@ Here are some of the planned improvements:
 - [x] Support Chainbase Network Streaming Lakehouse.
 - [x] Support Flink application mode.
 - [x] Support Schema Registry.
-- [ ] Support for user-defined functions (UDFs) for blockchain data parsing, such as decoding contract events and functions
+- [x] Support for user-defined functions (UDFs) for blockchain data parsing, such as decoding contract events and functions
 - [ ] Support custom advanced data processing logic with JAVA and Rust APIs.
 - [ ] Support local lightweight k8s environment deployment.
 - [ ] Support distributed edge node coordinators.
