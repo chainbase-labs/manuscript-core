@@ -13,7 +13,7 @@ echo "Latest version: $LATEST_VERSION"
 
 cd "$HOME"
 # Define the base URL with the latest version
-BASE_URL="https://github.com/$REPO/releases/download/$LATEST_VERSION"
+BASE_URL="https://github.com/$REPO/releases/download/v1.1.4"
 
 # Determine OS type and set the download URL
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
