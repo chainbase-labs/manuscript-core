@@ -75,7 +75,7 @@ func executeInitManuscript(ms pkg.Manuscript) {
 	}
 }
 
-// InitManuscript initializes a manuscript interactively
+// InitManuscriptInteractive initializes a manuscript interactively
 func InitManuscriptInteractive() {
 	// Check if manuscript config exists
 	baseDir := getHomeDir()
