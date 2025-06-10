@@ -1007,31 +1007,31 @@ impl App {
                     }
                 }
             }
-            KeyCode::PageUp => {
-                if !self.show_tables {
-                    if self.selected_chain_index > visible_height {
-                        self.selected_chain_index -= visible_height;
-                    } else {
-                        self.selected_chain_index = 0;
-                    }
-                    if self.selected_chain_index < self.scroll_offset {
-                        self.scroll_offset = self.selected_chain_index;
-                    }
-                }
-            }
-            KeyCode::PageDown => {
-                if !self.show_tables {
-                    let new_index = self.selected_chain_index + visible_height;
-                    if new_index < self.chains.len() {
-                        self.selected_chain_index = new_index;
-                    } else {
-                        self.selected_chain_index = self.chains.len() - 1;
-                    }
-                    if self.selected_chain_index >= self.scroll_offset + visible_height {
-                        self.scroll_offset = self.selected_chain_index - visible_height + 1;
-                    }
-                }
-            }
+            // KeyCode::PageUp => {
+            //     if !self.show_tables {
+            //         if self.selected_chain_index > visible_height {
+            //             self.selected_chain_index -= visible_height;
+            //         } else {
+            //             self.selected_chain_index = 0;
+            //         }
+            //         if self.selected_chain_index < self.scroll_offset {
+            //             self.scroll_offset = self.selected_chain_index;
+            //         }
+            //     }
+            // }
+            // KeyCode::PageDown => {
+            //     if !self.show_tables {
+            //         let new_index = self.selected_chain_index + visible_height;
+            //         if new_index < self.chains.len() {
+            //             self.selected_chain_index = new_index;
+            //         } else {
+            //             self.selected_chain_index = self.chains.len() - 1;
+            //         }
+            //         if self.selected_chain_index >= self.scroll_offset + visible_height {
+            //             self.scroll_offset = self.selected_chain_index - visible_height + 1;
+            //         }
+            //     }
+            // }
             KeyCode::Tab => {
                 self.current_tab = (self.current_tab + 1) % 3;
             }
@@ -1088,6 +1088,18 @@ impl App {
                 self.sql_input = self.generate_initial_manuscript();
                 self.sql_cursor_position = self.sql_input.len();
                 self.current_tab = 1;
+            }
+            KeyCode::PageUp => {
+                if self.setup_state == SetupState::Complete {
+                    self.vertical_scroll = self.vertical_scroll.saturating_sub(1);
+                    self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
+                }
+            }
+            KeyCode::PageDown | KeyCode::Char('j') => {
+                if self.setup_state == SetupState::Complete {
+                    self.vertical_scroll = self.vertical_scroll.saturating_add(1);
+                    self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
+                }
             }
             _ => {}
         }

@@ -856,11 +856,27 @@ fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
         if app.setup_state == SetupState::Complete {
             // When complete, use the full console area for the message
             let inner_area = console_block.inner(console_area);
+            
+            // Update scrollbar state with content length
+            if let Some(result) = &app.debug_result {
+                let content_length = result.lines().count();
+                app.vertical_scroll_state = app.vertical_scroll_state.content_length(content_length);
+            }
+            
             let paragraph_msg = Paragraph::new(app.get_setup_progress_msg())
                 .gray()
                 .block(Block::default().padding(Padding::horizontal(4)))
                 .scroll((app.vertical_scroll as u16, 0));
             frame.render_widget(paragraph_msg, inner_area);
+            
+            // Render the scrollbar
+            frame.render_stateful_widget(
+                Scrollbar::new(ScrollbarOrientation::VerticalRight)
+                    .begin_symbol(Some("↑"))
+                    .end_symbol(Some("↓")),
+                inner_area,
+                &mut app.vertical_scroll_state,
+            );
         } else {
             // During setup, use the original divided layout
             let inner_area = console_block.inner(console_area);

@@ -69,7 +69,7 @@ impl PreRun {
         }
         let results = self.wait_for_results(&session_handle, &operation_handle).await?;
 
-        Ok(format!("Setup completed successfully. Results:\n{}", results))
+        Ok(format!("Setup completed successfully. Results(PageUp↑/Down↓ to scroll): \n{}", results))
     }
 
     async fn submit_sql_task(&self, sql: Option<&str>) -> Result<(String, String), String> {
