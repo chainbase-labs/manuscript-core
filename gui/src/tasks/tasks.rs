@@ -548,14 +548,33 @@ impl JobManager {
 
         let sql = sql.trim();
 
+        // Parse SQL to extract fields
+        let mut fields = Vec::new();
+        if let Some(select_pos) = sql.to_lowercase().find("select") {
+            if let Some(from_pos) = sql[select_pos..].to_lowercase().find("from") {
+                let fields_str = &sql[select_pos + 6..select_pos + from_pos].trim();
+                if *fields_str != "*" {
+                    fields = fields_str.split(',')
+                        .map(|f| f.trim().to_string())
+                        .collect();
+                }
+            }
+        }
+
         // Check if SQL already contains the full dataset name (including schema)
         let sql = if sql.contains(dataset) {
-            format!("select * from ({}) limit 10", sql)
+            if fields.is_empty() {
+                format!("select * from ({}) limit 10", sql)
+            } else {
+                format!("select {} from ({}) limit 10", fields.join(", "), sql)
+            }
         } else {
-            // Use the full dataset name which includes schema
-            format!("select * from {} limit 10", dataset)
+            if fields.is_empty() {
+                format!("select * from {} limit 10", dataset)
+            } else {
+                format!("select {} from {} limit 10", fields.join(", "), dataset)
+            }
         };
-
         Ok(sql)
     }
 
