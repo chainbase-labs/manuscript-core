@@ -5,4 +5,3 @@ pub mod ui;
 pub mod prerun;
 pub mod tasks;
 pub mod logger;
-pub mod api;

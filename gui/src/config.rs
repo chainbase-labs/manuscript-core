@@ -2,66 +2,6 @@ use config::{Config, ConfigError, File, FileFormat};
 use serde::Deserialize;
 use lazy_static::lazy_static;
 use std::path::Path;
-// src/config.rs
-use std::collections::HashMap;
-
-#[derive(Debug, Deserialize)]
-pub struct ManuscriptConfigs {
-    pub base_dir: String,
-    pub system_info: String,
-    pub manuscripts: Vec<Manuscript>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Manuscript {
-    pub base_dir: String,
-    pub name: String,
-    pub spec_version: String,
-    pub parallelism: i32,
-    pub sources: Vec<Source>,
-    pub transforms: Vec<Transform>,
-    pub sinks: Vec<Sink>,
-    pub chain: String,
-    pub table: String,
-    pub database: String,
-    pub query: String,
-    pub sink: String,
-    pub port: i32,
-    pub db_port: i32,
-    pub db_user: String,
-    pub db_password: String,
-    pub graphql_image: String,
-    pub graphql_port: i32,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Source {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub type_: String,
-    pub dataset: String,
-    pub filter: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Transform {
-    pub name: String,
-    pub sql: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Sink {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub type_: String,
-    pub from: String,
-    pub database: String,
-    pub schema: String,
-    pub table: String,
-    #[serde(rename = "primary_key")]
-    pub primary_key: String,
-    pub config: HashMap<String, String>,
-}
 
 #[derive(Debug, Deserialize)]
 pub struct ApiConfig {
@@ -132,19 +72,6 @@ impl Settings {
         builder.build()?.try_deserialize()
     }
 
-    /// Returns the full API URL for fetching blockchain network chains.
-    ///
-    /// This function attempts to construct the URL from application settings.
-    /// If the settings fail to load, it returns a default hardcoded URL instead.
-    ///
-    /// # Returns
-    /// A `String` containing the full API endpoint for chain metadata.
-    ///
-    /// # Example
-    /// ```
-    /// let url = get_chains_url();
-    /// println!("{}", url); // e.g. "https://api.chainbase.com/api/v1/metadata/network_chains"
-    /// ```
     pub fn get_chains_url() -> String {
         match &*SETTINGS {
             Ok(settings) => format!("{}{}", settings.api.base_url, settings.api.endpoints.chains),

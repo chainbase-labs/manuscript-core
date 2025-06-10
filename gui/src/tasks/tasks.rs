@@ -1,33 +1,10 @@
-use super::docker::{
-    DOCKER_COMPOSE_TEMPLATE, DOCKER_COMPOSE_TEMPLATE_SOLANA, JOB_CONFIG_TEMPLATE,
-    MANUSCRIPT_TEMPLATE, MANUSCRIPT_TEMPLATE_SOLANA,
-};
-use crate::api;
-use crate::config::{Manuscript, ManuscriptConfigs, Settings};
-use serde::Deserialize;
-use serde_json::Value;
-use std::collections::HashSet;
-use std::{io, process::Command};
+use std::{process::Command, io};
+use webbrowser;
 use tokio::sync::mpsc;
 use tokio::time::Duration;
-use webbrowser;
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct JobStatusRaw {
-    #[serde(rename = "Name")]
-    pub name: String,
-    #[serde(rename = "Status")]
-    pub status: String,
-    #[serde(rename = "ContainerStatus")]
-    pub container_status: Vec<ContainerStatus>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct JobsStatuses {
-    #[serde(rename = "jobs")]
-    pub jobs: Vec<JobStatusRaw>,
-}
-
+use super::docker::{DOCKER_COMPOSE_TEMPLATE, DOCKER_COMPOSE_TEMPLATE_SOLANA, JOB_CONFIG_TEMPLATE, MANUSCRIPT_TEMPLATE, MANUSCRIPT_TEMPLATE_SOLANA};
+use crate::config::Settings;
+use std::collections::HashSet;
 #[derive(Debug, Clone)]
 pub struct JobManager;
 
@@ -38,13 +15,10 @@ pub struct JobStatus {
     pub containers: Vec<ContainerStatus>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ContainerStatus {
-    #[serde(rename = "Name")]
     pub name: String,
-    #[serde(rename = "State")]
     pub state: String,
-    #[serde(rename = "Status")]
     pub status: String,
 }
 
@@ -56,11 +30,6 @@ pub enum JobState {
     NotStarted,
     PullingImage,
     Creating,
-    Exited,
-    Dead,
-    Paused,
-    PartiallyRunning,
-    Unknown,
 }
 
 #[derive(Debug)]
@@ -137,148 +106,69 @@ impl JobManager {
             "edit" => {
                 let yaml_content = std::fs::read_to_string(job_dir.join("manuscript.yaml"))?;
                 Ok(Some(yaml_content))
-            }
+            },
             "logs" => {
-                let output = Command::new("docker").args(["compose", "logs"]).output()?;
-
+                let output = Command::new("docker")
+                    .args(["compose", "logs"])
+                    .output()?;
+                
                 if output.status.success() {
                     Ok(Some(String::from_utf8_lossy(&output.stdout).to_string()))
                 } else {
-                    Ok(Some(format!(
-                        "Error: {}",
-                        String::from_utf8_lossy(&output.stderr)
-                    )))
+                    Ok(Some(format!("Error: {}", String::from_utf8_lossy(&output.stderr))))
                 }
-            }
+            },
             "graphql" => {
                 self.handle_graphql_action(job_name, &home_dir).await?;
                 Ok(None)
-            }
+            },
             "delete" => {
                 // First, stop containers
-                // eprintln!("Starting to down docker containers...");
-                let docker_down_result = Command::new("docker").args(["compose", "down"]).output();
-                match docker_down_result {
-                    Ok(output) => {
-                        if !output.status.success() {
-                            eprintln!(
-                                "docker-compose down failed: {}",
-                                String::from_utf8_lossy(&output.stderr)
-                            );
-                            return Err(io::Error::new(io::ErrorKind::Other, "Docker down failed"));
-                        }
-                        // eprintln!("Docker containers stopped successfully.");
-                    }
-                    Err(_) => {
-                        eprintln!("Docker not found. Skipping docker-compose down.");
-                    }
-                }
+                Command::new("docker")
+                    .args(["compose", "down"])
+                    .output()?;
 
                 // Delete job directory
-                // eprintln!("Starting to remove job directory: {:?}", job_dir);
-                if let Err(e) = std::fs::remove_dir_all(&job_dir) {
-                    // eprintln!("Failed to remove job directory: {}", e);
-                } else {
-                    // eprintln!("Job directory removed successfully.");
-                }
+                std::fs::remove_dir_all(&job_dir)?;
 
                 // Remove job configuration from .manuscript_config.ini
                 let config_path = home_dir.join(".manuscript_config.ini");
-                // eprintln!(
-                //     "Starting to remove job configuration from: {:?}",
-                //     config_path
-                // );
                 if config_path.exists() {
                     let content = std::fs::read_to_string(&config_path)?;
                     let mut lines: Vec<String> = Vec::new();
                     let mut skip_section = false;
-                    let mut found_section = false;
 
                     for line in content.lines() {
                         if line.starts_with('[') && line.ends_with(']') {
-                            skip_section = &line[1..line.len() - 1] == job_name;
-                            if skip_section {
-                                found_section = true;
-                            }
+                            skip_section = &line[1..line.len()-1] == job_name;
                         }
                         if !skip_section {
                             lines.push(line.to_string());
                         }
                     }
 
-                    if found_section {
-                        std::fs::write(&config_path, lines.join("\n"))?;
-                        // eprintln!("Job configuration removed successfully.");
-                    } else {
-                        // eprintln!("No configuration section found for job: {}", job_name);
-                    }
-                } else {
-                    // eprintln!("Configuration file not found: {:?}", config_path);
+                    std::fs::write(config_path, lines.join("\n"))?;
                 }
 
                 Ok(None)
-            }
+            },
             "start" => {
-                // eprintln!("Starting to bring up docker containers...");
                 Command::new("docker")
                     .args(["compose", "up", "-d"])
                     .output()?;
                 Ok(None)
-            }
+            },
             "stop" => {
-                // eprintln!("Starting to down docker containers...");
-                let docker_down_result = Command::new("docker").args(["compose", "down"]).output();
-                match docker_down_result {
-                    Ok(output) => {
-                        if !output.status.success() {
-                            eprintln!(
-                                "docker-compose down failed: {}",
-                                String::from_utf8_lossy(&output.stderr)
-                            );
-                            return Err(io::Error::new(io::ErrorKind::Other, "Docker down failed"));
-                        }
-                        // eprintln!("Docker containers stopped successfully.");
-                    }
-                    Err(_) => {
-                        // eprintln!("Docker not found. Skipping docker-compose down.");
-                    }
-                }
-                Ok(None)
-            }
-            "restart" => {
-                // eprintln!("Starting to down docker containers...");
-                let docker_down_result = Command::new("docker").args(["compose", "down"]).output();
-                match docker_down_result {
-                    Ok(output) => {
-                        if !output.status.success() {
-                            eprintln!(
-                                "docker-compose down failed: {}",
-                                String::from_utf8_lossy(&output.stderr)
-                            );
-                            return Err(io::Error::new(io::ErrorKind::Other, "Docker down failed"));
-                        }
-                        // eprintln!("Docker containers stopped successfully.");
-                    }
-                    Err(_) => {
-                        // eprintln!("Docker not found. Skipping docker-compose down.");
-                    }
-                }
-
-                // eprintln!("Starting to bring up docker containers...");
                 Command::new("docker")
-                    .args(["compose", "up", "-d"])
+                    .args(["compose", "down"])
                     .output()?;
                 Ok(None)
             }
-            _ => Ok(None),
+            _ => Ok(None)
         }
     }
 
-    async fn handle_graphql_action(
-        &self,
-        job_name: &str,
-        home_dir: &std::path::Path,
-    ) -> io::Result<()> {
+    async fn handle_graphql_action(&self, job_name: &str, home_dir: &std::path::Path) -> io::Result<()> {
         let content = std::fs::read_to_string(home_dir.join(".manuscript_config.ini"))?;
         let mut current_section = "";
         let mut port = None;
@@ -287,12 +177,12 @@ impl JobManager {
 
         for line in content.lines() {
             let line = line.trim();
-
+            
             if line.starts_with("[") && line.ends_with("]") {
-                current_section = &line[1..line.len() - 1];
+                current_section = &line[1..line.len()-1];
                 continue;
             }
-
+            
             if current_section == job_name {
                 if line.starts_with("graphqlPort") {
                     if let Some(val) = line.split('=').nth(1) {
@@ -314,12 +204,12 @@ impl JobManager {
 
         if let (Some(port), Some(table), Some(chain)) = (port, table, chain) {
             let url = format!("http://127.0.0.1:{}", port);
-
+            
             // TODO: The data here needs to be upgraded to automatically obtain from the protocol.
             let payload = if chain == "solana" {
                 serde_json::json!({
                     "type": "bulk",
-                    "source": "default",
+                    "source": "default", 
                     "resource_version": 1,
                     "args": [{
                         "type": "postgres_track_tables",
@@ -395,8 +285,7 @@ impl JobManager {
             };
 
             let client = reqwest::Client::new();
-            let response = client
-                .post(format!("{}/v1/metadata", url))
+            let response = client.post(format!("{}/v1/metadata", url))
                 .json(&payload)
                 .send()
                 .await
@@ -410,17 +299,13 @@ impl JobManager {
         Ok(())
     }
 
-    pub async fn create_config_file(
-        &self,
-        yaml_content: &str,
-        tx: mpsc::Sender<JobsUpdate>,
-    ) -> io::Result<()> {
+    pub async fn create_config_file(&self, yaml_content: &str, tx: mpsc::Sender<JobsUpdate>) -> io::Result<()> {
         let home_dir = dirs::home_dir()
             .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found"))?;
-
+        
         let config = self.parse_manuscript_yaml(yaml_content)?;
         let config_path = home_dir.join(".manuscript_config.ini");
-
+        
         // Read existing config if it exists
         let existing_content = if config_path.exists() {
             std::fs::read_to_string(&config_path)?
@@ -443,7 +328,7 @@ impl JobManager {
         // Create manuscript directory
         let manuscript_dir = home_dir.join("manuscripts");
         std::fs::create_dir_all(&manuscript_dir)?;
-
+        
         // Create job directory inside manuscript
         let job_dir = manuscript_dir.join(&config.name);
         std::fs::create_dir_all(&job_dir)?;
@@ -456,21 +341,24 @@ impl JobManager {
         let mut job_section_start = None;
         let mut job_section_end = None;
         let mut current_section = String::new();
-
+        
         for (i, line) in lines.iter().enumerate() {
             if line.starts_with('[') && line.ends_with(']') {
                 if !current_section.is_empty() && job_section_start.is_some() {
                     job_section_end = Some(i);
                 }
-                current_section = line[1..line.len() - 1].to_string();
+                current_section = line[1..line.len()-1].to_string();
                 if current_section == config.name {
                     job_section_start = Some(i);
                 }
             }
         }
 
-        let job_port = self.get_available_port(18080, 18090).unwrap_or(18080);
 
+        let job_port = self.get_available_port(18080, 18090)
+        .unwrap_or(18080);
+
+        
         // Create new job config content
         let new_job_config = JOB_CONFIG_TEMPLATE
             .replace("{name}", &config.name)
@@ -482,7 +370,7 @@ impl JobManager {
             .replace("{graphql_port}", &config.graphql_port.to_string())
             .replace("{table}", &config.source.table)
             .replace("{database}", &config.sink.database)
-            .replace("{query}", &config.transform.sql.replace('\n', " ").replace('\r', " "))
+            .replace("{query}", &config.transform.sql)
             .replace("{sink_type}", &config.sink.sink_type)
             .replace("{db_port}", &config.db_port.to_string())
             .replace("{db_user}", &config.sink.config.username)
@@ -508,13 +396,11 @@ impl JobManager {
         // Create and start docker-compose with the correct name
         self.create_docker_compose(&job_dir, &config)?;
 
-        let _ = tx
-            .send(JobsUpdate::Status(vec![JobStatus {
-                name: config.name,
-                status: JobState::Creating,
-                containers: Vec::new(),
-            }]))
-            .await;
+        let _ = tx.send(JobsUpdate::Status(vec![JobStatus {
+            name: config.name,
+            status: JobState::Creating,
+            containers: Vec::new(),
+        }])).await;
 
         self.start_docker_compose(&job_dir)?;
         // thread::sleep(Duration::from_secs(10));
@@ -522,18 +408,13 @@ impl JobManager {
         Ok(())
     }
 
-    fn create_docker_compose(
-        &self,
-        job_dir: &std::path::Path,
-        config: &ManuscriptConfig,
-    ) -> io::Result<()> {
+    fn create_docker_compose(&self, job_dir: &std::path::Path, config: &ManuscriptConfig) -> io::Result<()> {
         let (mut job_manager_image, hasura_image) = Settings::get_docker_images();
 
         // TODO: solana support needs change the job_manager image
         // Solana compatible with future needs to migrate to the refactored protocol.
         if config.source.chain == "solana" {
-            job_manager_image =
-                "repository.chainbase.com/manuscript-node/manuscript-solana:latest".to_string();
+            job_manager_image = "repository.chainbase.com/manuscript-node/manuscript-solana:latest".to_string();
         }
 
         let template = if config.source.chain == "solana" {
@@ -541,7 +422,7 @@ impl JobManager {
         } else {
             DOCKER_COMPOSE_TEMPLATE
         };
-
+        
         let docker_compose_content = template
             .replace("{name}", &config.name)
             .replace("{job_manager_image}", &job_manager_image)
@@ -570,7 +451,7 @@ impl JobManager {
                 format!(
                     "Failed to start docker compose: {}",
                     String::from_utf8_lossy(&output.stderr)
-                ),
+                )
             ));
         }
 
@@ -578,56 +459,46 @@ impl JobManager {
     }
 
     fn parse_manuscript_yaml(&self, yaml_content: &str) -> Result<ManuscriptConfig, io::Error> {
-        let yaml: serde_yaml::Value = serde_yaml::from_str(yaml_content).map_err(|e| {
-            io::Error::new(io::ErrorKind::Other, format!("Failed to parse YAML: {}", e))
-        })?;
+        let yaml: serde_yaml::Value = serde_yaml::from_str(yaml_content)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to parse YAML: {}", e)))?;
 
         // Parse source configuration
         let source = yaml["sources"]
             .as_sequence()
             .and_then(|sources| sources.first())
-            .ok_or_else(|| {
-                io::Error::new(io::ErrorKind::InvalidData, "No source configuration found")
-            })?;
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "No source configuration found"))?;
 
         let dataset = source["dataset"]
             .as_str()
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Dataset not found"))?;
-
+        
         let parts: Vec<&str> = dataset.split('.').collect();
         if parts.len() != 2 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "Invalid dataset format",
-            ));
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid dataset format"));
         }
 
         // Parse transform configuration
         let transform = yaml["transforms"]
             .as_sequence()
             .and_then(|transforms| transforms.first())
-            .ok_or_else(|| {
-                io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "No transform configuration found",
-                )
-            })?;
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "No transform configuration found"))?;
 
         // Parse sink configuration
         let sink = yaml["sinks"]
             .as_sequence()
             .and_then(|sinks| sinks.first())
-            .ok_or_else(|| {
-                io::Error::new(io::ErrorKind::InvalidData, "No sink configuration found")
-            })?;
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "No sink configuration found"))?;
 
         let config = ManuscriptConfig {
             name: yaml["name"].as_str().unwrap_or("demo").to_string(),
             spec_version: yaml["specVersion"].as_str().unwrap_or("v1.0.0").to_string(),
             parallelism: yaml["parallelism"].as_u64().unwrap_or(1),
-            db_port: self.get_available_port(15432, 15439).unwrap_or(15432),
-            graphql_port: self.get_available_port(19080, 19090).unwrap_or(19080),
-            job_port: self.get_available_port(18080, 18090).unwrap_or(18080),
+            db_port: self.get_available_port(15432, 15439)
+                .unwrap_or(15432),
+            graphql_port: self.get_available_port(19080, 19090)
+                .unwrap_or(19080),
+            job_port: self.get_available_port(18080, 18090)
+                .unwrap_or(18080),
             source: SourceConfig {
                 name: source["name"].as_str().unwrap_or("").to_string(),
                 dataset_type: source["type"].as_str().unwrap_or("dataset").to_string(),
@@ -648,19 +519,10 @@ impl JobManager {
                 table: sink["table"].as_str().unwrap_or("").to_string(),
                 primary_key: sink["primary_key"].as_str().unwrap_or("").to_string(),
                 config: DatabaseConfig {
-                    host: sink["config"]["host"]
-                        .as_str()
-                        .unwrap_or("postgres")
-                        .to_string(),
+                    host: sink["config"]["host"].as_str().unwrap_or("postgres").to_string(),
                     port: sink["config"]["port"].as_u64().unwrap_or(5432) as u16,
-                    username: sink["config"]["username"]
-                        .as_str()
-                        .unwrap_or("postgres")
-                        .to_string(),
-                    password: sink["config"]["password"]
-                        .as_str()
-                        .unwrap_or("postgres")
-                        .to_string(),
+                    username: sink["config"]["username"].as_str().unwrap_or("postgres").to_string(),
+                    password: sink["config"]["password"].as_str().unwrap_or("postgres").to_string(),
                 },
             },
         };
@@ -686,84 +548,137 @@ impl JobManager {
 
         let sql = sql.trim();
 
+        // Parse SQL to extract fields
+        let mut fields = Vec::new();
+        if let Some(select_pos) = sql.to_lowercase().find("select") {
+            if let Some(from_pos) = sql[select_pos..].to_lowercase().find(" from ") {
+                let fields_str = &sql[select_pos + 6..select_pos + from_pos].trim();
+                if *fields_str != "*" {
+                    fields = fields_str.split(',')
+                        .map(|f| f.trim().to_string())
+                        .collect();
+                }
+            }
+        }
+
         // Check if SQL already contains the full dataset name (including schema)
         let sql = if sql.contains(dataset) {
-            format!("select * from ({}) limit 10", sql)
+            if fields.is_empty() {
+                format!("select * from ({}) limit 10", sql)
+            } else {
+                format!("select {} from ({}) limit 10", fields.join(", "), sql)
+            }
         } else {
-            // Use the full dataset name which includes schema
-            format!("select * from {} limit 10", dataset)
+            if fields.is_empty() {
+                format!("select * from {} limit 10", dataset)
+            } else {
+                format!("select {} from {} limit 10", fields.join(", "), dataset)
+            }
         };
-
         Ok(sql)
-    }
-    fn map_status_to_state(status: &str) -> JobState {
-        match status.to_lowercase().as_str() {
-            "running" => JobState::Running,
-            "created" => JobState::NotStarted,
-            "pending" => JobState::Pending,
-            "failed" => JobState::Failed,
-            "pulling" | "pullingimage" => JobState::PullingImage,
-            "creating" => JobState::Creating,
-            "exited" => JobState::Exited,
-            "dead" => JobState::Dead,
-            "paused" => JobState::Paused,
-            ""=>JobState::PartiallyRunning,
-            _ => JobState::Pending, // 默认未知状态为 pending
-        }
     }
 
     async fn check_jobs_status() -> Result<Vec<JobStatus>, std::io::Error> {
-        let home_dir = dirs::home_dir().ok_or_else(|| {
-            std::io::Error::new(std::io::ErrorKind::NotFound, "Home directory not found")
-        })?;
-
+        let home_dir = dirs::home_dir()
+            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "Home directory not found"))?;
+        
         let config_path = home_dir.join(".manuscript_config.ini");
         if !config_path.exists() {
             return Ok(Vec::new());
         }
 
-        let json_val: Value = api::list_job_statuses(config_path.to_str().ok_or_else(|| {
-            std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid config path")
-        })?)
-            .await
-            .map_err(|e| {
-                eprintln!("[ERROR] list_job_statuses failed: {}", e);
-                std::io::Error::new(std::io::ErrorKind::Other, e)
-            })?;
-        let jobs_statuses: JobsStatuses = match serde_json::from_value(json_val.clone()) {
-            Ok(parsed) => parsed,
-            Err(e) => {
-                eprintln!("[ERROR] Failed to parse jobs_statuses: {}", e);
-                eprintln!("[DEBUG] Raw JSON value:\n{}", json_val);
-                return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, e));
-            }
-        };
-        let map_status_to_state = |status: &str| -> JobState {
-            match status.to_lowercase().as_str() {
-                "not_started"=>JobState::NotStarted,
-                "running" => JobState::Running,
-                "created" => JobState::Creating,
-                "pending" => JobState::Pending,
-                "failed" => JobState::Failed,
-                "pulling" | "pullingimage" => JobState::PullingImage,
-                "exited" => JobState::Exited,
-                "dead" => JobState::Dead,
-                "paused" => JobState::Paused,
-                "partially_running" => JobState::PartiallyRunning,
-                "unknown" => JobState::Unknown,
-                _ => JobState::Pending,
-            }
-        };
+        let config_content = std::fs::read_to_string(config_path)?;
+        let mut jobs = Vec::new();
+        let mut current_section = String::new();
+        let mut current_job_base_dir = String::new();
+        let mut current_job_name = String::new();
 
-        let jobs = jobs_statuses
-            .jobs
-            .into_iter()
-            .map(|raw_job| JobStatus {
-                name: raw_job.name,
-                status: map_status_to_state(&raw_job.status),
-                containers: raw_job.container_status,
-            })
-            .collect();
+        // Parse INI file to get all jobs in order
+        for line in config_content.lines() {
+            let line = line.trim();
+            
+            if line.starts_with('[') && line.ends_with(']') {
+                // New section
+                current_section = line[1..line.len()-1].to_string();
+                continue;
+            }
+
+            if !current_section.is_empty() {
+                if line.starts_with("baseDir") {
+                    if let Some(dir) = line.split('=').nth(1) {
+                        current_job_base_dir = dir.trim().to_string();
+                    }
+                } else if line.starts_with("name") {
+                    if let Some(name) = line.split('=').nth(1) {
+                        current_job_name = name.trim().to_string();
+                    }
+                }
+
+                // If we have both baseDir and name, we can check the job status
+                if !current_job_base_dir.is_empty() && !current_job_name.is_empty() {
+                    let job_dir = std::path::Path::new(&current_job_base_dir)
+                        .join(&current_job_name);
+
+                    // Change into the job's directory
+                    if let Ok(_) = std::env::set_current_dir(&job_dir) {
+                        // Check docker compose status
+                        if let Ok(output) = Command::new("docker")
+                            .args(["compose", "ps", "-a", "--format", "json"])
+                            .output()
+                        {
+                            if output.status.success() {
+                                let output_str = String::from_utf8_lossy(&output.stdout);
+                                let mut containers = Vec::new();
+                                let mut all_running = true;
+                                let mut has_containers = false;
+
+                                for line in output_str.lines() {
+                                    if let Ok(container) = serde_json::from_str::<serde_json::Value>(line) {
+                                        has_containers = true;
+                                        let name = container["Name"].as_str().unwrap_or("").to_string();
+                                        let state = container["State"].as_str().unwrap_or("").to_string();
+                                        let status = container["RunningFor"].as_str().unwrap_or("").to_string();
+
+                                        let status = if !status.is_empty() {
+                                            format!("({})", status)
+                                        } else {
+                                            status
+                                        };
+                                        if state != "running" {
+                                            all_running = false;
+                                        }
+                                        
+                                        containers.push(ContainerStatus { 
+                                            name, 
+                                            state,
+                                            status 
+                                        });
+                                    }
+                                }
+
+                                let status = if !has_containers {
+                                    JobState::NotStarted
+                                } else if all_running {
+                                    JobState::Running 
+                                } else { 
+                                    JobState::Pending 
+                                };
+
+                                jobs.push(JobStatus {
+                                    name: current_job_name.clone(),
+                                    status,
+                                    containers,
+                                });
+                            }
+                        }
+                    }
+
+                    // Reset for next job
+                    current_job_base_dir.clear();
+                    current_job_name.clear();
+                }
+            }
+        }
 
         Ok(jobs)
     }
@@ -771,10 +686,10 @@ impl JobManager {
     pub async fn jobs_monitor(
         &self,
         mut command_rx: mpsc::Receiver<JobsCommand>,
-        status_tx: mpsc::Sender<JobsUpdate>,
+        status_tx: mpsc::Sender<JobsUpdate>
     ) {
         let mut interval = tokio::time::interval(Duration::from_secs(5));
-
+    
         loop {
             tokio::select! {
                 _ = interval.tick() => {
@@ -794,7 +709,7 @@ impl JobManager {
         let home_dir = dirs::home_dir()
             .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found"))?;
         let config_path = home_dir.join(".manuscript_config.ini");
-
+        
         let mut used_ports = HashSet::new();
         if config_path.exists() {
             let content = std::fs::read_to_string(&config_path)?;
@@ -812,11 +727,10 @@ impl JobManager {
         // Check system ports using lsof command
         if let Ok(output) = Command::new("lsof")
             .args(["-nP", "-iTCP", "-sTCP:LISTEN"])
-            .output()
+            .output() 
         {
             let output_str = String::from_utf8_lossy(&output.stdout);
-            for line in output_str.lines().skip(1) {
-                // Skip header line
+            for line in output_str.lines().skip(1) { // Skip header line
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 if parts.len() >= 9 {
                     if let Some(port_str) = parts[8].split(':').last() {
@@ -837,7 +751,7 @@ impl JobManager {
 
         Err(io::Error::new(
             io::ErrorKind::Other,
-            format!("No available ports in range {}-{}", start, end),
+            format!("No available ports in range {}-{}", start, end)
         ))
     }
 
@@ -849,8 +763,10 @@ impl JobManager {
         };
 
         // Get available ports
-        let db_port = self.get_available_port(15432, 15439).unwrap_or(15432);
-        let graphql_port = self.get_available_port(19080, 19090).unwrap_or(19080);
+        let db_port = self.get_available_port(15432, 15439)
+            .unwrap_or(15432);
+        let graphql_port = self.get_available_port(19080, 19090)
+            .unwrap_or(19080);
 
         // TODO: solana support while moving to the refactored protocol
         let manuscript = if dataset_name == "solana" {
