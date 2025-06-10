@@ -1,24 +1,24 @@
-use crate::config::Settings;
-use crate::prerun::PreRun;
-use crate::tasks::tasks::{JobStatus, JobsCommand, JobsUpdate};
-use crate::tasks::JobManager;
-use crate::ui;
-use aes_gcm::aead::{Aead, KeyInit};
-use aes_gcm::{Aes128Gcm, Key, Nonce};
-use base64;
+use std::{io, collections::HashMap, time::Duration, cell::RefCell};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
-use ratatui::layout::Alignment;
-use ratatui::style::{palette::tailwind, Color, Style};
-use ratatui::symbols::Marker;
-use ratatui::text::{Line, Span, Text};
-use ratatui::widgets::{block::Title, Block, Borders, Padding};
 use ratatui::DefaultTerminal;
-use reqwest;
 use serde::Deserialize;
-use std::process::Command;
-use std::time::Instant;
-use std::{cell::RefCell, collections::HashMap, io, time::Duration};
+use reqwest;
 use tokio::sync::mpsc;
+use ratatui::style::{Style, Color,palette::tailwind};
+use ratatui::text::{Line, Span, Text};
+use ratatui::layout::Alignment;
+use ratatui::widgets::{block::Title,Block,Borders, Padding};
+use std::time::Instant;
+use ratatui::symbols::Marker;
+use crate::ui;
+use crate::prerun::PreRun;
+use crate::config::Settings;
+use crate::tasks::JobManager;
+use crate::tasks::tasks::{JobsCommand, JobsUpdate, JobStatus};
+use aes_gcm::{Aes128Gcm, Key, Nonce};
+use aes_gcm::aead::{Aead, KeyInit};
+use base64;
+use std::process::Command;
 
 #[derive(Debug)]
 pub struct App {
@@ -40,12 +40,12 @@ pub struct App {
     pub sql_error: Option<String>,
     pub sql_columns: Vec<Column>,
     pub sql_data: Vec<Vec<serde_json::Value>>,
-    pub sql_timer: u64,
+    pub sql_timer: u64, 
     pub pre_run: PreRun,
     pub debug_result: Option<String>,
     pub docker_setup_in_progress: bool,
     pub docker_setup_timer: u64,
-    pub setup_progress: f64,
+    pub setup_progress: f64, 
     pub setup_state: SetupState,
     pub state: AppState,
     progress_columns: u16,
@@ -87,11 +87,9 @@ pub struct App {
     pub logs_scroll_position: usize,
     pub show_help: bool,
     pub network_status: NetworkStatus,
-    pub deploy_form: DeployForm,
-    pub selected_deploy_input_option: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone,)]
 struct SinSignal {
     x: f64,
     interval: f64,
@@ -185,7 +183,7 @@ impl Clone for App {
             vertical_scroll: self.vertical_scroll,
             vertical_scroll_state: self.vertical_scroll_state.clone(),
             signal1: self.signal1.clone(),
-            data1: self.data1.clone(),
+            data1: self.data1.clone(),   
             signal2: self.signal2.clone(),
             data2: self.data2.clone(),
             window: self.window.clone(),
@@ -214,8 +212,6 @@ impl Clone for App {
             logs_scroll_position: self.logs_scroll_position,
             show_help: self.show_help,
             network_status: self.network_status.clone(),
-            selected_deploy_input_option: self.selected_deploy_input_option,
-            deploy_form: self.deploy_form.clone(),
         }
     }
 }
@@ -263,7 +259,7 @@ impl IntoIterator for DataDictionary {
 
 #[derive(Clone, Debug)]
 pub enum AppUpdate {
-    SetupResult(String),
+    SteupResult(String),
     SetupProgress(SetupStep, SetupStepStatus),
     SetupComplete,
     SetupFailed(String, SetupStep),
@@ -302,25 +298,18 @@ pub struct NetworkStatus {
     pub thread: String,
 }
 
-#[derive(Debug, Deserialize, Clone, Default)]
-pub struct DeployForm {
-    pub hash: String,
-    pub version: String,
-    pub api_key: String,
-}
-
 impl App {
     pub async fn new() -> Self {
         let (update_sender, update_receiver) = mpsc::channel(32);
         let (jobs_command_tx, jobs_command_rx) = mpsc::channel(32);
         let (jobs_update_tx, mut jobs_update_rx) = mpsc::channel(32);
         let (action_sender, action_receiver) = mpsc::channel(32);
-
+        
         let mut signal1 = SinSignal::new(0.2, 3.0, 18.0);
         let mut signal2 = SinSignal::new(0.1, 2.0, 10.0);
         let data1 = signal1.by_ref().take(200).collect::<Vec<(f64, f64)>>();
         let data2 = signal2.by_ref().take(200).collect::<Vec<(f64, f64)>>();
-
+        
         let (chains, network_status) = match App::fetch_chains().await {
             Ok(data) => data,
             Err(e) => {
@@ -330,19 +319,19 @@ impl App {
         };
 
         let job_manager = JobManager::new();
-
+        
         // Create a clone of job_manager for the monitor task
         let monitor_job_manager = job_manager.clone();
         let tx1 = jobs_update_tx.clone();
         let tx2 = jobs_update_tx.clone();
-
+        
         // Start the jobs monitor in a separate task
         tokio::spawn(async move {
             monitor_job_manager.jobs_monitor(jobs_command_rx, tx1).await;
         });
 
         let job_options = vec!["edit", "logs", "start", "stop", "graphql", "delete"];
-
+        
         let mut pre_run = PreRun::new();
         let (un, pw) = App::fetch_and_decrypt_credentials().await;
         pre_run.set_auth(un, pw);
@@ -384,7 +373,7 @@ impl App {
             vertical_scroll: 0,
             vertical_scroll_state: ratatui::widgets::ScrollbarState::default(),
             signal1: signal1,
-            data1: data1,
+            data1: data1,   
             signal2: signal2,
             data2: data2,
             window: [0.0, 20.0],
@@ -416,8 +405,6 @@ impl App {
             logs_scroll_position: 0,
             show_help: false,
             network_status,
-            selected_deploy_input_option: 1,
-            deploy_form: DeployForm::default(),
         };
 
         app
@@ -428,16 +415,15 @@ impl App {
 
         match reqwest::get(url).await?.json::<Response>().await {
             Ok(response) => {
-                let chains = response
-                    .graphData
-                    .into_iter()
+                let chains = response.graphData.into_iter()
                     .map(|graph_data| {
-                        let mut tables: Vec<(String, Vec<DataDictionaryItem>)> =
-                            graph_data.chain.dataDictionary.into_iter().collect();
+                        let mut tables: Vec<(String, Vec<DataDictionaryItem>)> = graph_data.chain.dataDictionary
+                            .into_iter()
+                            .collect();
                         tables.sort_by(|a, b| a.0.cmp(&b.0));
-
+                        
                         let time_ago = Self::calculate_time_diff(&graph_data.chain.lastUpdate);
-
+                        
                         Chain {
                             name: graph_data.chain.name,
                             ticker: graph_data.chain.ticker,
@@ -465,7 +451,7 @@ impl App {
         if let Ok(time) = chrono::DateTime::parse_from_rfc3339(time_str) {
             let now = chrono::Utc::now();
             let duration = now.signed_duration_since(time);
-
+            
             if duration.num_hours() > 24 {
                 format!("{} days", duration.num_days())
             } else if duration.num_hours() > 0 {
@@ -478,33 +464,14 @@ impl App {
         }
     }
 
-    /// Runs the main application loop, handling UI rendering, keyboard input,
-    /// asynchronous updates, and timed tasks.
-    ///
-    /// This method continuously runs until the `exit` flag is set to `true`.
-    /// It performs the following tasks in each iteration:
-    /// - Renders the current UI using the provided terminal
-    /// - Updates the setup timer and triggers updates if Docker setup is in progress
-    /// - Polls for and handles keyboard input events
-    /// - Listens to messages from `update_receiver` for setup progress, results, or errors
-    /// - Handles user actions like editing SQL or viewing logs from `action_receiver`
-    /// - Triggers periodic tick updates based on a fixed interval
-    ///
-    /// # Arguments
-    ///
-    /// * `terminal` - A mutable reference to the terminal used for rendering the UI
-    ///
-    /// # Returns
-    ///
-    /// * `io::Result<()>` - Returns `Ok(())` if the loop exits without error, or an `io::Error` if a terminal operation fails
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
         let tick_rate = Duration::from_millis(150);
         let mut last_tick = Instant::now();
         while !self.exit {
             let visible_height = terminal.size()?.height as usize - 2;
-
+            
             terminal.draw(|frame| ui::draw(frame, self))?;
-
+            
             // Update timer if Docker setup is in progress
             if self.state == AppState::Started {
                 self.docker_setup_timer = self.docker_setup_timer.saturating_add(1);
@@ -522,20 +489,18 @@ impl App {
             if let Some(receiver) = &mut self.update_receiver {
                 match receiver.try_recv() {
                     Ok(update) => match update {
-                        AppUpdate::SetupResult(msg) => {
+                        AppUpdate::SteupResult(msg) => {
                             self.debug_result = Some(msg);
-                        }
+                        },
                         AppUpdate::SetupProgress(step, status) => {
                             self.current_setup_step = Some(step.clone());
                             self.setup_state = match status {
                                 SetupStepStatus::Pending => SetupState::NotStarted,
                                 SetupStepStatus::InProgress => SetupState::InProgress,
                                 SetupStepStatus::Complete => SetupState::Complete,
-                                SetupStepStatus::Failed => {
-                                    SetupState::Failed(format!("Step {} failed", step.as_str()))
-                                }
+                                SetupStepStatus::Failed => SetupState::Failed(format!("Step {} failed", step.as_str())),
                             };
-                        }
+                        },
                         AppUpdate::SetupComplete => {
                             self.state = AppState::Running;
                             self.setup_state = SetupState::Complete;
@@ -543,7 +508,7 @@ impl App {
                             self.progress1 = 0.0;
                             self.docker_setup_in_progress = false;
                             self.current_setup_step = None;
-                        }
+                        },
                         AppUpdate::SetupFailed(error, step) => {
                             self.debug_result = Some(format!("Error: {}", error));
                             self.state = AppState::Running;
@@ -554,7 +519,7 @@ impl App {
                             self.current_setup_step = Some(step);
                         }
                     },
-                    Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {}
+                    Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {},
                     Err(_) => {
                         self.debug_result = Some("Channel closed".to_string());
                     }
@@ -563,18 +528,20 @@ impl App {
 
             if let Some(receiver) = &mut self.action_receiver {
                 match receiver.try_recv() {
-                    Ok((action, content)) => match action.as_str() {
-                        "edit" => {
-                            self.saved_manuscript = Some(content.clone());
-                            self.show_sql_window = true;
-                            self.sql_input = content;
-                            self.sql_cursor_position = self.sql_input.len();
+                    Ok((action, content)) => {
+                        match action.as_str() {
+                            "edit" => {
+                                self.saved_manuscript = Some(content.clone());
+                                self.show_sql_window = true;
+                                self.sql_input = content;
+                                self.sql_cursor_position = self.sql_input.len();
+                            }
+                            "logs" => {
+                                self.job_logs = Some(content);
+                            }
+                            _ => {}
                         }
-                        "logs" => {
-                            self.job_logs = Some(content);
-                        }
-                        _ => {}
-                    },
+                    }
                     Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {}
                     Err(_) => {}
                 }
@@ -608,9 +575,8 @@ impl App {
         }
 
         let total_duration = 300;
-        self.progress1 =
-            (self.docker_setup_timer as f64 * 100.0 / total_duration as f64).min(100.0);
-
+        self.progress1 = (self.docker_setup_timer as f64 * 100.0 / total_duration as f64).min(100.0);
+        
         if self.progress1 >= 100.0 {
             self.state = AppState::Running;
             self.docker_setup_timer = 0;
@@ -625,21 +591,18 @@ impl App {
             }
 
             if let Some(table_index) = self.selected_table_index {
-                let table_name = selected_chain
-                    .dataDictionary
+                let table_name = selected_chain.dataDictionary
                     .get(table_index)
                     .map(|(name, _)| name.as_str());
 
                 if let Some(table_name) = table_name {
                     if let Some(examples) = &selected_chain.example {
                         if let Some(example_data) = examples.get(table_name) {
-                            let columns = selected_chain
-                                .dataDictionary
+                            let columns = selected_chain.dataDictionary
                                 .iter()
                                 .find(|(name, _)| name == table_name)
                                 .map(|(_, items)| {
-                                    items
-                                        .iter()
+                                    items.iter()
                                         .map(|item| Column {
                                             name: item.name.clone(),
                                             type_: item.dataType.clone(),
@@ -693,17 +656,16 @@ impl App {
                             self.show_deploy_options = false;
                             return;
                         }
-
+                        
                         if let Some(yaml_content) = &self.saved_manuscript {
                             let yaml_content = yaml_content.clone();
                             let job_manager = self.job_manager.clone();
 
+
                             match self.jobs_monitor_sender.clone() {
                                 Some(tx) => {
                                     tokio::spawn(async move {
-                                        if let Err(e) =
-                                            job_manager.create_config_file(&yaml_content, tx).await
-                                        {
+                                        if let Err(e) = job_manager.create_config_file(&yaml_content, tx).await {
                                             eprintln!("Failed to create config file: {}", e);
                                         }
                                     });
@@ -713,7 +675,6 @@ impl App {
                                 }
                             }
                         }
-                    } else if self.selected_deploy_option == 1 {
                     }
                     self.show_deploy_options = false;
                 }
@@ -799,9 +760,7 @@ impl App {
                     let before_cursor = &self.sql_input[..self.sql_cursor_position];
                     if let Some(current_line_start) = before_cursor.rfind('\n') {
                         // Get the previous line's start
-                        if let Some(prev_line_start) =
-                            before_cursor[..current_line_start].rfind('\n')
-                        {
+                        if let Some(prev_line_start) = before_cursor[..current_line_start].rfind('\n') {
                             let current_col = self.sql_cursor_position - current_line_start - 1;
                             let prev_line_length = current_line_start - prev_line_start - 1;
                             let new_col = current_col.min(prev_line_length);
@@ -817,20 +776,17 @@ impl App {
                 }
                 KeyCode::Down => {
                     // Find the next newline after cursor
-                    if let Some(current_line_end) =
-                        self.sql_input[self.sql_cursor_position..].find('\n')
-                    {
+                    if let Some(current_line_end) = self.sql_input[self.sql_cursor_position..].find('\n') {
                         let current_line_end = current_line_end + self.sql_cursor_position;
                         // Find the current line start to calculate column position
                         let before_cursor = &self.sql_input[..self.sql_cursor_position];
-                        let current_line_start =
-                            before_cursor.rfind('\n').map(|pos| pos + 1).unwrap_or(0);
+                        let current_line_start = before_cursor.rfind('\n')
+                            .map(|pos| pos + 1)
+                            .unwrap_or(0);
                         let current_col = self.sql_cursor_position - current_line_start;
 
                         // Find the next line's end
-                        if let Some(next_line_end) =
-                            self.sql_input[current_line_end + 1..].find('\n')
-                        {
+                        if let Some(next_line_end) = self.sql_input[current_line_end + 1..].find('\n') {
                             let next_line_end = next_line_end + current_line_end + 1;
                             let next_line_length = next_line_end - (current_line_end + 1);
                             let new_col = current_col.min(next_line_length);
@@ -879,11 +835,9 @@ impl App {
                             {
                                 if current_filtered_index > 0 {
                                     // Move up in filtered list
-                                    let prev_filtered_chain =
-                                        &self.filtered_chains[current_filtered_index - 1];
+                                    let prev_filtered_chain = &self.filtered_chains[current_filtered_index - 1];
                                     // Find corresponding index in original chains
-                                    if let Some(original_index) = self
-                                        .chains
+                                    if let Some(original_index) = self.chains
                                         .iter()
                                         .position(|c| c.name == prev_filtered_chain.name)
                                     {
@@ -902,7 +856,7 @@ impl App {
                                 }
                             }
                         }
-                    }
+                    },
                     1 => {
                         // Jobs tab logic
                         if !self.jobs_status.is_empty() {
@@ -933,35 +887,29 @@ impl App {
                             {
                                 if current_filtered_index < self.filtered_chains.len() - 1 {
                                     // Move down in filtered list
-                                    let next_filtered_chain =
-                                        &self.filtered_chains[current_filtered_index + 1];
+                                    let next_filtered_chain = &self.filtered_chains[current_filtered_index + 1];
                                     // Find corresponding index in original chains
-                                    if let Some(original_index) = self
-                                        .chains
+                                    if let Some(original_index) = self.chains
                                         .iter()
                                         .position(|c| c.name == next_filtered_chain.name)
                                     {
                                         self.selected_chain_index = original_index;
-                                        if current_filtered_index
-                                            >= self.scroll_offset + visible_height
-                                        {
-                                            self.scroll_offset =
-                                                current_filtered_index - visible_height + 1;
+                                        if current_filtered_index >= self.scroll_offset + visible_height {
+                                            self.scroll_offset = current_filtered_index - visible_height + 1;
                                         }
                                     }
                                 }
                             }
                         } else {
                             if let Some(index) = self.selected_table_index {
-                                let tables_len =
-                                    self.chains[self.selected_chain_index].dataDictionary.len();
+                                let tables_len = self.chains[self.selected_chain_index].dataDictionary.len();
                                 if index < tables_len - 1 {
                                     self.selected_table_index = Some(index + 1);
                                     self.update_example_data();
                                 }
                             }
                         }
-                    }
+                    },
                     1 => {
                         // Jobs tab logic
                         if !self.jobs_status.is_empty() {
@@ -984,14 +932,8 @@ impl App {
                     0 => {
                         // Network tab logic
                         if !self.show_tables {
-                            if let Some(filtered_chain) =
-                                self.filtered_chains.get(self.selected_chain_index)
-                            {
-                                if let Some(original_index) = self
-                                    .chains
-                                    .iter()
-                                    .position(|c| c.name == filtered_chain.name)
-                                {
+                            if let Some(filtered_chain) = self.filtered_chains.get(self.selected_chain_index) {
+                                if let Some(original_index) = self.chains.iter().position(|c| c.name == filtered_chain.name) {
                                     self.selected_chain_index = original_index;
                                 }
                             }
@@ -1004,7 +946,7 @@ impl App {
                             self.sql_cursor_position = self.sql_input.len();
                             self.current_tab = 1;
                         }
-                    }
+                    },
                     1 => {
                         // Jobs tab logic
                         if !self.jobs_status.is_empty() {
@@ -1018,21 +960,8 @@ impl App {
                                             let action = action.to_string();
                                             let sender = action_sender.clone();
                                             async move {
-                                                match job_manager
-                                                    .handle_action(&job_name, &action)
-                                                    .await
-                                                {
-                                                    Ok(Some(content)) => {
-                                                        let _ =
-                                                            sender.send((action, content)).await;
-                                                    }
-                                                    Err(e) => {
-                                                        eprintln!(
-                                                            "Error handling action '{}': {}",
-                                                            action, e
-                                                        );
-                                                    }
-                                                    _ => {}
+                                                if let Ok(Some(content)) = job_manager.handle_action(&job_name, &action).await {
+                                                    let _ = sender.send((action, content)).await;
                                                 }
                                             }
                                         });
@@ -1064,10 +993,7 @@ impl App {
                         self.progress1 = 0.0;
                         self.docker_setup_in_progress = false;
                     }
-                    if self.saved_manuscript.is_some()
-                        || self.show_tables
-                        || self.sql_result.is_some()
-                    {
+                    if self.saved_manuscript.is_some() || self.show_tables || self.sql_result.is_some() {
                         if !self.sql_input.trim().is_empty() {
                             self.saved_manuscript = Some(self.sql_input.clone());
                         }
@@ -1081,31 +1007,31 @@ impl App {
                     }
                 }
             }
-            KeyCode::PageUp => {
-                if !self.show_tables {
-                    if self.selected_chain_index > visible_height {
-                        self.selected_chain_index -= visible_height;
-                    } else {
-                        self.selected_chain_index = 0;
-                    }
-                    if self.selected_chain_index < self.scroll_offset {
-                        self.scroll_offset = self.selected_chain_index;
-                    }
-                }
-            }
-            KeyCode::PageDown => {
-                if !self.show_tables {
-                    let new_index = self.selected_chain_index + visible_height;
-                    if new_index < self.chains.len() {
-                        self.selected_chain_index = new_index;
-                    } else {
-                        self.selected_chain_index = self.chains.len() - 1;
-                    }
-                    if self.selected_chain_index >= self.scroll_offset + visible_height {
-                        self.scroll_offset = self.selected_chain_index - visible_height + 1;
-                    }
-                }
-            }
+            // KeyCode::PageUp => {
+            //     if !self.show_tables {
+            //         if self.selected_chain_index > visible_height {
+            //             self.selected_chain_index -= visible_height;
+            //         } else {
+            //             self.selected_chain_index = 0;
+            //         }
+            //         if self.selected_chain_index < self.scroll_offset {
+            //             self.scroll_offset = self.selected_chain_index;
+            //         }
+            //     }
+            // }
+            // KeyCode::PageDown => {
+            //     if !self.show_tables {
+            //         let new_index = self.selected_chain_index + visible_height;
+            //         if new_index < self.chains.len() {
+            //             self.selected_chain_index = new_index;
+            //         } else {
+            //             self.selected_chain_index = self.chains.len() - 1;
+            //         }
+            //         if self.selected_chain_index >= self.scroll_offset + visible_height {
+            //             self.scroll_offset = self.selected_chain_index - visible_height + 1;
+            //         }
+            //     }
+            // }
             KeyCode::Tab => {
                 self.current_tab = (self.current_tab + 1) % 3;
             }
@@ -1163,6 +1089,18 @@ impl App {
                 self.sql_cursor_position = self.sql_input.len();
                 self.current_tab = 1;
             }
+            KeyCode::PageUp => {
+                if self.setup_state == SetupState::Complete {
+                    self.vertical_scroll = self.vertical_scroll.saturating_sub(1);
+                    self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
+                }
+            }
+            KeyCode::PageDown | KeyCode::Char('j') => {
+                if self.setup_state == SetupState::Complete {
+                    self.vertical_scroll = self.vertical_scroll.saturating_add(1);
+                    self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
+                }
+            }
             _ => {}
         }
 
@@ -1209,9 +1147,7 @@ impl App {
         if let Some(chain) = self.chains.get(self.selected_chain_index) {
             if let Some(table_index) = self.selected_table_index {
                 if let Some((table_name, _)) = chain.dataDictionary.get(table_index) {
-                    let manuscript = self
-                        .job_manager
-                        .generate_initial_manuscript(&chain.databaseName, table_name);
+                    let manuscript = self.job_manager.generate_initial_manuscript(&chain.databaseName, table_name);
                     return manuscript;
                 }
             }
@@ -1222,43 +1158,37 @@ impl App {
     pub async fn setup_docker(&mut self) {
         self.docker_setup_in_progress = true;
         self.docker_setup_timer = 0;
-
+        
         if let Some(sender) = &self.update_sender {
-            let _ = sender
-                .send(AppUpdate::SetupResult(
-                    "Executing in the debug environment...".to_string(),
-                ))
-                .await;
+            let _ = sender.send(AppUpdate::SteupResult(
+                "Executing in the debug environment...".to_string()
+            )).await;
         }
-
+        
         let sender = self.update_sender.clone();
         let sql = self.transformed_sql.clone();
-
+        
         match self.pre_run.setup(sender, sql).await {
             Ok(msg) => {
                 if !self.should_cancel_setup {
                     if let Some(sender) = &self.update_sender {
                         let _ = sender.send(AppUpdate::SetupComplete).await;
-                        let _ = sender.send(AppUpdate::SetupResult(msg)).await;
+                        let _ = sender.send(AppUpdate::SteupResult(msg)).await;
                     }
                 }
-            }
+            },
             Err(e) => {
                 if !self.should_cancel_setup {
                     if let Some(sender) = &self.update_sender {
-                        let _ = sender
-                            .send(AppUpdate::SetupFailed(
-                                e.to_string(),
-                                self.current_setup_step
-                                    .clone()
-                                    .unwrap_or(SetupStep::SubmitSQLTask),
-                            ))
-                            .await;
+                        let _ = sender.send(AppUpdate::SetupFailed(
+                            e.to_string(),
+                            self.current_setup_step.clone().unwrap_or(SetupStep::SubmitSQLTask)
+                        )).await;
                     }
                 }
             }
         }
-
+        
         self.docker_setup_in_progress = false;
     }
 
@@ -1267,13 +1197,11 @@ impl App {
         let mut lines = vec![
             Line::from(""),
             Line::from(Span::styled(
-                format!(
-                    "Setting up debug environment... ({:.1}s)",
-                    self.docker_setup_timer as f64 / 10.0
-                ),
-                Style::default().fg(Color::Yellow),
+                format!("Setting up debug environment... ({:.1}s)", 
+                    self.docker_setup_timer as f64 / 10.0),
+                Style::default().fg(Color::Yellow)
             )),
-            Line::from(""),
+            Line::from("")
         ];
 
         let all_steps = vec![
@@ -1290,20 +1218,20 @@ impl App {
                     if *current == step {
                         match &self.setup_state {
                             SetupState::Failed(_) => ("✗", Style::default().fg(Color::Red)),
-                            _ => ("⋯", Style::default().fg(Color::Yellow)),
+                            _ => ("⋯", Style::default().fg(Color::Yellow))
                         }
                     } else if *current > step {
                         ("✓", Style::default().fg(Color::Green))
                     } else {
                         ("○", Style::default().fg(Color::DarkGray))
                     }
-                }
-                None => ("○", Style::default().fg(Color::DarkGray)),
+                },
+                None => ("○", Style::default().fg(Color::DarkGray))
             };
 
             lines.push(Line::from(Span::styled(
                 format!("{} {}", prefix, step.as_str()),
-                style,
+                style
             )));
         }
 
@@ -1315,16 +1243,14 @@ impl App {
 
         if let Some(status) = &self.debug_result {
             // Split status by both \n and literal "\\n"
-            let split_lines = status
-                .split(|c| c == '\n')
+            let split_lines = status.split(|c| c == '\n')
                 .flat_map(|line| line.split(r"\n"));
 
             for line in split_lines {
                 if let SetupState::Failed(_) = self.setup_state {
-                    lines.push(Line::from(Span::styled(
-                        line,
-                        Style::default().fg(Color::Red),
-                    )));
+                    lines.push(Line::from(
+                        Span::styled(line, Style::default().fg(Color::Red))
+                    ));
                 } else {
                     lines.push(Line::from(line));
                 }
@@ -1341,25 +1267,20 @@ impl App {
     // Add new method to filter chains
     fn filter_chains(&mut self) {
         let search_term = self.search_input.to_lowercase();
-        self.filtered_chains = self
-            .chains
+        self.filtered_chains = self.chains
             .iter()
             .filter(|chain| chain.name.to_lowercase().contains(&search_term))
             .cloned()
             .collect();
-
+        
         // Reset selection and scroll
         if !self.filtered_chains.is_empty() {
             self.selected_chain_index = 0;
             self.scroll_offset = 0;
-
+            
             // Update selected_chain_index to point to the first filtered chain in original array
             if let Some(first_filtered_chain) = self.filtered_chains.first() {
-                if let Some(original_index) = self
-                    .chains
-                    .iter()
-                    .position(|c| c.name == first_filtered_chain.name)
-                {
+                if let Some(original_index) = self.chains.iter().position(|c| c.name == first_filtered_chain.name) {
                     self.selected_chain_index = original_index;
                 }
             }
@@ -1373,30 +1294,22 @@ impl App {
                     self.jobs_status = new_status;
                 }
                 Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {}
-                Err(_) => {}
+                Err(_) => {
+                }
             }
         }
     }
 
     async fn fetch_and_decrypt_credentials() -> (String, String) {
-        let response = reqwest::get(format!(
-            "{}/api/v1/metadata/np",
-            Settings::get_chainbase_url()
-        ))
-        .await
-        .expect("Failed to fetch metadata")
-        .json::<HashMap<String, String>>()
-        .await
-        .expect("Failed to parse JSON response");
+        let response = reqwest::get(format!("{}/api/v1/metadata/np", Settings::get_chainbase_url()))
+            .await
+            .expect("Failed to fetch metadata")
+            .json::<HashMap<String, String>>()
+            .await
+            .expect("Failed to parse JSON response");
 
-        let un = response
-            .get("un")
-            .cloned()
-            .unwrap_or_else(|| "".to_string());
-        let encrypted_pw = response
-            .get("pw")
-            .cloned()
-            .unwrap_or_else(|| "".to_string());
+        let un = response.get("un").cloned().unwrap_or_else(|| "".to_string());
+        let encrypted_pw = response.get("pw").cloned().unwrap_or_else(|| "".to_string());
         let pw = App::decrypt_aes(&encrypted_pw).expect("Failed to decrypt password");
 
         (un, pw)
@@ -1407,17 +1320,17 @@ impl App {
         let key = Key::<Aes128Gcm>::from_slice(k.as_bytes());
         let decoded = base64::decode(encrypted_text)?;
         let (nonce, ciphertext) = decoded.split_at(12);
-
+    
         let cipher = Aes128Gcm::new(key);
-        let plaintext = cipher
-            .decrypt(Nonce::from_slice(nonce), ciphertext)
-            .map_err(|_| "Failed to decrypt password")?;
+        let plaintext = cipher.decrypt(Nonce::from_slice(nonce), ciphertext).map_err(|_| "Failed to decrypt password")?;
         Ok(String::from_utf8(plaintext).map_err(|_| "Failed to convert plaintext to string")?)
     }
 
     fn check_docker_installed(&self) -> bool {
-        let docker_check = Command::new("docker").arg("--version").output();
-
+        let docker_check = Command::new("docker")
+            .arg("--version")
+            .output();
+        
         let compose_check = Command::new("docker")
             .args(["compose", "--version"])
             .output();

@@ -9,7 +9,7 @@ use crate::app::{App, AppState, SetupState};
 use crate::tasks::JobState;
 use crate::config::Settings;
 use sysinfo::System;
-use crate::app;
+
 
 const CUSTOM_LABEL_COLOR: Color = Color::White;
 const GAUGE2_COLOR: Style = Style::new().fg(Color::Rgb(10, 100, 100));
@@ -124,17 +124,17 @@ fn draw_sql_popup(frame: &mut ratatui::Frame, app: &App) {
 
             for line in lines {
                 let line_length = line.len() + 1; // Add 1 for newline
-                let cursor_in_this_line = app.sql_cursor_position >= current_pos
+                let cursor_in_this_line = app.sql_cursor_position >= current_pos 
                     && app.sql_cursor_position <= current_pos + line_length - 1;
-
+                
                 if cursor_in_this_line {
                     let line_cursor_pos = app.sql_cursor_position - current_pos;
-
+                    
                     let mut spans = Vec::new();
                     if line_cursor_pos > 0 {
                         spans.push(Span::raw(&line[..line_cursor_pos]));
                     }
-
+                    
                     if line_cursor_pos < line.len() {
                         spans.push(Span::styled(
                             &line[line_cursor_pos..line_cursor_pos+1],
@@ -149,12 +149,12 @@ fn draw_sql_popup(frame: &mut ratatui::Frame, app: &App) {
                             Style::default().bg(Color::White)
                         ));
                     }
-
+                    
                     styled_text.extend(Text::from(Line::from(spans)));
                 } else {
                     styled_text.extend(Text::from(Line::from(line.to_string())));
                 }
-
+                
                 current_pos += line_length;
             }
 
@@ -167,14 +167,14 @@ fn draw_sql_popup(frame: &mut ratatui::Frame, app: &App) {
             if let Some(result) = &app.sql_result {
                 let result_text = Paragraph::new(result.as_str())
                     .style(Style::default().fg(Color::Green));
-
+                
                 let result_window = Rect::new(
                     sql_window.x,
                     sql_window.y + sql_window.height,
                     sql_window.width,
                     3,
                 );
-
+                
                 frame.render_widget(Clear, result_window);
                 frame.render_widget(result_text, result_window);
             }
@@ -182,15 +182,15 @@ fn draw_sql_popup(frame: &mut ratatui::Frame, app: &App) {
 
 fn draw_status_bar(frame: &mut ratatui::Frame) {
     let blocks = "▃ ▅ ▇";
-
+    
     // Get system memory info
     let sys = System::new_all();
     let used_mem = sys.used_memory() / 1024;
     let total_mem = sys.total_memory() / 1024;
     let mem_percent = (used_mem as f64 / total_mem as f64 * 100.0) as u64;
-
+    
     let cpu_percent = sys.global_cpu_usage() as u64;
-
+    
     let text = vec![
         Span::styled(Settings::get_status_text(), Style::default().bold()),
         Span::raw(" | "),
@@ -200,7 +200,7 @@ fn draw_status_bar(frame: &mut ratatui::Frame) {
         Span::raw(" | "),
         Span::styled(blocks, Style::default().fg(Color::Green))
     ];
-
+    
     let status_text = Paragraph::new(Line::from(text)).alignment(Alignment::Right);
     frame.render_widget(
         status_text,
@@ -239,11 +239,11 @@ fn draw_chain_list(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
     };
 
     draw_chains_block(frame, app, left_chunks[0]);
-
+    
     if app.show_tables {
         draw_tables_block(frame, app, left_chunks[1]);
     }
-
+    
     draw_network_monitoring(frame, app, left_chunks[left_chunks.len()-1]);
 }
 
@@ -309,10 +309,10 @@ fn draw_network_monitoring(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         .as_secs();
 
     let window_size = area.width.min(100) as usize;
-
+    
     let mut history = vec![' '; window_size];
     let mut compute_history = vec![' '; window_size];
-
+    
     for i in 0..window_size {
         let past_time = now - (window_size - i - 1) as u64;
         let rand_val = (past_time * i as u64) % 100;
@@ -344,7 +344,7 @@ fn draw_network_monitoring(frame: &mut ratatui::Frame, app: &App, area: Rect) {
 
         Line::from(vec![
             Span::styled("Pro Threads:", Style::default().fg(Color::White)),
-            Span::styled(compute_line, Style::default().fg(Color::DarkGray)),
+            Span::styled(compute_line, Style::default().fg(Color::DarkGray)), 
             Span::styled(format!(" {}", app.network_status.thread), Style::default().fg(Color::Green)),
         ]),
         Line::from(compute_history.iter().collect::<String>()).fg(Color::Rgb(231, 186, 80)),
@@ -400,17 +400,17 @@ fn draw_network_monitoring(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         .title(" Network Resources ")
         .title_alignment(Alignment::Center)
         .border_set(border::THICK);
-
+    
     let hints_paragraph = Paragraph::new(hints_text)
         .block(hints_block)
         .alignment(Alignment::Left);
-
+    
     frame.render_widget(hints_paragraph, area);
 }
 
 fn create_chain_list_item<'a>(app: &'a App, chain: &'a crate::app::Chain, index: usize) -> ListItem<'a> {
     let index = index + app.scroll_offset + 1; // Calculate the 1-based index
-    let time_ago_style = if chain.time_ago.contains("min") &&
+    let time_ago_style = if chain.time_ago.contains("min") && 
         chain.time_ago.as_str().trim_end_matches(" min").parse::<u64>().unwrap_or(0) > 10 {
         chain.time_ago.as_str().yellow()
     } else {
@@ -433,11 +433,11 @@ fn create_chain_list_item<'a>(app: &'a App, chain: &'a crate::app::Chain, index:
             format!("{:<3}⟠ {:<25}", index, chain.name).bold().white().bg(Color::DarkGray).into(),
             format!("{:<10}", chain.ticker).bold().white().bg(Color::DarkGray).into(),
             format!("{:<10}", if chain.status == "Online" { format!("↿⇂{}", chain.net) } else if chain.status == "Offline" { "↿⇂".to_string() } else { "◑".to_string() }).bold()
-                .style(if chain.status == "Online" && chain.time_ago.contains("min") {
+                .style(if chain.status == "Online" && chain.time_ago.contains("min") { 
                     Style::default().fg(Color::Green).bg(Color::DarkGray)
                 } else if chain.status == "Offline" {
                     Style::default().fg(Color::Red).bg(Color::DarkGray)
-                } else {
+                } else { 
                     Style::default().fg(Color::Yellow).bg(Color::DarkGray)
                 }).into(),
             format!("{:<10}", time_ago_style).bold().bg(Color::DarkGray).into(),
@@ -445,36 +445,36 @@ fn create_chain_list_item<'a>(app: &'a App, chain: &'a crate::app::Chain, index:
     } else {
         Line::from(vec![
             format!("{:<3}⟠ {:<25}", index, chain.name).bold()
-                .style(if chain.status == "Online" && chain.time_ago.contains("min") {
+                .style(if chain.status == "Online" && chain.time_ago.contains("min") { 
                     Style::default().fg(Color::Green)
                 } else if chain.status == "Offline" {
                     Style::default().fg(Color::Red)
-                } else {
-                    Style::default().fg(Color::Yellow)
+                } else { 
+                    Style::default().fg(Color::Yellow) 
                 }).into(),
             format!("{:<10}", chain.ticker).bold()
-                .style(if chain.status == "Online" && chain.time_ago.contains("min") {
+                .style(if chain.status == "Online" && chain.time_ago.contains("min") { 
                     Style::default().fg(Color::Green)
                 } else if chain.status == "Offline" {
                     Style::default().fg(Color::Red)
-                } else {
-                    Style::default().fg(Color::Yellow)
+                } else { 
+                    Style::default().fg(Color::Yellow) 
                 }).into(),
                 format!("{:<10}", if chain.status == "Online" { format!("↿⇂{}", chain.net) } else if chain.status == "Offline" { "↿⇂".to_string() } else { "◑".to_string() }).bold()
-                .style(if chain.status == "Online" && chain.time_ago.contains("min") {
+                .style(if chain.status == "Online" && chain.time_ago.contains("min") { 
                     Style::default().fg(Color::Green)
                 } else if chain.status == "Offline" {
                     Style::default().fg(Color::Red)
-                } else {
-                    Style::default().fg(Color::Yellow)
+                } else { 
+                    Style::default().fg(Color::Yellow) 
                 }).into(),
             format!("{:<10}", time_ago_style).bold()
-                .style(if chain.status == "Online" && chain.time_ago.contains("min") {
+                .style(if chain.status == "Online" && chain.time_ago.contains("min") { 
                     Style::default().fg(Color::Green)
                 } else if chain.status == "Offline" {
                     Style::default().fg(Color::Red)
-                } else {
-                    Style::default().fg(Color::Yellow)
+                } else { 
+                    Style::default().fg(Color::Yellow) 
                 }).into(),
         ])
     };
@@ -513,7 +513,7 @@ fn draw_chain_details(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
             let fields = selected_chain.dataDictionary
                 .get(app.selected_table_index.unwrap())
                 .map(|(_, items)| items);
-
+            
             let mut lines = Vec::new();
 
             // Add chain name and overview
@@ -532,7 +532,7 @@ fn draw_chain_details(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
                     table_name.yellow().bold().into()
                 ]));
             }
-
+            
             // Add header
             lines.push(Line::from(vec![
                 "Field Name".bold().white(),
@@ -560,7 +560,7 @@ fn draw_chain_details(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
             if let Some(example_data) = &app.example_data {
                 lines.push(Line::from(""));
                 lines.push(Line::from("Example Data:".bold().yellow()));
-
+                
                 // Add header
                 lines.push(Line::from(vec![
                     "Column Name".bold().white(),
@@ -727,16 +727,11 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
 
         let style = match job.status {
             JobState::Running => Style::default().fg(Color::Green),
-            JobState::Pending => Style::default().fg(Color::Rgb(255, 165, 0)),
+            JobState::Pending => Style::default().fg(Color::Yellow),
             JobState::PullingImage => Style::default().fg(Color::Yellow),
             JobState::Failed => Style::default().fg(Color::Red),
             JobState::NotStarted => Style::default().fg(Color::Yellow),
             JobState::Creating => Style::default().fg(Color::Yellow),
-            JobState::Exited => Style::default().fg(Color::Black),
-            JobState::Dead => Style::default().fg(Color::Red),
-            JobState::Paused => Style::default().fg(Color::Blue),
-            JobState::PartiallyRunning => Style::default().fg(Color::Red),
-            JobState::Unknown => Style::default().fg(Color::Red),
         };
 
         let is_selected = index == app.selected_job_index;
@@ -756,19 +751,14 @@ fn draw_jobs_list(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
                 }
             ),
             Span::styled(
-                format!("{:<10}",
+                format!("{:<10}", 
                     match job.status {
                         JobState::Running => "Running",
                         JobState::Pending => "Pulling Image...",
                         JobState::PullingImage => "Pulling Image...",
                         JobState::Failed => "Failed",
-                        JobState::NotStarted => "Not Started (pull images will take a few minutes..)",
-                        JobState::Creating => "Creating (pull images will take a few minutes..)",
-                        JobState::Exited => "Exited",
-                        JobState::Dead => "Dead",
-                        JobState::Paused => "Paused",
-                        JobState::PartiallyRunning => "PARTIALLY RUNNING",
-                        JobState::Unknown => "UNKNOWN"
+                        JobState::NotStarted => "Not Started (pull images while take few minutes..)",
+                        JobState::Creating => "Creating (pull images while take few minutes..)",
                     }
                 ),
                 style
@@ -836,10 +826,10 @@ fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
             .padding(Padding::new(1, 1, 0, 1))
             .title_bottom(Line::from(vec![
                 "   Press ".white(),
-                "R".green().bold(),
+                "R".green().bold(), 
                 " to run, ".white(),
                 "E".red().bold(),
-                " to edit, ".white(),
+                " to edit, ".white(), 
                 "D".blue().bold(),
                 " to deploy  ".white()
             ]).right_aligned());
@@ -866,11 +856,27 @@ fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
         if app.setup_state == SetupState::Complete {
             // When complete, use the full console area for the message
             let inner_area = console_block.inner(console_area);
+            
+            // Update scrollbar state with content length
+            if let Some(result) = &app.debug_result {
+                let content_length = result.lines().count();
+                app.vertical_scroll_state = app.vertical_scroll_state.content_length(content_length);
+            }
+            
             let paragraph_msg = Paragraph::new(app.get_setup_progress_msg())
                 .gray()
                 .block(Block::default().padding(Padding::horizontal(4)))
                 .scroll((app.vertical_scroll as u16, 0));
             frame.render_widget(paragraph_msg, inner_area);
+            
+            // Render the scrollbar
+            frame.render_stateful_widget(
+                Scrollbar::new(ScrollbarOrientation::VerticalRight)
+                    .begin_symbol(Some("↑"))
+                    .end_symbol(Some("↓")),
+                inner_area,
+                &mut app.vertical_scroll_state,
+            );
         } else {
             // During setup, use the original divided layout
             let inner_area = console_block.inner(console_area);
@@ -880,7 +886,7 @@ fn draw_sql_editor(frame: &mut ratatui::Frame, app: &mut App, area: Rect) {
                     Constraint::Length(0),
                     Constraint::Length(1),
                     Constraint::Length(1),
-                    Constraint::Length(2),
+                    Constraint::Length(2),  
                     Constraint::Length(6),
                     Constraint::Min(0),
                 ])
@@ -1015,7 +1021,7 @@ fn draw_deploy_options_popup(frame: &mut ratatui::Frame, app: &App) {
             } else {
                 Style::default()
             };
-
+            
             ListItem::new(option.as_str()).style(style)
         })
         .collect();
@@ -1028,74 +1034,6 @@ fn draw_deploy_options_popup(frame: &mut ratatui::Frame, app: &App) {
         .highlight_style(Style::default().bg(Color::Blue).fg(Color::White));
 
     frame.render_widget(options_list, window);
-}
-
-fn draw_deploy_on_chainbase_popup(frame: &mut ratatui::Frame,form: &app::DeployForm, app: &App) {
-    let area = frame.area();
-    let window_width = 50;
-    let window_height = 10;
-    let window = Rect::new(
-        (area.width - window_width) / 2,
-        (area.height - window_height) / 2,
-        window_width,
-        window_height,
-    );
-
-    // Clear the area under the window
-    frame.render_widget(Clear, window);
-
-    // Create the options list
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .margin(1)
-        .constraints([
-            Constraint::Length(2), // hash
-            Constraint::Length(2), // version
-            Constraint::Length(2), // api_key
-            Constraint::Length(2), // deploy 按钮
-        ])
-        .split(window);
-
-    let fields = [
-        ("Hash", &form.hash),
-        ("Version", &form.version),
-        ("API Key", &form.api_key),
-    ];
-
-    for (i, (label, value)) in fields.iter().enumerate() {
-        let block = Block::bordered()
-            .title(format!(" Deploy On Chainbase - {} ", label))
-            .title_alignment(Alignment::Center)
-            .border_set(border::THICK);
-
-        let paragraph = Paragraph::new(value.as_str())
-            .block(block)
-            .style(if app.selected_deploy_input_option == i {
-                Style::default().fg(Color::Yellow) // 当前选中的输入框高亮
-            } else {
-                Style::default()
-            });
-
-        frame.render_widget(paragraph, chunks[i]);
-    }
-
-    let deploy_block = Block::bordered()
-        .title(" [ Deploy ] ")
-        .title_alignment(Alignment::Center)
-        .border_set(border::THICK);
-
-    let deploy_style = if app.selected_deploy_input_option == 3 {
-        Style::default().fg(Color::LightGreen)
-    } else {
-        Style::default()
-    };
-
-    let deploy_paragraph = Paragraph::new("")
-        .block(deploy_block)
-        .style(deploy_style);
-
-    frame.render_widget(deploy_paragraph, chunks[3]);
-
 }
 
 fn draw_job_options_popup(frame: &mut ratatui::Frame, app: &App) {
@@ -1177,27 +1115,27 @@ fn map_canvas(app: &App) -> impl Widget + '_ {
 }
 
 const LOGO: &str = "
- ########   #######   ########
- #########  #######  #########
- ##########  #####  ##########
-  ########## ##### ##########
-      ####### ### #######
-        ####  #  #####
- #########            ########
- ###########       ###########
- ########             ########
-        #####  #  #####
-     ######## ###  #######
-  ########## ##### ##########
- ##########  #####  ##########
- #########  #######  #########
+ ########   #######   ######## 
+ #########  #######  ######### 
+ ##########  #####  ########## 
+  ########## ##### ##########  
+      ####### ### #######      
+        ####  #  #####         
+ #########            ######## 
+ ###########       ########### 
+ ########             ######## 
+        #####  #  #####        
+     ######## ###  #######     
+  ########## ##### ##########  
+ ##########  #####  ########## 
+ #########  #######  ######### 
  ########   #######   ########";
 
 const LOGO_LETTER: &str = "
   █████╗██╗  ██╗ █████╗ ██╗███╗   ██╗██████╗  █████╗ ███████╗███████╗
 ██╔════╝██║  ██║██╔══██╗██║████╗  ██║██╔══██╗██╔══██╗██╔════╝██╔════╝
-██║     ███████║███████║██║██╔██╗ ██║██████╔╝███████║███████╗█████╗
-██║     ██╔══██║██╔══██║██║██║╚██╗██║██╔══██╗██╔══██║╚════██║██╔══╝
+██║     ███████║███████║██║██╔██╗ ██║██████╔╝███████║███████╗█████╗  
+██║     ██╔══██║██╔══██║██║██║╚██╗██║██╔══██╗██╔══██║╚════██║██╔══╝  
 ╚██████╗██║  ██║██║  ██║██║██║ ╚████║██████╔╝██║  ██║███████║███████╗
   ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝";
 
@@ -1251,7 +1189,7 @@ fn draw_help_popup(frame: &mut ratatui::Frame) {
         "Global Shortcuts",
         "────────────────",
         "",
-        "Enter      Select/Confirm",
+        "Enter      Select/Confirm", 
         "Esc        Back/Cancel",
         "/          Search",
         "q          Quit",
@@ -1259,7 +1197,7 @@ fn draw_help_popup(frame: &mut ratatui::Frame) {
         "Tab/1/2/3  Switch tabs",
         "↑/↓        Navigate",
         "c          Create manuscript",
-        "e          Edit manuscript",
+        "e          Edit manuscript", 
         "r          Run manuscript",
         "d          Deploy options",
     ];
