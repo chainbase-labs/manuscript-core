@@ -551,7 +551,7 @@ impl JobManager {
         // Parse SQL to extract fields
         let mut fields = Vec::new();
         if let Some(select_pos) = sql.to_lowercase().find("select") {
-            if let Some(from_pos) = sql[select_pos..].to_lowercase().find("from") {
+            if let Some(from_pos) = sql[select_pos..].to_lowercase().find(" from ") {
                 let fields_str = &sql[select_pos + 6..select_pos + from_pos].trim();
                 if *fields_str != "*" {
                     fields = fields_str.split(',')
