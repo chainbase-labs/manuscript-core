@@ -24,7 +24,7 @@ impl PreRun {
             api_endpoint: "https://testnet-debug.chainbasehq.com".to_string(),
             catalog_statement: r#"CREATE CATALOG paimon WITH ( 
                 'type' = 'paimon',
-                'warehouse' = 'oss://network-testnet/warehouse',
+                'warehouse' = 'hdfs://chainbase-ali-sp-01/warehouse',
                 'table-default.merge-engine' = 'deduplicate',
                 'table-default.changelog-producer' = 'input',
                 'table-default.metastore.partitioned-table' = 'false',
@@ -39,7 +39,8 @@ impl PreRun {
                 'table-default.scan.plan-sort-partition' = 'true',
                 'table-default.snapshot.expire.limit' = '10000',
                 'table-default.snapshot.num.retained.max' = '2000'
-            );"#.to_string(),
+            );"#
+                .to_string(),
             un: "un".to_string(),
             pw: "pww".to_string(),
         }
