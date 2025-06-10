@@ -272,6 +272,13 @@ Here are some of the planned improvements:
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/Dimitrolito">
+                    <img src="https://avatars.githubusercontent.com/u/46675332?v=4" width="100;" alt="Dimitrolito"/>
+                    <br />
+                    <sub><b>Dmytrol</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/nnsW3">
                     <img src="https://avatars.githubusercontent.com/u/146735585?v=4" width="100;" alt="nnsW3"/>
                     <br />
