@@ -286,6 +286,13 @@ Here are some of the planned improvements:
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/linchizhen">
+                    <img src="https://avatars.githubusercontent.com/u/170242051?v=4" width="100;" alt="linchizhen"/>
+                    <br />
+                    <sub><b>linchizhen</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/junyoungcross">
                     <img src="https://avatars.githubusercontent.com/u/96804462?v=4" width="100;" alt="junyoungcross"/>
                     <br />
