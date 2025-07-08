@@ -44,7 +44,7 @@ func NewStateDetector(manuscript *Manuscript, containers []ContainerInfo) *State
 	}
 }
 
-// ContainerInfo represents information about a Docker container
+// findContainer represents information about a Docker container
 func (sd *StateDetector) findContainer(name string) *ContainerInfo {
 	for _, container := range sd.containers {
 		if container.Name == name {
