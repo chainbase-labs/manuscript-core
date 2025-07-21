@@ -286,6 +286,13 @@ Here are some of the planned improvements:
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/Olexandr88">
+                    <img src="https://avatars.githubusercontent.com/u/93856062?v=4" width="100;" alt="Olexandr88"/>
+                    <br />
+                    <sub><b>Olexandr88</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/Radovenchyk">
                     <img src="https://avatars.githubusercontent.com/u/107338472?v=4" width="100;" alt="Radovenchyk"/>
                     <br />
@@ -299,6 +306,8 @@ Here are some of the planned improvements:
                     <sub><b>jinmu0410</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/linchizhen">
                     <img src="https://avatars.githubusercontent.com/u/170242051?v=4" width="100;" alt="linchizhen"/>
@@ -306,13 +315,18 @@ Here are some of the planned improvements:
                     <sub><b>linchizhen</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/nebkoo">
                     <img src="https://avatars.githubusercontent.com/u/46592476?v=4" width="100;" alt="nebkoo"/>
                     <br />
                     <sub><b>nebkoo</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/rustfix">
+                    <img src="https://avatars.githubusercontent.com/u/155627174?v=4" width="100;" alt="rustfix"/>
+                    <br />
+                    <sub><b>rustfix</b></sub>
                 </a>
             </td>
             <td align="center">
