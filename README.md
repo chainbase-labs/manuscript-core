@@ -265,6 +265,13 @@ Here are some of the planned improvements:
 		</tr>
 		<tr>
             <td align="center">
+                <a href="https://github.com/nebkoo">
+                    <img src="https://avatars.githubusercontent.com/u/46592476?v=4" width="100;" alt="nebkoo"/>
+                    <br />
+                    <sub><b>nebkoo</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/AlanViast">
                     <img src="https://avatars.githubusercontent.com/u/9742385?v=4" width="100;" alt="AlanViast"/>
                     <br />
@@ -299,6 +306,8 @@ Here are some of the planned improvements:
                     <sub><b>Radovenchyk</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/jinmu0410">
                     <img src="https://avatars.githubusercontent.com/u/33084817?v=4" width="100;" alt="jinmu0410"/>
@@ -306,20 +315,11 @@ Here are some of the planned improvements:
                     <sub><b>jinmu0410</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/linchizhen">
                     <img src="https://avatars.githubusercontent.com/u/170242051?v=4" width="100;" alt="linchizhen"/>
                     <br />
                     <sub><b>linchizhen</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/nebkoo">
-                    <img src="https://avatars.githubusercontent.com/u/46592476?v=4" width="100;" alt="nebkoo"/>
-                    <br />
-                    <sub><b>nebkoo</b></sub>
                 </a>
             </td>
             <td align="center">
