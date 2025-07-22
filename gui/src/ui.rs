@@ -417,6 +417,7 @@ fn create_chain_list_item<'a>(app: &'a App, chain: &'a crate::app::Chain, index:
         let display_time = if chain.time_ago == "unknown" { "-" } else { &chain.time_ago };
         display_time.white()
     };
+    
     // Get the current filtered index
     let is_selected = if let Some(current_filtered_index) = app
         .filtered_chains
@@ -428,9 +429,12 @@ fn create_chain_list_item<'a>(app: &'a App, chain: &'a crate::app::Chain, index:
         false
     };
 
+    // Add "new" indicator if the name is "Solana"
+    let new_indicator = if chain.name == "Solana" { "🔥" } else { "" };
+
     let content = if is_selected {
         Line::from(vec![
-            format!("{:<3}⟠ {:<25}", index, chain.name).bold().white().bg(Color::DarkGray).into(),
+            format!("{:<3}⟠ {:<25}{}", index, chain.name, new_indicator).bold().white().bg(Color::DarkGray).into(),
             format!("{:<10}", chain.ticker).bold().white().bg(Color::DarkGray).into(),
             format!("{:<10}", if chain.status == "Online" { format!("↿⇂{}", chain.net) } else if chain.status == "Offline" { "↿⇂".to_string() } else { "◑".to_string() }).bold()
                 .style(if chain.status == "Online" && chain.time_ago.contains("min") { 
@@ -444,7 +448,7 @@ fn create_chain_list_item<'a>(app: &'a App, chain: &'a crate::app::Chain, index:
         ])
     } else {
         Line::from(vec![
-            format!("{:<3}⟠ {:<25}", index, chain.name).bold()
+            format!("{:<3}⟠ {:<25}{}", index, chain.name, new_indicator).bold()
                 .style(if chain.status == "Online" && chain.time_ago.contains("min") { 
                     Style::default().fg(Color::Green)
                 } else if chain.status == "Offline" {
@@ -460,7 +464,7 @@ fn create_chain_list_item<'a>(app: &'a App, chain: &'a crate::app::Chain, index:
                 } else { 
                     Style::default().fg(Color::Yellow) 
                 }).into(),
-                format!("{:<10}", if chain.status == "Online" { format!("↿⇂{}", chain.net) } else if chain.status == "Offline" { "↿⇂".to_string() } else { "◑".to_string() }).bold()
+            format!("{:<10}", if chain.status == "Online" { format!("↿⇂{}", chain.net) } else if chain.status == "Offline" { "↿⇂".to_string() } else { "◑".to_string() }).bold()
                 .style(if chain.status == "Online" && chain.time_ago.contains("min") { 
                     Style::default().fg(Color::Green)
                 } else if chain.status == "Offline" {
