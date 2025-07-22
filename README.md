@@ -13,7 +13,7 @@
 [![GitHub Version](https://img.shields.io/github/tag-pre/chainbase-labs/manuscript-core?label=Version&color=1b1d24)](https://github.com/chainbase-labs/manuscript-core/releases)
 [![PyPI License](https://img.shields.io/pypi/l/quixstreams?label=Licence&color=1b1d24)](https://github.com/chainbase-labs/manuscript-core/blob/main/LICENSE)
 [![Docs](https://img.shields.io/badge/docs-chainbase.com-0345b2?label=Docs&color=1b1d24)](https://docs.chainbase.com/core-concepts/manuscript/overview#core-values-and-capabilities-of-manuscript)
-[![Discord](https://img.shields.io/badge/Chainbase-4c4293?logo=Discord&color=1b1d24)](https://discord.com/channels/933995010158907422/935156893872185344)
+[![Discord](https://img.shields.io/badge/Chainbase-4c4293?logo=Discord&color=1b1d24)](https://discord.com/invite/chainbase)
 [![Telegram](https://img.shields.io/badge/Chainbase-4c4293?logo=Telegram&color=1b1d24)](https://t.me/ChainbaseNetwork)
 <a href="https://x.com/chainbasehq" target="_blank" style="display: flex; align-items: center;">
 <img src="https://img.shields.io/badge/Twitter-1b1d24?logo=x&logoColor=white" alt="Twitter" />
@@ -286,6 +286,13 @@ Here are some of the planned improvements:
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/Olexandr88">
+                    <img src="https://avatars.githubusercontent.com/u/93856062?v=4" width="100;" alt="Olexandr88"/>
+                    <br />
+                    <sub><b>Olexandr88</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/Radovenchyk">
                     <img src="https://avatars.githubusercontent.com/u/107338472?v=4" width="100;" alt="Radovenchyk"/>
                     <br />
@@ -299,6 +306,8 @@ Here are some of the planned improvements:
                     <sub><b>jinmu0410</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/linchizhen">
                     <img src="https://avatars.githubusercontent.com/u/170242051?v=4" width="100;" alt="linchizhen"/>
@@ -306,13 +315,18 @@ Here are some of the planned improvements:
                     <sub><b>linchizhen</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/nebkoo">
                     <img src="https://avatars.githubusercontent.com/u/46592476?v=4" width="100;" alt="nebkoo"/>
                     <br />
                     <sub><b>nebkoo</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/rustfix">
+                    <img src="https://avatars.githubusercontent.com/u/155627174?v=4" width="100;" alt="rustfix"/>
+                    <br />
+                    <sub><b>rustfix</b></sub>
                 </a>
             </td>
             <td align="center">
