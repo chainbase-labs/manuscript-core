@@ -70,20 +70,27 @@ services:
       - "{db_port}:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_DB=${POSTGRES_DB:-{database}}
     networks:
-      - ms_network
+      - ms_network_{name}
     restart: unless-stopped
 
   jobmanager:
     image: {job_manager_image}
     ports:
       - "{job_port}:8081"
+    depends_on:
+      - postgres
+    environment:
+      - SOL_RPC_URL={sol_rpc_url}
+      - POSTGRES_DSN=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/solana?sslmode=disable
+    restart: unless-stopped
     networks:
-      - ms_network
+      - ms_network_{name}
 
   hasura:
     image: {hasura_image}
@@ -95,11 +102,11 @@ services:
       HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/{database}
       HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
     networks:
-      - ms_network
+      - ms_network_{name}
     restart: unless-stopped
 
 networks:
-  ms_network:"#; 
+  ms_network_{name}:"#;
 
 pub const JOB_CONFIG_TEMPLATE: &str = r#"
 [{name}]
@@ -154,7 +161,8 @@ parallelism: 1
 
 sources:
   - name: {dataset_name}
-    type: substreams
+    type: rpc
+    sol_rpc_url: https://mainnet.helius-rpc.com/?api-key=xxxxxx
     dataset: {dataset_name}.{table_name}
 
 transforms:

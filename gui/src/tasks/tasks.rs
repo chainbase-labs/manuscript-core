@@ -3,6 +3,7 @@ use webbrowser;
 use tokio::sync::mpsc;
 use tokio::time::Duration;
 use super::docker::{DOCKER_COMPOSE_TEMPLATE, DOCKER_COMPOSE_TEMPLATE_SOLANA, JOB_CONFIG_TEMPLATE, MANUSCRIPT_TEMPLATE, MANUSCRIPT_TEMPLATE_SOLANA};
+use super::sql::SOLANA_INIT_SQL;
 use crate::config::Settings;
 use std::collections::HashSet;
 #[derive(Debug, Clone)]
@@ -53,6 +54,7 @@ pub struct ManuscriptConfig {
     pub db_port: u16,
     pub graphql_port: u16,
     pub job_port: u16,
+    pub sol_rpc_url: Option<String>, // 新增
 }
 
 #[derive(Debug, Clone)]
@@ -414,7 +416,7 @@ impl JobManager {
         // TODO: solana support needs change the job_manager image
         // Solana compatible with future needs to migrate to the refactored protocol.
         if config.source.chain == "solana" {
-            job_manager_image = "repository.chainbase.com/manuscript-node/manuscript-solana:latest".to_string();
+            job_manager_image = "manuscriptsrepo/manuscripts:latest".to_string();
         }
 
         let template = if config.source.chain == "solana" {
@@ -423,7 +425,7 @@ impl JobManager {
             DOCKER_COMPOSE_TEMPLATE
         };
         
-        let docker_compose_content = template
+        let mut docker_compose_content = template
             .replace("{name}", &config.name)
             .replace("{job_manager_image}", &job_manager_image)
             .replace("{hasura_image}", &hasura_image)
@@ -431,6 +433,16 @@ impl JobManager {
             .replace("{db_port}", &config.db_port.to_string())
             .replace("{graphql_port}", &config.graphql_port.to_string())
             .replace("{job_port}", &config.job_port.to_string());
+
+        if config.source.chain == "solana" {
+            let sol_rpc_url = config.sol_rpc_url.as_deref().unwrap_or("");
+            docker_compose_content = docker_compose_content.replace("{sol_rpc_url}", sol_rpc_url);
+        }
+
+        // Write init.sql file for Solana chain
+        if config.source.chain == "solana" {
+            std::fs::write(job_dir.join("init.sql"), SOLANA_INIT_SQL)?;
+        }
 
         std::fs::write(job_dir.join("docker-compose.yml"), docker_compose_content)?;
         Ok(())
@@ -489,6 +501,11 @@ impl JobManager {
             .and_then(|sinks| sinks.first())
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "No sink configuration found"))?;
 
+        let sol_rpc_url = if let Some(source) = yaml["sources"].as_sequence().and_then(|sources| sources.first()) {
+            source["sol_rpc_url"].as_str().map(|s| s.to_string())
+        } else {
+            None
+        };
         let config = ManuscriptConfig {
             name: yaml["name"].as_str().unwrap_or("demo").to_string(),
             spec_version: yaml["specVersion"].as_str().unwrap_or("v1.0.0").to_string(),
@@ -499,6 +516,7 @@ impl JobManager {
                 .unwrap_or(19080),
             job_port: self.get_available_port(18080, 18090)
                 .unwrap_or(18080),
+            sol_rpc_url,
             source: SourceConfig {
                 name: source["name"].as_str().unwrap_or("").to_string(),
                 dataset_type: source["type"].as_str().unwrap_or("dataset").to_string(),
