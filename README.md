@@ -44,6 +44,13 @@ The vision of Manuscript is to realize “data trade” within the Chainbase net
 
 - **Monetization**: Leveraging the data capabilities provided by Manuscript, combined with the dual-chain architecture CometBFT + DPoS high-performance instant transaction finality and proof-of-stake consensus features, Chainbase offers a fair and transparent data value exchange ecosystem. Creators can monetize their processed data through Manuscript, while data users can conveniently consume the data they need. This mechanism not only incentivizes the production of high-quality data but also promotes the positive development of the entire blockchain ecosystem.
 
+## 🔥 What's New（v1.5.0）
+The latest feature — Solana On-chain Parser — is now officially released.
+![solana0](./images/ms-1-5-0.png)
+![solana0](./images/ms-1-5-2.gif)
+![solana2](./images/ms-1-5-1.png)
+
+
 ## ✨ Videos
 <https://github.com/user-attachments/assets/80dfb1c2-3a4e-4e85-bd2b-12d5ca0b5639>
 
@@ -52,11 +59,33 @@ The vision of Manuscript is to realize “data trade” within the Chainbase net
 ## Getting Started 🏄
 ### Requirements
 [Docker Desktop 25.1+](https://www.docker.com/products/docker-desktop/)
+
+### GUI
+#### Install Manuscript Client
+```shell
+curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install-gui.sh | bash
+```
+
+![manuscript-gui](./images/manuscript_gui_1.jpg)
+
+#### Example
+
+Here's an example of how to <b>process</b> data from chainbase with manuscript:
+
+##### 1. Selecting data and creating local tasks
+
+![manuscript-gui](./images/manuscript_gui_2.jpg)
+
+##### 2. Waiting for the task to run and use the data
+
+![manuscript-gui](./images/manuscript_gui_3.jpg)
+
 ### CLI
 #### Install Manuscript Client
 ```shell
 curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install.sh | bash
 ```
+
 #### Example
 
 Here's an example of how to <b>process</b> data from chainbase with manuscript:
@@ -150,25 +179,6 @@ manuscript-cli deploy ~/github/manuscript/demo/manuscript.yaml --env=local
 or
 manuscript-cli deploy ~/github/manuscript/demo/manuscript.yaml --env=chainbase
 ```
-
-### GUI
-![manuscript-gui](./images/manuscript_gui_1.jpg)
-#### Install Manuscript Client
-```shell
-curl -fsSL  https://github.com/chainbase-labs/manuscript-core/raw/main/install-gui.sh | bash
-```
-
-#### Example
-
-Here's an example of how to <b>process</b> data from chainbase with manuscript:
-
-##### 1. Selecting data and creating local tasks
-
-![manuscript-gui](./images/manuscript_gui_2.jpg)
-
-##### 2. Waiting for the task to run and use the data
-
-![manuscript-gui](./images/manuscript_gui_3.jpg)
 
 ### MAKE
 ```shell
