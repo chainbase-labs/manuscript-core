@@ -1,0 +1,23 @@
+[package]
+name = "carbon-pump-swap-decoder"
+version = "0.9.1"
+description = "PumpSwap Decoder"
+license = { workspace = true }
+edition = { workspace = true }
+readme = "README.md"
+repository = { workspace = true }
+keywords = ["solana", "decoder", "pump-swap"]
+categories = ["encoding"]
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+carbon-core = { workspace = true }
+serde = { workspace = true }
+solana-account = { workspace = true }
+solana-instruction = { workspace = true, default-features = false }
+solana-pubkey = { workspace = true }
+
+[dev-dependencies]
+carbon-test-utils = { workspace = true }
