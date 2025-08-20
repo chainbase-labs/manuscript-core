@@ -266,19 +266,19 @@ Here are some of the planned improvements:
                 </a>
             </td>
             <td align="center">
-                <a href="https://github.com/ypszn">
-                    <img src="https://avatars.githubusercontent.com/u/110453347?v=4" width="100;" alt="ypszn"/>
+                <a href="https://github.com/nebkoo">
+                    <img src="https://avatars.githubusercontent.com/u/46592476?v=4" width="100;" alt="nebkoo"/>
                     <br />
-                    <sub><b>ypszn</b></sub>
+                    <sub><b>nebkoo</b></sub>
                 </a>
             </td>
 		</tr>
 		<tr>
             <td align="center">
-                <a href="https://github.com/nebkoo">
-                    <img src="https://avatars.githubusercontent.com/u/46592476?v=4" width="100;" alt="nebkoo"/>
+                <a href="https://github.com/ypszn">
+                    <img src="https://avatars.githubusercontent.com/u/110453347?v=4" width="100;" alt="ypszn"/>
                     <br />
-                    <sub><b>nebkoo</b></sub>
+                    <sub><b>ypszn</b></sub>
                 </a>
             </td>
             <td align="center">
