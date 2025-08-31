@@ -1,0 +1,20 @@
+[package]
+name = "carbon-jupiter-swap-decoder"
+version = "0.9.1"
+description = "Jupiter Swap Decoder"
+license = { workspace = true }
+edition = { workspace = true }
+readme = "README.md"
+repository = { workspace = true }
+keywords = ["solana", "decoder", "jupiter"]
+categories = ["encoding"]
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+carbon-core = { workspace = true }
+serde = { workspace = true }
+solana-account = { workspace = true }
+solana-instruction = { workspace = true, default-features = false }
+solana-pubkey = { workspace = true }
