@@ -1,5 +1,5 @@
 [package]
-name = "carbon-pump-swap-decoder"
+name = "pump-swap-decoder"
 version = "0.9.1"
 description = "PumpSwap Decoder"
 license = { workspace = true }
