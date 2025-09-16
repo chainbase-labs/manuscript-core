@@ -1,12 +1,11 @@
 [package]
-name = "jupiter-swap-decoder"
-version = "0.9.1"
-description = "Jupiter Swap Decoder"
+name = "okx-dex-decoder"
+version = "0.10.0"
+description = "OKX DEX Decoder"
 license = { workspace = true }
 edition = { workspace = true }
 readme = "README.md"
-repository = { workspace = true }
-keywords = ["solana", "decoder", "jupiter"]
+keywords = ["solana", "decoder", "okx"]
 categories = ["encoding"]
 
 [lib]
