@@ -1,0 +1,78 @@
+{
+  "accounts": [
+    {
+      "pubkey": "Ce8W9ThaNsa15BtyvnGU85xTLGANgpWqyxwt5o4uaKUv",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "position"
+    },
+    {
+      "pubkey": "3uref9YcGnma388KKM2kqP6NAcuCdPh5NbwYpqzcYZfK",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "lbPair"
+    },
+    {
+      "pubkey": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "binArrayBitmapExtension"
+    },
+    {
+      "pubkey": "J75TPk5xqCR6VPN6ZvyX2A2TvPG7oE8oCggmp1kHWmq1",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "userToken"
+    },
+    {
+      "pubkey": "HSKLo63VLJj61oNwfMMr9S761NRpm1U6s2pXfBRqGdzG",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "reserve"
+    },
+    {
+      "pubkey": "Grk4aSvTDdeNgi5JodDTuwGCb1oXLj9dmTfn4x5o7Q9t",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "tokenMint"
+    },
+    {
+      "pubkey": "Huk9wcMCsNXiDj8SocVm5axc3WZ9gpzdWaQ8waTVpRqU",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "binArrayLower"
+    },
+    {
+      "pubkey": "8zzYe5K8CfemwbivccZvXbZpNbMgkEijVitNNTwfpjYk",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "binArrayUpper"
+    },
+    {
+      "pubkey": "7CNXNAdUDBDYvZPGhRx8MG6nMeCxHC9B1iBVPY4H1gTU",
+      "is_signer": true,
+      "is_writable": true,
+      "label": "sender"
+    },
+    {
+      "pubkey": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "tokenProgram"
+    },
+    {
+      "pubkey": "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "eventAuthority"
+    },
+    {
+      "pubkey": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "program"
+    }
+  ],
+  "data": "a1c26754ab47fa9a06000000e0fcffffc36a0100e1fcffff32280300e2fcffff3e910400e3fcffff5ddf0500e4fcffffaa210700e5fcffff445f080000ca9a3b00000000",
+  "program_id": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
+}

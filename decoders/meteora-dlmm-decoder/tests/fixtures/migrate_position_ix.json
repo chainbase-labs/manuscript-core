@@ -1,0 +1,66 @@
+{
+  "accounts": [
+    {
+      "pubkey": "AEYyKDsv4fRebC2pAmv3hksXwtzzDKG5dCMxbXrVKzRf",
+      "is_signer": true,
+      "is_writable": true,
+      "label": "positionV2"
+    },
+    {
+      "pubkey": "8y9Rjqvb3UdT9SDfcM7v94Po2G36ndVM3pe1gLpGLRhx",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "positionV1"
+    },
+    {
+      "pubkey": "FoSDw2L5DmTuQTFe55gWPDXf88euaxAEKFre74CnvQbX",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "lbPair"
+    },
+    {
+      "pubkey": "6XnihiWoRfgFUncqAYeajEFEdu5m5bpY9kA39goDuDk9",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "binArrayLower"
+    },
+    {
+      "pubkey": "3kBRpy3Lj434ZXiCJ8u7TSRDcL2PKCGCCHrW4WuZWzbZ",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "binArrayUpper"
+    },
+    {
+      "pubkey": "DxocTN1otn4MUpJZED6XFbRxQmK5RrB3hqMYjoBZnXUb",
+      "is_signer": true,
+      "is_writable": true,
+      "label": "owner"
+    },
+    {
+      "pubkey": "11111111111111111111111111111111",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "systemProgram"
+    },
+    {
+      "pubkey": "DxocTN1otn4MUpJZED6XFbRxQmK5RrB3hqMYjoBZnXUb",
+      "is_signer": true,
+      "is_writable": true,
+      "label": "rentReceiver"
+    },
+    {
+      "pubkey": "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "eventAuthority"
+    },
+    {
+      "pubkey": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "program"
+    }
+  ],
+  "data": "0f843b32c706fb2e",
+  "program_id": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
+}

@@ -1,0 +1,90 @@
+{
+  "accounts": [
+    {
+      "pubkey": "Em94tW6wo3K15z7mM6wW926QRamuLKhiRe52tvk92ARs",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "lbPair"
+    },
+    {
+      "pubkey": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "binArrayBitmapExtension"
+    },
+    {
+      "pubkey": "BSJUzBQfPe7snyjxJxAJG183yYhDtLUEi3c8LGW7DCVw",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "tokenMintX"
+    },
+    {
+      "pubkey": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "tokenMintY"
+    },
+    {
+      "pubkey": "5Lbm1X6oYcSUcscMmvWqmg7sz2Qh3XJ3ydBy2v8cTrTV",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "reserveX"
+    },
+    {
+      "pubkey": "Fov1U4FMX8u4Ln5gM9LHsZcWgwHAeZ526usUjaYza2BR",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "reserveY"
+    },
+    {
+      "pubkey": "AG47v72cfwRUwdk9M2AfE691wzsETrjo8iieH3gAWsTX",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "oracle"
+    },
+    {
+      "pubkey": "8dn7co13une6bT7dt7caCFj5E8cCuH5wzCZLaTncL3D2",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "userTokenX"
+    },
+    {
+      "pubkey": "3A2f4jax9vQRsaxDpocDKA3MhHdibwwZBSsBFcgfgkLw",
+      "is_signer": true,
+      "is_writable": true,
+      "label": "funder"
+    },
+    {
+      "pubkey": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "tokenProgram"
+    },
+    {
+      "pubkey": "11111111111111111111111111111111",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "systemProgram"
+    },
+    {
+      "pubkey": "SysvarRent111111111111111111111111111111111",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "userTokenY"
+    },
+    {
+      "pubkey": "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "eventAuthority"
+    },
+    {
+      "pubkey": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "program"
+    }
+  ],
+  "data": "2e2729876fb7c840010000000200881300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+  "program_id": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
+}

@@ -1,0 +1,66 @@
+{
+  "accounts": [
+    {
+      "pubkey": "4wM3eJMduZBFytW6VqV5DC2CaSovRrM2RJG8bJkroqLD",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "lbPair"
+    },
+    {
+      "pubkey": "5qeKgwuWULUacKHQxeTyJH1hzr4xXEDS6PwCfuSC8ntf",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "position"
+    },
+    {
+      "pubkey": "GKELxnW2LL2aHXe61pCoCFyko2UjZKKwRgHg8kCyGNzv",
+      "is_signer": true,
+      "is_writable": true,
+      "label": "sender"
+    },
+    {
+      "pubkey": "DLuW6nRywCBG5BssbaFpLfLsMSoXoXRiuzUtH6VJb12c",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "rewardVault"
+    },
+    {
+      "pubkey": "AuQaustGiaqxRvj2gtCdrd22PBzTn8kM3kEPEkZCtuDw",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "rewardMint"
+    },
+    {
+      "pubkey": "Co1sWgvQ3KvTgsGcHZy9YNA9s7oNjDL6xH2RNJbWxDPC",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "userTokenAccount"
+    },
+    {
+      "pubkey": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "tokenProgram"
+    },
+    {
+      "pubkey": "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "memoProgram"
+    },
+    {
+      "pubkey": "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "eventAuthority"
+    },
+    {
+      "pubkey": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "program"
+    }
+  ],
+  "data": "be037f77b2579db700000000000000000400000004000000010000000200",
+  "program_id": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
+}

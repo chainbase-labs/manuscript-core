@@ -1,0 +1,12 @@
+{
+  "accounts": [
+    {
+      "pubkey": "zNLqkEXHxVDAbyjSSA8E17e1ksw5XEGrAA2Jha6e3FH",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "lbPair"
+    }
+  ],
+  "data": "11179fd365b829f1",
+  "program_id": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
+}

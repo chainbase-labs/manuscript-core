@@ -1,0 +1,139 @@
+{
+  "accounts": [
+    {
+      "pubkey": "3gWKqojAWeJRgdSe3bPyzNwjAdjeyaYJuraTEbFkEn9x",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "position"
+    },
+    {
+      "pubkey": "FvgJNjvU1swX8roYZpJ3BpjwVDqcrM2tEt18nhTNLCfd",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "lbPair"
+    },
+    {
+      "pubkey": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "binArrayBitmapExtension"
+    },
+    {
+      "pubkey": "Eurd4K4mrUypp3EhXxvBPhUm3e9WLoLyAwkzNDXv4shW",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "userTokenX"
+    },
+    {
+      "pubkey": "EgJsiHQDTfxXH6EkNTqLE6jd1H9Q1GZJPRMzVDfZKPGn",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "userTokenY"
+    },
+    {
+      "pubkey": "2u8ZyhXETPLkTGFhgtFm3zjpD1PosF7VySFoc9PdQQ7K",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "reserveX"
+    },
+    {
+      "pubkey": "4UN3pAUqsM1X73zPTG1iLaxAWxy5vzg8kspBbqfPEq2n",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "reserveY"
+    },
+    {
+      "pubkey": "dHNnE3a7aJpwmfGhh5QssrPUj4gAMNdkaCvUwyTwest",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "tokenXMint"
+    },
+    {
+      "pubkey": "So11111111111111111111111111111111111111112",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "tokenYMint"
+    },
+    {
+      "pubkey": "9NQ5D4CjcTa4AsXZ37j7gAjEJiqjSgn5SSTftryMwest",
+      "is_signer": true,
+      "is_writable": true,
+      "label": "sender"
+    },
+    {
+      "pubkey": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "tokenXProgram"
+    },
+    {
+      "pubkey": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "tokenYProgram"
+    },
+    {
+      "pubkey": "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "memoProgram"
+    },
+    {
+      "pubkey": "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "eventAuthority"
+    },
+    {
+      "pubkey": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "program"
+    }
+  ],
+  "data": "e6d7527ff165e39201000000d0fdffff10270200000000000100",
+  "program_id": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+  "data_decoded": {
+    "binLiquidityRemoval": {
+      "type": {
+        "vec": {
+          "defined": "BinLiquidityReduction"
+        }
+      },
+      "data": [
+        {
+          "binId": -560,
+          "bpsToRemove": 10000
+        }
+      ]
+    },
+    "remainingAccountsInfo": {
+      "type": {
+        "defined": "RemainingAccountsInfo"
+      },
+      "data": {
+        "slices": {
+          "type": {
+            "vec": {
+              "defined": "RemainingAccountsSlice"
+            }
+          },
+          "data": [
+            {
+              "accountsType": {
+                "transferHookX": {}
+              },
+              "length": 0
+            },
+            {
+              "accountsType": {
+                "transferHookY": {}
+              },
+              "length": 0
+            }
+          ]
+        }
+      }
+    }
+  }
+}

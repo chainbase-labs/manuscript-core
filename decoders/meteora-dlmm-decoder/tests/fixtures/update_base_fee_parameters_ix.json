@@ -1,0 +1,51 @@
+{
+  "accounts": [
+    {
+      "pubkey": "4uPKbdiUTdLWjTMGwUQb2tiw1HYhy6FLSmZU5tx85vBZ",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "lbPair"
+    },
+    {
+      "pubkey": "5unTfT2kssBuNvHPY6LbJfJpLqEcdMxGYLWHwShaeTLi",
+      "is_signer": true,
+      "is_writable": true,
+      "label": "admin"
+    },
+    {
+      "pubkey": "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "eventAuthority"
+    },
+    {
+      "pubkey": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "program"
+    }
+  ],
+  "data": "4ba8dfa110c3032fd007350c00",
+  "program_id": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+  "data_decoded": {
+    "feeParameter": {
+      "type": {
+        "defined": "BaseFeeParameter"
+      },
+      "data": {
+        "protocolShare": {
+          "type": "u16",
+          "data": "2000"
+        },
+        "baseFactor": {
+          "type": "u16",
+          "data": "3125"
+        },
+        "baseFeePowerFactor": {
+          "type": "u8",
+          "data": 0
+        }
+      }
+    }
+  }
+}

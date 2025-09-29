@@ -1,0 +1,60 @@
+{
+  "accounts": [
+    {
+      "pubkey": "5xScxBWRWFVuMGBLJFVSsj2jAi5WZzNXD7skTS4Qqyed",
+      "is_signer": true,
+      "is_writable": true,
+      "label": "payer"
+    },
+    {
+      "pubkey": "4gUTbkvyP6nMS74N6pTtWt9pSLagjewLf221DriGZAML",
+      "is_signer": true,
+      "is_writable": false,
+      "label": "base"
+    },
+    {
+      "pubkey": "75uZqmbettMfwem3w7KvWdRHHhx5iYE7LuGj8fV5oHAn",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "position"
+    },
+    {
+      "pubkey": "8gJ7UWboMeQ6z6AQwFP3cAZwSYG8udVS2UesyCbH79r7",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "lbPair"
+    },
+    {
+      "pubkey": "5xScxBWRWFVuMGBLJFVSsj2jAi5WZzNXD7skTS4Qqyed",
+      "is_signer": true,
+      "is_writable": true,
+      "label": "owner"
+    },
+    {
+      "pubkey": "11111111111111111111111111111111",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "systemProgram"
+    },
+    {
+      "pubkey": "SysvarRent111111111111111111111111111111111",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "rent"
+    },
+    {
+      "pubkey": "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "eventAuthority"
+    },
+    {
+      "pubkey": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "program"
+    }
+  ],
+  "data": "2e527d92558de499eaf7ffff46000000",
+  "program_id": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
+}

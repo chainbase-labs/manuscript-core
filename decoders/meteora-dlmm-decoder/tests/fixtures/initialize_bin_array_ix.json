@@ -1,0 +1,30 @@
+{
+  "accounts": [
+    {
+      "pubkey": "Bwf8q9r1wgSvQWcAdLXJqMM6icGSVW5BWrHWEEpyCAcP",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "lbPair"
+    },
+    {
+      "pubkey": "C4ytp5DSAHx2nveimbZYR3rBPgvPKPYQY38V8abDNiUh",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "binArray"
+    },
+    {
+      "pubkey": "235sX2nwcsYqJrzSYeViPJJNgaQ73atZ3oJbYqt5eA1i",
+      "is_signer": true,
+      "is_writable": true,
+      "label": "funder"
+    },
+    {
+      "pubkey": "11111111111111111111111111111111",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "systemProgram"
+    }
+  ],
+  "data": "235613b94ed44bd30600000000000000",
+  "program_id": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
+}
