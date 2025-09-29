@@ -1,0 +1,24 @@
+{
+  "accounts": [
+    {
+      "pubkey": "Axsuoe5peu6xPnxB4eAzsgWwpgqymjQT5aJ4KE8NgQei",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "presetParameter"
+    },
+    {
+      "pubkey": "5unTfT2kssBuNvHPY6LbJfJpLqEcdMxGYLWHwShaeTLi",
+      "is_signer": true,
+      "is_writable": true,
+      "label": "admin"
+    },
+    {
+      "pubkey": "5unTfT2kssBuNvHPY6LbJfJpLqEcdMxGYLWHwShaeTLi",
+      "is_signer": true,
+      "is_writable": true,
+      "label": "rentReceiver"
+    }
+  ],
+  "data": "04949164861ab53d",
+  "program_id": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
+}

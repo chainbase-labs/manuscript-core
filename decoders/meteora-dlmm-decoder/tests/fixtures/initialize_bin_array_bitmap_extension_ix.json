@@ -1,0 +1,36 @@
+{
+  "accounts": [
+    {
+      "pubkey": "7bGcnxwxHhWKtE7L7opZPqzJH6aU3HbRbuQnrGKf8779",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "lbPair"
+    },
+    {
+      "pubkey": "H2mrTZ7gSQ6EknZUeBakw6u6VEfd4t4g7KEPWgRV5Ffv",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "binArrayBitmapExtension"
+    },
+    {
+      "pubkey": "BZ9BoTtGkPXCJ73EdBLvy36kop8tMpzHXVboEnB71T2m",
+      "is_signer": true,
+      "is_writable": true,
+      "label": "funder"
+    },
+    {
+      "pubkey": "11111111111111111111111111111111",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "systemProgram"
+    },
+    {
+      "pubkey": "SysvarRent111111111111111111111111111111111",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "rent"
+    }
+  ],
+  "data": "2f9de2b40cf02147",
+  "program_id": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
+}

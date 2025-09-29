@@ -1,0 +1,18 @@
+{
+  "accounts": [
+    {
+      "pubkey": "C6881xvUWFRBFgDX8TrdiuQzHf6gBrmrh6DRzGa5B3Ft",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "lbPair"
+    },
+    {
+      "pubkey": "E4PmHc6Hmsf5soqFsz9ZjsGwTwNjkWd9pw5MZfRctP6e",
+      "is_signer": true,
+      "is_writable": true,
+      "label": "creator"
+    }
+  ],
+  "data": "4e3b98d346b72ed000",
+  "program_id": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
+}

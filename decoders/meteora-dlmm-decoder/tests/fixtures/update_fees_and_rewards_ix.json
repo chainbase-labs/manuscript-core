@@ -1,0 +1,36 @@
+{
+  "accounts": [
+    {
+      "pubkey": "xVntejWTytykHTM33wHCfogpQRcy7mDAnH3U5b7X8eD",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "position"
+    },
+    {
+      "pubkey": "6cDtJkcJKFEsGDhptmgvy3XtbwyRqnW3GoGcmnwVzJ7U",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "lbPair"
+    },
+    {
+      "pubkey": "3bi5tFzspV17UGEKra1HReFN6doQ2iSsyvWY8XzQGaoc",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "binArrayLower"
+    },
+    {
+      "pubkey": "5vfo4AvbiE4T1VBtqYhv8YAA92fERDevKCGHj8sVyYuQ",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "binArrayUpper"
+    },
+    {
+      "pubkey": "6jW5kGzAQ6dM3CUGF7k1uTRBb8DFm9whv52UTEPFpgF8",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "owner"
+    }
+  ],
+  "data": "9ae6fa0decd14bdf",
+  "program_id": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
+}

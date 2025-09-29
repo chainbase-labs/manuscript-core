@@ -1,0 +1,72 @@
+{
+  "accounts": [
+    {
+      "pubkey": "J5BwKjUTKLdYQf9sexskHgHLyVWHtmG7gPxf3sGUfJLJ",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "lbPair"
+    },
+    {
+      "pubkey": "5VAkBGkRRsoPx6PxQr4jeCAGS1Mb1PHuqDPcFZPquCLX",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "position"
+    },
+    {
+      "pubkey": "AnDCpj7VxG72LvXdaCn7zsHjaVruSBDWTbpVcdSGiFkK",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "binArrayLower"
+    },
+    {
+      "pubkey": "5B6DoUgQHYfftC89eALn94QfaUzjKJUr3dKQzKYEXDih",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "binArrayUpper"
+    },
+    {
+      "pubkey": "HWg7gUo8aSZD61q4wfwwr9AYZDDZtb5NKgLVpGuxvgw3",
+      "is_signer": true,
+      "is_writable": true,
+      "label": "sender"
+    },
+    {
+      "pubkey": "A4kyhECGSMiKoP5DDQa4xqN3QQwwpmkNW5X1vdYDVyGk",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "rewardVault"
+    },
+    {
+      "pubkey": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "rewardMint"
+    },
+    {
+      "pubkey": "5kZ9Fis9hvdnhVCpxHGXCc9Yjf1GagLnacJkxSikJ77G",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "userTokenAccount"
+    },
+    {
+      "pubkey": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "tokenProgram"
+    },
+    {
+      "pubkey": "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "eventAuthority"
+    },
+    {
+      "pubkey": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "program"
+    }
+  ],
+  "data": "955fb5f25e5a9ea20000000000000000",
+  "program_id": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
+}

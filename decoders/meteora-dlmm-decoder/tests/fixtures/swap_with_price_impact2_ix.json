@@ -1,0 +1,133 @@
+{
+  "accounts": [
+    {
+      "pubkey": "D4ARLASjg2Suy7M6vQtHAvx5NZEECuR7SFzWXhp41hfY",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "lbPair"
+    },
+    {
+      "pubkey": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "binArrayBitmapExtension"
+    },
+    {
+      "pubkey": "6RPeoQaz4aCCLY92qiF22eymiu8HtXfi6o96PCHro85R",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "reserveX"
+    },
+    {
+      "pubkey": "Eq7wrmK1m4DpvihrnGwzBPccbsdP8u4nxi3obZ4325MC",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "reserveY"
+    },
+    {
+      "pubkey": "2YGA6ogjCtCJGg5HaPpreiH7qeiQEWsboiV1UhNVk8LB",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "userTokenIn"
+    },
+    {
+      "pubkey": "J1aRY8W75LHRoTrQjKri9ZrnZWVwH6b9pMYAJYLCxQk1",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "userTokenOut"
+    },
+    {
+      "pubkey": "7VnT8zHzorYS92snKC4CZU2veigEVnVVBSxTw7G1pump",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "tokenXMint"
+    },
+    {
+      "pubkey": "So11111111111111111111111111111111111111112",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "tokenYMint"
+    },
+    {
+      "pubkey": "CS4LtXuwrM5Z7UcS1GsA9KdSzo6d2yzsaVcJ3YkUvwzj",
+      "is_signer": false,
+      "is_writable": true,
+      "label": "oracle"
+    },
+    {
+      "pubkey": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "hostFeeIn"
+    },
+    {
+      "pubkey": "6ZgXjkSmcAqV2ELiRv33D16CQV5GAkFpL8jmuBg5QfPY",
+      "is_signer": true,
+      "is_writable": true,
+      "label": "user"
+    },
+    {
+      "pubkey": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "tokenXProgram"
+    },
+    {
+      "pubkey": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "tokenYProgram"
+    },
+    {
+      "pubkey": "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "memoProgram"
+    },
+    {
+      "pubkey": "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "eventAuthority"
+    },
+    {
+      "pubkey": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "is_signer": false,
+      "is_writable": false,
+      "label": "program"
+    }
+  ],
+  "data": "4a62c0d6b1334b33c7e500000000000001ebfdffffe80300000000",
+  "program_id": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+  "data_decoded": {
+    "amountIn": {
+      "type": "u64",
+      "data": "58823"
+    },
+    "activeId": {
+      "type": {
+        "option": "i32"
+      },
+      "data": -533
+    },
+    "maxPriceImpactBps": {
+      "type": "u16",
+      "data": "1000"
+    },
+    "remainingAccountsInfo": {
+      "type": {
+        "defined": "RemainingAccountsInfo"
+      },
+      "data": {
+        "slices": {
+          "type": {
+            "vec": {
+              "defined": "RemainingAccountsSlice"
+            }
+          },
+          "data": []
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+[package]
+name = "meteora-dlmm-decoder"
+version = "0.10.0"
+description = "Meteora DLMM Decoder"
+license = { workspace = true }
+edition = { workspace = true }
+repository = { workspace = true }
+keywords = ["solana", "decoder", "meteora"]
+categories = ["encoding"]
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+carbon-core = { workspace = true }
+serde = { workspace = true }
+serde-big-array = { workspace = true }
+solana-account = { workspace = true }
+solana-instruction = { workspace = true, default-features = false }
+solana-pubkey = { workspace = true }
+
+[dev-dependencies]
+carbon-test-utils = { workspace = true }
