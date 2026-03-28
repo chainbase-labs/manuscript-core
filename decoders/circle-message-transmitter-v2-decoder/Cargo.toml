@@ -1,0 +1,21 @@
+[package]
+name = "carbon-circle-message-transmitter-v2-decoder"
+version = "0.12.0"
+description = "Circle CCTP Message Transmitter V2 Decoder"
+homepage = "https://github.com/circlefin/solana-cctp-contracts"
+edition = { workspace = true }
+license = { workspace = true }
+readme = "README.md"
+repository = { workspace = true }
+keywords = ["solana", "decoder", "circle", "cctp"]
+categories = ["encoding"]
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+carbon-core = { workspace = true }
+serde = { workspace = true }
+solana-account = { workspace = true }
+solana-instruction = { workspace = true, default-features = false }
+solana-pubkey = { workspace = true }
