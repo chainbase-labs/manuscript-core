@@ -340,6 +340,13 @@ Here are some of the planned improvements:
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/Fankouzu">
+                    <img src="https://avatars.githubusercontent.com/u/8297296?v=4" width="100;" alt="Fankouzu"/>
+                    <br />
+                    <sub><b>崔棉大师</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/junyoungcross">
                     <img src="https://avatars.githubusercontent.com/u/96804462?v=4" width="100;" alt="junyoungcross"/>
                     <br />
